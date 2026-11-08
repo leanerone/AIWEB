@@ -33,6 +33,16 @@ class ResourceIn(BaseModel):
     external_url: str | None = None
 
 
+def _safe_external_url(url: str | None) -> str | None:
+    """外链只允许 http(s)，防 javascript: 注入"""
+    if not url:
+        return None
+    url = url.strip()
+    if url.lower().startswith(("http://", "https://")):
+        return url
+    return None
+
+
 @router.get("")
 def list_resources(
     keyword: str = "",
@@ -114,8 +124,9 @@ async def create_resource(
         tags=tag_list, author=author, created_by=user.username,
     )
     if external_url:
-        r.external_url = external_url
-        r.source_type = "url"
+        r.external_url = _safe_external_url(external_url)
+        if r.external_url:
+            r.source_type = "url"
     if file is not None:
         # 安全限制：大小 + 可执行扩展名黑名单
         ext = Path(file.filename or "").suffix.lower()
@@ -202,9 +213,11 @@ def update_resource(resource_id: int, body: ResourceIn,
     r.tags = body.tags
     r.author = body.author
     if body.external_url:
-        r.external_url = body.external_url
-        if r.source_type != "upload":
-            r.source_type = "url"
+        safe = _safe_external_url(body.external_url)
+        if safe:
+            r.external_url = safe
+            if r.source_type != "upload":
+                r.source_type = "url"
     db.commit()
     return {"success": True, "data": _serialize(r, user.username)}
 

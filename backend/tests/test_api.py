@@ -127,6 +127,14 @@ class TestResourceApi:
                            headers=auth(token))
         assert resp.status_code == 400 and "不允许" in resp.json()["detail"]
 
+    def test_external_url_xss_blocked(self, token):
+        # javascript: 外链必须被清洗为 None
+        r = client.post("/api/resources", data={"type": "tool", "name": "xss-test",
+                                                "external_url": "javascript:alert(1)"},
+                        headers=auth(token)).json()["data"]
+        assert not r["external_url"]
+        client.delete(f"/api/resources/{r['id']}", headers=auth(token))
+
 
 class TestMemoApi:
     def test_crud(self, token):
