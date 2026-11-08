@@ -30,6 +30,21 @@ def stats(db: Session = Depends(get_db), _: object = Depends(get_current_user)):
     }
 
 
+@router.get("/today")
+def today_count(db: Session = Depends(get_db), _: object = Depends(get_current_user)):
+    """今日新增条目数（资源+笔记+内容卡+资讯），用于顶栏铃铛"""
+    from datetime import date, datetime
+
+    start = datetime.combine(date.today(), datetime.min.time())
+    n = sum([
+        db.query(Resource).filter(Resource.created_at >= start).count(),
+        db.query(Memo).filter(Memo.created_at >= start).count(),
+        db.query(FeedCard).filter(FeedCard.created_at >= start).count(),
+        db.query(RssItem).filter(RssItem.created_at >= start).count(),
+    ])
+    return {"success": True, "data": {"new_today": n}}
+
+
 @router.get("/contributors")
 def contributors(db: Session = Depends(get_db), _: object = Depends(get_current_user)):
     """贡献者榜：资源 + 笔记 + 内容卡计数 Top 8"""

@@ -1,4 +1,4 @@
-import { BookmarkPlus, DatabaseBackup, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2, UserPlus, Users } from 'lucide-react'
+import { BookmarkPlus, DatabaseBackup, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Sparkles, Trash2, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
@@ -288,6 +288,15 @@ export function Settings() {
                   <p className="truncate text-sm font-medium">{it.title}</p>
                   <p className="text-[11px] text-gray-400">{it.source} · {it.published_at || ''}</p>
                 </a>
+                <button title="AI 生成知识卡并沉淀到首页" className="hidden shrink-0 rounded-lg p-1.5 text-violet-500 hover:bg-violet-50 group-hover:block"
+                  onClick={async () => {
+                    try {
+                      const d = await api.post<never, { id: number; title: string }>('/ai/rss-card', { rss_item_id: it.id })
+                      toast('success', `知识卡已生成：${d.title.slice(0, 30)}…`)
+                    } catch (e) { toast('error', (e as Error).message) }
+                  }}>
+                  <Sparkles size={14} />
+                </button>
                 <button title="保存为笔记" className="hidden shrink-0 rounded-lg p-1.5 text-subtle hover:bg-brand-50 hover:text-brand-600 group-hover:block"
                   onClick={async () => {
                     try {

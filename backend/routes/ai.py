@@ -62,6 +62,40 @@ def describe(body: dict, db: Session = Depends(get_db), user: object = Depends(g
     return {"success": True, "data": {"summary": text.strip()}}
 
 
+@router.post("/rss-card")
+def rss_to_card(body: dict, db: Session = Depends(get_db), user: object = Depends(get_current_user)):
+    """把一条 RSS 资讯交给 AI 生成中文知识卡，沉淀到首页动态"""
+    from database.models import RssItem
+
+    item = db.query(RssItem).get(int(body.get("rss_item_id", 0)))
+    if not item:
+        raise HTTPException(status_code=404, detail="资讯条目不存在")
+    prompt = (
+        f"把下面这条资讯整理成一张中文知识卡（Markdown，不超过150字）：\n"
+        f"格式：一句话核心结论 + 2-3 个要点（- 开头）+ 对企业内网 AI 应用的启示（可选）。\n\n"
+        f"标题：{item.title}\n摘要：{item.summary}"
+    )
+    try:
+        content = "".join(stream_chat(db, [{"role": "user", "content": prompt}]))
+    except AiNotConfigured as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI 调用失败：{e}")
+    if not content.strip():
+        raise HTTPException(status_code=502, detail="AI 未返回内容")
+
+    card = FeedCard(
+        kind="ai", title=f"知识卡 · {item.title[:80]}",
+        content=content.strip(),
+        summary=content.strip().replace("\n", " ")[:150],
+        ref_type="rss", ref_id=item.id, source_url=item.link,
+        created_by=user.username,
+    )
+    db.add(card)
+    db.commit()
+    return {"success": True, "data": {"id": card.id, "title": card.title}}
+
+
 @router.post("/briefing")
 def daily_briefing(db: Session = Depends(get_db), user: object = Depends(get_current_user)):
     """把启用的 RSS 源里最新条目交给 AI 生成「今日 AI 简报」，沉淀为内容卡"""

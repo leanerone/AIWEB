@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
-import { Bot, BookOpen, LayoutGrid, LogOut, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
+import { Bell, Bot, BookOpen, LayoutGrid, LogOut, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BackToTop } from './BackToTop'
 import { CommandPalette } from './CommandPalette'
@@ -19,11 +20,16 @@ export function Layout() {
   const nav = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [dark, setDark] = useState(() => localStorage.getItem('aiweb_theme') === 'dark')
+  const [todayCount, setTodayCount] = useState(0)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('aiweb_theme', dark ? 'dark' : 'light')
   }, [dark])
+
+  useEffect(() => {
+    api.get<never, { new_today: number }>('/hub/today').then((d) => setTodayCount(d.new_today)).catch(() => {})
+  }, [])
 
   const logout = () => {
     clear()
@@ -76,6 +82,19 @@ export function Layout() {
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
           >
             <Search size={13} /> 搜索 <kbd className="rounded bg-gray-100 px-1 text-[10px]">Ctrl K</kbd>
+          </button>
+
+          <button
+            className="relative rounded-xl border border-gray-100 bg-white p-2 text-subtle shadow-sm transition hover:border-brand-200 hover:text-brand-600"
+            title="今日新增动态"
+            onClick={() => nav('/')}
+          >
+            <Bell size={16} />
+            {todayCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                {todayCount > 99 ? '99+' : todayCount}
+              </span>
+            )}
           </button>
 
           <button
