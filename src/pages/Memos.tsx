@@ -1,4 +1,4 @@
-import { ExternalLink, Loader2, Notebook, Pencil, Pin, PinOff, Plus, Save, Trash2, X } from 'lucide-react'
+import { ExternalLink, Layers, Loader2, Notebook, Pencil, Pin, PinOff, Plus, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useList } from '../hooks/useList'
@@ -20,6 +20,9 @@ export function Memos() {
   const [busy, setBusy] = useState(false)
   const [delId, setDelId] = useState<number | null>(null)
   const [links, setLinks] = useState<NoteLinkItem[]>([])
+  const [batchOpen, setBatchOpen] = useState(false)
+  const [batchText, setBatchText] = useState('')
+  const [batchBusy, setBatchBusy] = useState(false)
 
   const { keyword, setKeyword, items, loading, reload } = useList<Memo>(
     (p) => api.get<never, { total: number; items: Memo[] }>(
@@ -88,8 +91,13 @@ export function Memos() {
 
       {/* Notes 链接库 */}
       <BentoCard className="p-5" delay={0.05}>
-        <h2 className="mb-1 text-sm font-bold">Notes 链接库</h2>
-        <p className="mb-3 text-xs text-subtle">保存解析过的 HCL Notes 文档链接，点击「打开」唤起本机 Notes 客户端</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold">Notes 链接库</h2>
+            <p className="mb-3 text-xs text-subtle">保存解析过的 HCL Notes 文档链接，点击「打开」唤起本机 Notes 客户端</p>
+          </div>
+          <button className="btn-ghost shrink-0" onClick={() => setBatchOpen(true)}><Layers size={14} /> 批量导入</button>
+        </div>
         <NotesLinkCard onSaved={() => { loadLinks(); toast('success', '链接已入库') }} />
         {links.length > 0 && (
           <div className="mt-3 space-y-1.5">
@@ -184,6 +192,38 @@ export function Memos() {
 
       <ConfirmDialog open={!!delId} danger title="删除笔记" message="删除后不可恢复，确定吗？"
         onConfirm={del} onCancel={() => setDelId(null)} />
+
+      {/* 批量导入 Notes 链接 */}
+      {batchOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm" onClick={() => setBatchOpen(false)}>
+          <div className="w-full max-w-md rounded-bento2 bg-white p-6 shadow-bentoHover" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-bold">批量导入 Notes 链接</h3>
+            <p className="mb-3 text-xs text-subtle">每行一条：notes:// 链接或 Notes 客户端复制的 NDL 文本（可含标题行）</p>
+            <textarea className="input min-h-[160px] font-mono text-xs" placeholder={'notes://Server/db.nsf/0/UNID\n标题xxx\n<NDL>…</NDL>'}
+              value={batchText} onChange={(e) => setBatchText(e.target.value)} />
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setBatchOpen(false)}>取消</button>
+              <button className="btn-primary" disabled={batchBusy || !batchText.trim()}
+                onClick={async () => {
+                  setBatchBusy(true)
+                  let ok = 0
+                  const lines = batchText.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean)
+                  for (const line of lines) {
+                    try {
+                      const r = await api.post<never, unknown>('/notes/links', { raw_text: line })
+                      if (r) ok++
+                    } catch { /* 单条失败不中断 */ }
+                  }
+                  toast('success', `导入完成：${ok}/${lines.length} 条成功`)
+                  setBatchText(''); setBatchOpen(false); setBatchBusy(false)
+                  loadLinks()
+                }}>
+                {batchBusy ? <Loader2 size={15} className="animate-spin" /> : null} 导入
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

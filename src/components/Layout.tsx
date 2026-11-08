@@ -3,6 +3,7 @@ import { Bot, BookOpen, LayoutGrid, LogOut, Moon, Notebook, Search, Settings as 
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../stores/auth'
+import { BackToTop } from './BackToTop'
 import { CommandPalette } from './CommandPalette'
 
 const NAV = [
@@ -116,6 +117,7 @@ export function Layout() {
       </main>
 
       <footer className="py-8 text-center text-xs text-gray-300">AI Hub · 内网 AI 分享平台</footer>
+      <BackToTop />
     </div>
   )
 }

@@ -1,10 +1,85 @@
-import { BookmarkPlus, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2 } from 'lucide-react'
+import { BookmarkPlus, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
 import { useToast } from '../components/ui/Toast'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import type { RssItem, RssSourceItem, SettingsData } from '../types'
+
+interface UserItem { id: number; username: string; display_name: string; role: string; department: string }
+
+/** 成员管理（仅管理员可见） */
+function MemberAdmin() {
+  const me = useAuth((s) => s.user)
+  const toast = useToast()
+  const [users, setUsers] = useState<UserItem[]>([])
+  const [form, setForm] = useState({ username: '', display_name: '', password: '', role: 'user' })
+  const [busy, setBusy] = useState(false)
+
+  const load = () => api.get<never, UserItem[]>('/auth/users').then(setUsers).catch(() => {})
+  useEffect(() => { load() }, [])
+
+  if (me?.role !== 'admin') return null
+
+  const create = async () => {
+    if (!form.username.trim() || !form.password) { toast('info', '用户名和密码必填'); return }
+    setBusy(true)
+    try {
+      await api.post('/auth/users', form)
+      toast('success', '成员已创建')
+      setForm({ username: '', display_name: '', password: '', role: 'user' })
+      load()
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <BentoCard className="h-fit p-6" delay={0.18}>
+      <div className="mb-4 flex items-center gap-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-600"><Users size={17} /></span>
+        <h2 className="text-sm font-bold">成员管理</h2>
+        <span className="chip bg-brand-50 text-brand-600">管理员</span>
+      </div>
+      <div className="mb-3 space-y-1.5">
+        {users.map((u) => (
+          <div key={u.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-sm">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700">
+              {(u.display_name || u.username).slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{u.display_name || u.username}</p>
+              <p className="text-[11px] text-gray-400">{u.username}{u.department ? ` · ${u.department}` : ''}</p>
+            </div>
+            {u.role === 'admin' && <span className="chip bg-violet-100 text-violet-700">admin</span>}
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2 border-t border-gray-100 pt-3">
+        <div className="grid grid-cols-2 gap-2">
+          <input className="input" placeholder="用户名（域账号）" value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          <input className="input" placeholder="显示名" value={form.display_name}
+            onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input className="input" type="password" placeholder="初始密码" value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <select className="input cursor-pointer" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+            <option value="user">普通成员</option>
+            <option value="admin">管理员</option>
+          </select>
+        </div>
+        <button className="btn-primary w-full" onClick={create} disabled={busy}>
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} 创建成员
+        </button>
+      </div>
+    </BentoCard>
+  )
+}
 
 export function Settings() {
   const toast = useToast()
@@ -24,7 +99,7 @@ export function Settings() {
     api.get<never, RssSourceItem[]>('/rss/sources').then(setSources).catch(() => {})
     api.get<never, { items: RssItem[] }>('/rss/items?limit=30').then((d) => setItems(d.items)).catch(() => {})
   }
-  useEffect(load, [])
+  useEffect(() => { load() }, [])
 
   const saveAi = async () => {
     if (!cfg) return
@@ -182,6 +257,8 @@ export function Settings() {
           </div>
         </BentoCard>
       </div>
+
+      <MemberAdmin />
 
       <ConfirmDialog open={!!delId} danger title="删除订阅源" message="删除后该源的资讯条目也会清除。"
         onConfirm={delSource} onCancel={() => setDelId(null)} />

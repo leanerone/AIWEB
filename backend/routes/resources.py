@@ -39,6 +39,7 @@ def list_resources(
     type: str = "",
     tag: str = "",
     order: str = "new",
+    liked: int = 0,
     page: int = 1,
     limit: int = 20,
     db: Session = Depends(get_db),
@@ -47,6 +48,8 @@ def list_resources(
     query = db.query(Resource)
     if type in ALLOWED_TYPES:
         query = query.filter(Resource.type == type)
+    if liked:
+        query = query.filter(Resource.liked_by.contains(user.username))
     if keyword:
         like = f"%{keyword}%"
         query = query.filter(or_(Resource.name.like(like), Resource.summary.like(like),

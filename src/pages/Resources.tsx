@@ -55,17 +55,21 @@ export function Resources() {
   const me = useAuth((s) => s.user)
   const [showForm, setShowForm] = useState(false)
   const [order, setOrder] = useState('new')
+  const [likedOnly, setLikedOnly] = useState(false)
   const [likedMap, setLikedMap] = useState<Record<number, Pick<Resource, 'likes' | 'liked_by_me'>>>({})
 
   const { keyword, setKeyword, items, loading, reload } = useList<Resource>(
     (p) => api.get<never, { total: number; items: Resource[] }>(
-      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&order=${order}&page=${p.page}&limit=60`,
+      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&order=${order}&liked=${likedOnly ? 1 : 0}&page=${p.page}&limit=60`,
     ),
-    [type, order],
+    [type, order, likedOnly],
     60,
   )
 
-  const applyLike = (r: Resource) => setLikedMap((m) => ({ ...m, [r.id]: { likes: r.likes, liked_by_me: r.liked_by_me } }))
+  const applyLike = (r: Resource) => {
+    setLikedMap((m) => ({ ...m, [r.id]: { likes: r.likes, liked_by_me: r.liked_by_me } }))
+    if (likedOnly && !r.liked_by_me) reload()  // 「我的点赞」视图下取消点赞则移出列表
+  }
 
   return (
     <div className="space-y-4">
@@ -82,6 +86,13 @@ export function Resources() {
           <option value="downloads">最多下载</option>
           <option value="views">最多浏览</option>
         </select>
+        <button
+          className={`btn ${likedOnly ? 'bg-rose-50 text-rose-500 border border-rose-200' : 'btn-ghost'}`}
+          title="只看我点赞过的资源"
+          onClick={() => setLikedOnly((v) => !v)}
+        >
+          <Heart size={15} fill={likedOnly ? 'currentColor' : 'none'} /> 我的点赞
+        </button>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus size={16} /> 上传资源
         </button>
