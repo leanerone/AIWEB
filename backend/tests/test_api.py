@@ -190,6 +190,24 @@ class TestAiAndAdminApi:
         data = client.get("/api/hub/today", headers=auth(token)).json()["data"]
         assert data["new_today"] >= 0
 
+    def test_feed_card_delete_permission(self, token):
+        from database.session import SessionLocal
+        from database.models import FeedCard
+        db = SessionLocal()
+        card = FeedCard(kind="ai", title="t", content="c", created_by="someone-else")
+        db.add(card)
+        db.commit()
+        db.refresh(card)
+        db.close()
+        # 非创建者删除被拒
+        resp = client.delete(f"/api/hub/cards/{card.id}", headers=auth(token))
+        assert resp.status_code == 403
+        # 管理员可删
+        from services.auth_service import generate_token
+        admin_tok = generate_token("administrator", "admin")
+        resp2 = client.delete(f"/api/hub/cards/{card.id}", headers=auth(admin_tok))
+        assert resp2.status_code == 200
+
 
 class TestScheduler:
     def test_backup_creates_file(self):

@@ -1,5 +1,5 @@
 """聚合路由：首页 Bento 统计 + 动态 Feed。"""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database.models import (ChatSession, FeedCard, Memo, Resource, RssItem,
@@ -8,6 +8,20 @@ from database.session import get_db
 from routes.deps import get_current_user
 
 router = APIRouter(prefix="/hub", tags=["hub"])
+
+
+@router.delete("/cards/{card_id}")
+def delete_card(card_id: int, db: Session = Depends(get_db),
+                user: object = Depends(get_current_user)):
+    """删除内容卡（创建者或管理员）"""
+    card = db.get(FeedCard, card_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="内容卡不存在")
+    if user.role != "admin" and card.created_by != user.username:
+        raise HTTPException(status_code=403, detail="只能删除自己创建的内容卡")
+    db.delete(card)
+    db.commit()
+    return {"success": True}
 
 
 @router.get("/stats")

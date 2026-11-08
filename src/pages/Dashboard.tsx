@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Sparkles, StickyNote, Trophy, Wrench } from 'lucide-react'
+import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Sparkles, StickyNote, Trash2, Trophy, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
@@ -312,7 +312,23 @@ export function Dashboard() {
                 <h2 className="mt-2 text-lg font-bold tracking-tight">{viewing.title}</h2>
                 <p className="text-xs text-gray-400">{viewing.created_by} · {viewing.created_at}</p>
               </div>
-              <button className="rounded-lg p-1.5 text-subtle hover:bg-gray-100" onClick={() => setViewing(null)}>✕</button>
+              <div className="flex items-center gap-1">
+                {(viewing.kind === 'ai' || viewing.kind === 'announcement') && (
+                  <button title="删除这张内容卡"
+                    className="rounded-lg p-1.5 text-red-400 transition hover:bg-red-50"
+                    onClick={async () => {
+                      try {
+                        await api.delete(`/hub/cards/${viewing.id}`)
+                        setFeed((list) => list.filter((f) => !(f.kind === viewing.kind && f.id === viewing.id)))
+                        setViewing(null)
+                        toast('success', '内容卡已删除')
+                      } catch (e) { toast('error', (e as Error).message) }
+                    }}>
+                    <Trash2 size={15} />
+                  </button>
+                )}
+                <button className="rounded-lg p-1.5 text-subtle hover:bg-gray-100" onClick={() => setViewing(null)}>✕</button>
+              </div>
             </div>
             {viewing.source_url && (
               <a href={viewing.source_url} target="_blank" rel="noreferrer"
