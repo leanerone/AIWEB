@@ -10,14 +10,15 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (resp) => {
+    // 后端统一信封 {success, data, message} —— 直接解包 data 返回，与调用方泛型一致
     const body = resp.data
     if (body && typeof body === 'object' && 'success' in body) {
       if (!body.success && body.message) {
         return Promise.reject(new Error(body.message))
       }
-      resp.data = body.data
+      return body.data as typeof resp
     }
-    return resp
+    return body as typeof resp
   },
   (err) => {
     if (err.response?.status === 401) {
