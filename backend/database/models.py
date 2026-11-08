@@ -119,6 +119,7 @@ class RssSource(Base):
     url: Mapped[str] = mapped_column(String(512), unique=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     last_fetch_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 

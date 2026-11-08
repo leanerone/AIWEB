@@ -1,4 +1,4 @@
-import { Copy, FileDown, Loader2, Plus, Send, Sparkles, Square, Trash2 } from 'lucide-react'
+import { BookMarked, Copy, FileDown, Loader2, Plus, Send, Sparkles, Square, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
 import { BentoCard } from '../components/BentoCard'
@@ -6,7 +6,7 @@ import { MarkdownView } from '../components/MarkdownView'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import { downloadText } from '../utils/time'
-import type { ChatMsg, ChatSessionItem } from '../types'
+import type { ChatMsg, ChatSessionItem, Resource } from '../types'
 
 export function Chat() {
   const toast = useToast()
@@ -17,6 +17,12 @@ export function Chat() {
   const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const [contextRes, setContextRes] = useState<Resource | null>(null)
+  const [allResources, setAllResources] = useState<Resource[]>([])
+
+  useEffect(() => {
+    api.get<never, { items: Resource[] }>('/resources?limit=100').then((d) => setAllResources(d.items)).catch(() => {})
+  }, [])
 
   const loadSessions = () => api.get<never, ChatSessionItem[]>('/chat/sessions').then(setSessions).catch(() => {})
   useEffect(() => { loadSessions() }, [])
@@ -47,7 +53,7 @@ export function Chat() {
       const resp = await fetch('/api/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ session_id: sessionId, message: text }),
+        body: JSON.stringify({ session_id: sessionId, message: text, context_resource_id: contextRes?.id ?? null }),
         signal: controller.signal,
       })
       if (!resp.ok || !resp.body) {
@@ -217,6 +223,13 @@ export function Chat() {
         </div>
 
         <div className="border-t border-gray-100 p-4">
+          {contextRes && (
+            <div className="mb-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-700">
+              <BookMarked size={12} className="shrink-0" />
+              <span className="max-w-[240px] truncate">引用：{contextRes.name}</span>
+              <button onClick={() => setContextRes(null)}><X size={12} /></button>
+            </div>
+          )}
           <div className="flex gap-2">
             <textarea
               className="input max-h-32 min-h-[46px] flex-1 resize-none"
@@ -227,6 +240,20 @@ export function Chat() {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
               }}
             />
+            <select
+              className="input w-10 shrink-0 cursor-pointer p-0 text-center"
+              title="引用一个资源作为对话上下文"
+              value=""
+              onChange={(e) => {
+                const r = allResources.find((x) => x.id === Number(e.target.value))
+                if (r) setContextRes(r)
+              }}
+            >
+              <option value="">📎</option>
+              {allResources.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
             <button
               className={streaming ? 'btn self-end bg-red-50 text-red-500 border border-red-100' : 'btn-primary self-end'}
               onClick={streaming ? stop : () => send()}

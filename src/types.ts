@@ -81,6 +81,7 @@ export interface RssSourceItem {
   url: string
   enabled: boolean
   last_fetch_at: string | null
+  last_error?: string
 }
 
 export interface RssItem {

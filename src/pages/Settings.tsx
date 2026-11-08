@@ -233,10 +233,11 @@ export function Settings() {
           <div className="space-y-1.5">
             {sources.map((s) => (
               <div key={s.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-sm">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${s.enabled ? 'bg-emerald-400' : 'bg-gray-300'}`} />
+                <span className={`h-2 w-2 shrink-0 rounded-full ${s.enabled ? (s.last_error ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-gray-300'}`} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{s.name}</p>
                   <p className="truncate text-[11px] text-gray-400">{s.url}</p>
+                  {s.last_error && <p className="truncate text-[11px] text-amber-600" title={s.last_error}>⚠ {s.last_error}</p>}
                 </div>
                 <button className="rounded-lg p-1.5 text-red-400 hover:bg-red-50" onClick={() => setDelId(s.id)}>
                   <Trash2 size={14} />

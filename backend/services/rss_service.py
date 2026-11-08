@@ -38,9 +38,17 @@ def refresh_source(source: RssSource, db) -> dict:
         resp.raise_for_status()
     except requests.RequestException as e:
         logger.warning("RSS 抓取失败 %s: %s", source.url, e)
+        source.last_error = str(e)[:500]
+        db.commit()
         return {"fetched": 0, "new": 0, "error": str(e)}
 
     feed = feedparser.parse(resp.content)
+    if feed.bozo and not feed.entries:
+        source.last_error = f"解析失败: {getattr(feed, 'bozo_exception', 'unknown')}"[:500]
+        db.commit()
+        return {"fetched": 0, "new": 0, "error": source.last_error}
+
+    source.last_error = ""
     existing_links = {
         i.link for i in db.query(RssItem).filter(RssItem.source_id == source.id).all()
     }

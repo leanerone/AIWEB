@@ -24,7 +24,8 @@ def list_sources(db: Session = Depends(get_db), _: object = Depends(get_current_
         "success": True,
         "data": [
             {"id": s.id, "name": s.name, "url": s.url, "enabled": s.enabled,
-             "last_fetch_at": s.last_fetch_at.strftime("%Y-%m-%d %H:%M") if s.last_fetch_at else None}
+             "last_fetch_at": s.last_fetch_at.strftime("%Y-%m-%d %H:%M") if s.last_fetch_at else None,
+             "last_error": s.last_error or ""}
             for s in sources
         ],
     }

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from config import settings
-from database.models import ChatMessage, ChatSession, FeedCard
+from database.models import ChatMessage, ChatSession, FeedCard, Resource
 from database.session import get_db
 from routes.deps import get_current_user
 from services.ai_service import AiNotConfigured, stream_chat
@@ -18,6 +18,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 class ChatRequest(BaseModel):
     session_id: int | None = None
     message: str
+    context_resource_id: int | None = None
 
 
 @router.get("/sessions")
@@ -94,6 +95,17 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
         .all()
     )
     messages = [{"role": m.role, "content": m.content} for m in reversed(history)]
+
+    # 引用资源作为对话上下文
+    if body.context_resource_id:
+        res = db.query(Resource).get(body.context_resource_id)
+        if res:
+            sys_prompt = (
+                f"用户正在就平台上的资源向你提问，请结合该资源信息回答。\n"
+                f"资源：[{res.type}] {res.name}\n简介：{res.summary}\n详情：\n{res.content[:3000]}"
+            )
+            messages = [{"role": "system", "content": sys_prompt}] + messages
+
     session_id = session.id
     session_title = session.title
 
