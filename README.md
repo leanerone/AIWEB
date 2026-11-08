@@ -8,13 +8,15 @@
 
 | 模块 | 说明 |
 |---|---|
-| 首页 Bento | 欢迎卡 + 统计数字滚动（Skills/工具/插件/笔记）+ 聚合动态 Feed（AI 内容/资源/笔记/RSS 混排） |
-| 资源库 | skill / tool / plugin 统一管理：Markdown 详情、标签、搜索、zip/脚本附件上传下载、下载计数 |
+| 首页 Bento | 欢迎卡 + 统计数字滚动（Skills/工具/插件/笔记）+ 聚合动态 Feed（筛选 + 分页）+ 贡献者榜 |
+| 资源库 | skill / tool / plugin 统一管理：Markdown 详情、标签、搜索、zip/脚本附件上传下载、下载计数、**点赞**、**SKILL.md 元数据自动提取** |
 | 笔记 | Markdown 编辑、置顶、标签、搜索 |
 | Notes 链接库 | 粘贴 notes:// 链接 / NDL / 富文本 → 解析服务器/数据库/文档 → 点「打开」唤起 Notes 客户端 |
-| AI 对话 | OpenAI 兼容 API、SSE 流式输出、多会话，好回复一键「沉淀为内容卡」进首页 |
-| RSS 资讯 | 设置页管理订阅源，手动刷新抓取（feedparser），条目进动态 Feed |
+| AI 对话 | OpenAI 兼容 API、SSE 流式输出（可**停止生成**）、Markdown 渲染、多会话，好回复一键「沉淀为内容卡」 |
+| AI 每日简报 | 一键抓取 RSS 最新资讯 → AI 生成中文简报 → 沉淀到首页动态 |
+| RSS 资讯 | 设置页管理订阅源，手动刷新抓取（feedparser），条目可**一键存为笔记** |
 | 认证 | Windows 域 SSO（后端进程账号自动登录）+ 手动账密兜底，JWT 鉴权 |
+| 全局 | **深色模式**（顶栏切换）、⌘K 全局搜索（页面/资源/笔记）、Toast/确认弹窗/空状态 |
 
 ## 技术栈
 
@@ -35,6 +37,8 @@ python run.py        # http://localhost:8000，SQLite 自动建表 + 播种默�
 ```
 
 或直接双击 `start-all.bat` 一键启动两端。
+
+**测试**：`cd backend && python -m pytest tests/ -q`（17 个用例，自动使用独立测试库）
 
 **登录**：打开页面自动尝试 Windows 域 SSO（在公司域内电脑本机启动后端即直登）；
 失败时手动登录，内置账号 `administrator` / `eap.engineer` / `cim.user`，初始密码 `cim123456`

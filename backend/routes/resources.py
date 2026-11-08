@@ -18,6 +18,8 @@ from services.skill_meta import extract_from_upload
 router = APIRouter(prefix="/resources", tags=["resources"])
 
 ALLOWED_TYPES = {"skill", "tool", "plugin"}
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
+BLOCKED_EXTS = {".exe", ".msi", ".scr", ".com", ".pif", ".cpl", ".js", ".vbs"}
 
 
 class ResourceIn(BaseModel):
@@ -101,6 +103,15 @@ async def create_resource(
         r.external_url = external_url
         r.source_type = "url"
     if file is not None:
+        # 安全限制：大小 + 可执行扩展名黑名单
+        ext = Path(file.filename or "").suffix.lower()
+        if ext in BLOCKED_EXTS:
+            raise HTTPException(status_code=400, detail=f"不允许上传 {ext} 类文件")
+        file.file.seek(0, 2)
+        size = file.file.tell()
+        file.file.seek(0)
+        if size > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=400, detail="附件超过 20MB 限制")
         r.source_type = "upload"
         r.file_name = file.filename
         if not r.name:
