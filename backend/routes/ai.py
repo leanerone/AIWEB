@@ -12,6 +12,31 @@ from services.ai_service import AiNotConfigured, stream_chat
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
+@router.post("/describe")
+def describe(body: dict, db: Session = Depends(get_db), user: object = Depends(get_current_user)):
+    """AI 生成资源简介：根据名称/类型/补充说明写一句话摘要"""
+    name = (body.get("name") or "").strip()
+    rtype = (body.get("type") or "tool").strip()
+    hints = (body.get("hints") or "").strip()[:500]
+    if not name:
+        raise HTTPException(status_code=400, detail="请先填写资源名称")
+    label = {"skill": "技能包", "tool": "小工具", "plugin": "插件"}.get(rtype, rtype)
+    prompt = (
+        f"我在内网平台上发布一个{label}，名字叫「{name}」。"
+        + (f"补充说明：{hints}。" if hints else "")
+        + "请写一句话中文简介（不超过40字），说明它做什么、给谁用，直接输出简介本身。"
+    )
+    try:
+        text = "".join(stream_chat(db, [{"role": "user", "content": prompt}]))
+    except AiNotConfigured as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI 调用失败：{e}")
+    if not text.strip():
+        raise HTTPException(status_code=502, detail="AI 未返回内容")
+    return {"success": True, "data": {"summary": text.strip()}}
+
+
 @router.post("/briefing")
 def daily_briefing(db: Session = Depends(get_db), user: object = Depends(get_current_user)):
     """把启用的 RSS 源里最新条目交给 AI 生成「今日 AI 简报」，沉淀为内容卡"""

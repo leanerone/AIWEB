@@ -142,6 +142,27 @@ class TestMemoApi:
         assert client.delete(f"/api/memos/{mid}", headers=auth(token)).json()["success"]
 
 
+class TestCommentApi:
+    def test_comment_lifecycle(self, token):
+        rid = client.post("/api/resources", data={"type": "tool", "name": "commented-tool"},
+                          headers=auth(token)).json()["data"]["id"]
+        c = client.post(f"/api/resources/{rid}/comments", json={"content": "很好用"},
+                        headers=auth(token)).json()["data"]
+        assert c["content"] == "很好用"
+        lst = client.get(f"/api/resources/{rid}/comments", headers=auth(token)).json()["data"]
+        assert len(lst) == 1 and lst[0]["created_by"]
+        assert client.delete(f"/api/resources/comments/{c['id']}", headers=auth(token)).json()["success"]
+        assert client.get(f"/api/resources/{rid}/comments", headers=auth(token)).json()["data"] == []
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+    def test_empty_comment_rejected(self, token):
+        rid = client.post("/api/resources", data={"type": "tool", "name": "t2"},
+                          headers=auth(token)).json()["data"]["id"]
+        assert client.post(f"/api/resources/{rid}/comments", json={"content": "  "},
+                           headers=auth(token)).status_code == 400
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+
 class TestSettingsApi:
     def test_put_and_masked(self, token):
         assert client.put("/api/settings", json={"ai_api_key": "sk-secret", "ai_model": "m1"},

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download, FileText, FileUp, Heart, Loader2, Package, Plus, Puzzle, Search, Wrench } from 'lucide-react'
+import { Download, FileText, FileUp, Heart, Loader2, Package, Plus, Puzzle, Search, Sparkles, Wrench } from 'lucide-react'
 import { useState } from 'react'
 import type { MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -170,6 +170,21 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
   const [externalUrl, setExternalUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
+  const [aiBusy, setAiBusy] = useState(false)
+
+  const aiDescribe = async () => {
+    if (!name.trim()) { toast('info', '先填写资源名称，AI 才能写简介'); return }
+    setAiBusy(true)
+    try {
+      const d = await api.post<never, { summary: string }>('/ai/describe', { name, type, hints: content })
+      setSummary(d.summary)
+      toast('success', 'AI 简介已生成，可再手动修改')
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setAiBusy(false)
+    }
+  }
 
   const submit = async () => {
     if (!name.trim()) { toast('info', '请填写资源名称'); return }
@@ -214,7 +229,12 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
             ))}
           </div>
           <input className="input" placeholder="名称，如：excel-batch-tool" value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="input" placeholder="一句话简介" value={summary} onChange={(e) => setSummary(e.target.value)} />
+          <div className="flex gap-2">
+            <input className="input flex-1" placeholder="一句话简介" value={summary} onChange={(e) => setSummary(e.target.value)} />
+            <button className="btn-ghost shrink-0" onClick={aiDescribe} disabled={aiBusy} title="AI 根据名称生成简介">
+              {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} AI 简介
+            </button>
+          </div>
           <textarea className="input min-h-[110px]" placeholder="详细介绍（支持 Markdown）" value={content} onChange={(e) => setContent(e.target.value)} />
           <input className="input" placeholder="标签，逗号分隔：excel,自动化" value={tags} onChange={(e) => setTags(e.target.value)} />
           <input className="input" placeholder="外链地址（可选，如 Git 仓库 / 文档链接）" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />

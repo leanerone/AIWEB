@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, ExternalLink, Heart, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, Heart, Loader2, MessageSquare, Send, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -9,6 +9,8 @@ import { NotesLinkCard } from '../components/NotesLinkCard'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
 import type { Resource } from '../types'
+
+interface CommentItem { id: number; content: string; created_by: string; created_at: string }
 
 const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件' }
 const TYPE_BADGE: Record<string, string> = {
@@ -24,11 +26,36 @@ export function ResourceDetail() {
   const toast = useToast()
   const [r, setR] = useState<Resource | null>(null)
   const [confirmDel, setConfirmDel] = useState(false)
+  const [comments, setComments] = useState<CommentItem[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [sending, setSending] = useState(false)
+
+  const loadComments = (id: number) => {
+    api.get<never, CommentItem[]>(`/resources/${id}/comments`).then(setComments).catch(() => {})
+  }
 
   useEffect(() => {
-    api.get<never, Resource>(`/resources/${id}`).then(setR).catch((e) => toast('error', (e as Error).message))
+    api.get<never, Resource>(`/resources/${id}`).then((d) => {
+      setR(d)
+      loadComments(d.id)
+    }).catch((e) => toast('error', (e as Error).message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  const submitComment = async () => {
+    const content = newComment.trim()
+    if (!content || !r) return
+    setSending(true)
+    try {
+      const c = await api.post<never, CommentItem>(`/resources/${r.id}/comments`, { content })
+      setComments((list) => [...list, c])
+      setNewComment('')
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
 
   const download = () => {
     const token = localStorage.getItem('aiweb_token')
@@ -136,6 +163,43 @@ export function ResourceDetail() {
         <h2 className="mb-3 text-sm font-bold">关联 Notes 链接</h2>
         <p className="mb-3 text-xs text-subtle">该资源相关的 Notes 工作记录，粘贴链接自动解析，点击即可唤起 Notes 客户端</p>
         <NotesLinkCard onSaved={() => toast('success', '链接已入库')} />
+      </BentoCard>
+
+      <BentoCard className="p-5" delay={0.16}>
+        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold">
+          <MessageSquare size={15} className="text-brand-500" /> 讨论 <span className="text-xs text-gray-400">({comments.length})</span>
+        </h2>
+        <div className="space-y-2">
+          {comments.map((c) => (
+            <div key={c.id} className="group flex items-start gap-2.5 rounded-xl bg-gray-50 px-3.5 py-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700">
+                {(c.created_by || 'U').slice(0, 1).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-subtle">
+                  <b className="text-ink">{c.created_by}</b> · {c.created_at}
+                </p>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm leading-6">{c.content}</p>
+              </div>
+              <button className="hidden shrink-0 rounded-lg p-1 text-red-400 hover:bg-red-50 group-hover:block"
+                onClick={async () => {
+                  try {
+                    await api.delete(`/resources/comments/${c.id}`)
+                    setComments((list) => list.filter((x) => x.id !== c.id))
+                  } catch (e) { toast('error', (e as Error).message) }
+                }}><Trash2 size={13} /></button>
+            </div>
+          ))}
+          {comments.length === 0 && <p className="pb-1 text-xs text-gray-400">还没有讨论，说说你的使用心得或问题吧</p>}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input className="input flex-1" placeholder="写下你的评论，回车发送…" value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && submitComment()} />
+          <button className="btn-primary shrink-0" onClick={submitComment} disabled={sending || !newComment.trim()}>
+            {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+          </button>
+        </div>
       </BentoCard>
 
       <ConfirmDialog

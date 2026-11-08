@@ -47,6 +47,17 @@ class Resource(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
 
 
+class ResourceComment(Base):
+    """资源下的讨论/评论"""
+
+    __tablename__ = "resource_comments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    resource_id: Mapped[int] = mapped_column(ForeignKey("resources.id", ondelete="CASCADE"), index=True)
+    content: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class Memo(Base):
     """简单笔记"""
 
