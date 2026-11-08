@@ -64,3 +64,56 @@ body {
 .md-body table { @apply w-full my-3 text-left border-collapse; }
 .md-body th { @apply bg-gray-50 px-3 py-2 border border-gray-200 font-semibold; }
 .md-body td { @apply px-3 py-2 border border-gray-100; }
+
+/* ── 深色模式：语义类覆盖（单一来源，避免散落 dark: 变体）── */
+.dark { color-scheme: dark; }
+.dark body { background: #0e1016; color: #e5e7eb; }
+.dark .bg-base { background: #0e1016; }
+.dark .bg-white { background: #151823; }
+.dark .bg-white\/80 { background: rgba(21, 24, 35, 0.82); }
+.dark .bg-white\/60 { background: rgba(21, 24, 35, 0.6); }
+.dark .bg-white\/85 { background: rgba(21, 24, 35, 0.88); }
+.dark .text-ink { color: #e5e7eb; }
+.dark .text-subtle { color: #9aa3b2; }
+.dark .text-gray-700, .dark .text-gray-600, .dark .text-gray-500 { color: #b6bcc9; }
+.dark .text-gray-400, .dark .text-gray-300 { color: #6b7280; }
+.dark .border-gray-100 { border-color: #232733; }
+.dark .border-gray-200 { border-color: #2a2f3d; }
+.dark .border-gray-50 { border-color: #1c202c; }
+.dark .border-dashed.border-gray-200, .dark .border-dashed.border-gray-300 { border-color: #2f3545; }
+.dark .bg-gray-50 { background: #1a1e2a; }
+.dark .bg-gray-100 { background: #232838; }
+.dark .hover\:bg-gray-50:hover { background: #1c2130; }
+.dark .hover\:bg-gray-100:hover { background: #262c3d; }
+.dark .shadow-bento { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -10px rgba(0, 0, 0, 0.5); }
+.dark .shadow-bentoHover { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 44px -12px rgba(99, 102, 241, 0.35); }
+.dark .shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+.dark .chip.bg-gray-100 { background: #232838; color: #9aa3b2; }
+.dark .input { background: #151823; border-color: #2a2f3d; color: #e5e7eb; }
+.dark .input:focus { border-color: #6366f1; }
+.dark .btn-ghost { background: #151823; color: #e5e7eb; border-color: #2a2f3d; }
+.dark .btn-ghost:hover { border-color: #6366f1; color: #a5b4fc; }
+.dark .btn-danger { background: rgba(239, 68, 68, 0.12); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
+.dark .bg-brand-50 { background: rgba(99, 102, 241, 0.12); }
+.dark .bg-brand-100 { background: rgba(99, 102, 241, 0.2); color: #c7d2fe; }
+.dark .bg-emerald-50 { background: rgba(16, 185, 129, 0.12); }
+.dark .bg-emerald-100 { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
+.dark .bg-amber-50 { background: rgba(245, 158, 11, 0.12); }
+.dark .bg-amber-100 { background: rgba(245, 158, 11, 0.18); color: #fcd34d; }
+.dark .bg-sky-50 { background: rgba(14, 165, 233, 0.12); }
+.dark .bg-sky-100 { background: rgba(14, 165, 233, 0.18); color: #7dd3fc; }
+.dark .bg-violet-100 { background: rgba(139, 92, 246, 0.18); color: #c4b5fd; }
+.dark .bg-red-50 { background: rgba(239, 68, 68, 0.12); }
+.dark .bg-brand-200\/40 { background: rgba(99, 102, 241, 0.1); }
+.dark .bg-violet-300\/30 { background: rgba(139, 92, 246, 0.1); }
+.dark .bg-brand-100\/70 { background: rgba(99, 102, 241, 0.08); }
+.dark .bg-violet-200\/40 { background: rgba(139, 92, 246, 0.08); }
+.dark .dark\:bg-dark-card { background: #1c2130; }
+/* markdown 深色 */
+.dark .md-body { color: #c3c9d4; }
+.dark .md-body h1, .dark .md-body h2, .dark .md-body h3 { color: #e5e7eb; }
+.dark .md-body code { background: #232838; color: #a5b4fc; }
+.dark .md-body pre { background: #0a0c12; }
+.dark .md-body th { background: #1a1e2a; border-color: #2a2f3d; }
+.dark .md-body td { border-color: #232733; }
+.dark .md-body blockquote { color: #9aa3b2; border-color: #3f3f8a; }

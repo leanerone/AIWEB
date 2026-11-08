@@ -10,5 +10,17 @@ export default defineConfig({
       '/uploads': { target: 'http://localhost:8000', changeOrigin: true },
     },
   },
-  build: { outDir: 'dist', sourcemap: false },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          motion: ['framer-motion'],
+          md: ['react-markdown', 'remark-gfm'],
+        },
+      },
+    },
+  },
 })

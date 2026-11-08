@@ -1,7 +1,8 @@
-import { Loader2, Plus, Send, Sparkles, Trash2 } from 'lucide-react'
+import { Copy, Loader2, Plus, Send, Sparkles, Square, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
 import { BentoCard } from '../components/BentoCard'
+import { MarkdownView } from '../components/MarkdownView'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import type { ChatMsg, ChatSessionItem } from '../types'
@@ -14,6 +15,7 @@ export function Chat() {
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const loadSessions = () => api.get<never, ChatSessionItem[]>('/chat/sessions').then(setSessions).catch(() => {})
   useEffect(() => { loadSessions() }, [])
@@ -36,6 +38,8 @@ export function Chat() {
     setInput('')
     setStreaming(true)
     setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
+    const controller = new AbortController()
+    abortRef.current = controller
 
     try {
       const token = localStorage.getItem('aiweb_token')
@@ -43,6 +47,7 @@ export function Chat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ session_id: sessionId, message: text }),
+        signal: controller.signal,
       })
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({}))
@@ -90,10 +95,19 @@ export function Chat() {
         }
       }
     } catch (e) {
-      toast('error', (e as Error).message)
+      // 主动停止不算错误
+      if ((e as Error).name !== 'AbortError') toast('error', (e as Error).message)
     } finally {
       setStreaming(false)
+      abortRef.current = null
     }
+  }
+
+  const stop = () => abortRef.current?.abort()
+
+  const copyMsg = async (text: string) => {
+    await navigator.clipboard.writeText(text)
+    toast('success', '已复制')
   }
 
   const saveCard = async (content: string) => {
@@ -146,24 +160,36 @@ export function Chat() {
               hint="配置好 AI Key 后即可流式对话；好回复可一键沉淀为首页内容卡"
               action={<button className="btn-ghost" onClick={() => (location.href = '/settings')}>去配置 AI</button>} />
           )}
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap ${
-                m.role === 'user'
-                  ? 'text-white shadow-bento' + ' [background-image:var(--brand-grad)]'
-                  : 'bg-gray-50 text-ink'
-              }`}>
-                {m.content || (streaming && i === messages.length - 1 ? <Loader2 size={14} className="animate-spin inline" /> : '')}
-                {m.role === 'assistant' && !streaming && m.content && !m.content.startsWith('⚠️') && (
-                  <div className="mt-2 border-t border-gray-200/70 pt-2 text-right">
-                    <button className="text-[11px] text-brand-600 hover:underline" onClick={() => saveCard(m.content)}>
-                      ✦ 沉淀为内容卡
-                    </button>
-                  </div>
-                )}
+          {messages.map((m, i) => {
+            const isLast = i === messages.length - 1
+            const inProgress = m.role === 'assistant' && isLast && streaming
+            return (
+              <div key={i} className={`group flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-6 ${
+                  m.role === 'user'
+                    ? 'text-white shadow-bento [background-image:var(--brand-grad)]'
+                    : 'bg-gray-50 text-ink dark:bg-dark-card'
+                }`}>
+                  {m.role === 'assistant'
+                    ? (inProgress
+                        ? (m.content || <Loader2 size={14} className="animate-spin inline" />)
+                        : <MarkdownView text={m.content} />)
+                    : m.content}
+                  {m.role === 'assistant' && !streaming && m.content && !m.content.startsWith('⚠️') && (
+                    <div className="mt-2 flex justify-end gap-3 border-t border-gray-200/70 pt-2">
+                      <button className="flex items-center gap-1 text-[11px] text-subtle hover:text-brand-600"
+                        onClick={() => copyMsg(m.content)}>
+                        <Copy size={11} /> 复制
+                      </button>
+                      <button className="text-[11px] text-brand-600 hover:underline" onClick={() => saveCard(m.content)}>
+                        ✦ 沉淀为内容卡
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           <div ref={bottomRef} />
         </div>
 
@@ -178,8 +204,12 @@ export function Chat() {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
               }}
             />
-            <button className="btn-primary self-end" onClick={send} disabled={streaming || !input.trim()}>
-              {streaming ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            <button
+              className={streaming ? 'btn self-end bg-red-50 text-red-500 border border-red-100' : 'btn-primary self-end'}
+              onClick={streaming ? stop : send}
+              disabled={!streaming && !input.trim()}
+            >
+              {streaming ? <><Square size={14} /> 停止</> : <Send size={16} />}
             </button>
           </div>
         </div>

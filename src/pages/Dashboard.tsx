@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowUpRight, Bot, FileText, Newspaper, Package, Puzzle, Sparkles, StickyNote, Wrench } from 'lucide-react'
+import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Sparkles, StickyNote, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
@@ -21,11 +21,20 @@ export function Dashboard() {
   const user = useAuth((s) => s.user)
   const [stats, setStats] = useState<Stats | null>(null)
   const [feed, setFeed] = useState<FeedItem[]>([])
+  const [kind, setKind] = useState('')
+  const [limit, setLimit] = useState(25)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   useEffect(() => {
     api.get<never, Stats>('/hub/stats').then(setStats).catch(() => {})
-    api.get<never, FeedItem[]>('/hub/feed?limit=25').then(setFeed).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    setLoadingMore(true)
+    api.get<never, FeedItem[]>(`/hub/feed?limit=${limit}`).then(setFeed).catch(() => {}).finally(() => setLoadingMore(false))
+  }, [limit])
+
+  const filtered = kind ? feed.filter((f) => f.kind === kind) : feed
 
   const hour = new Date().getHours()
   const greeting = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
@@ -70,13 +79,29 @@ export function Dashboard() {
               查看资源库 <ArrowUpRight size={13} />
             </Link>
           </div>
+          <div className="flex flex-wrap gap-1.5 px-5 pt-3">
+            {[
+              { key: '', label: '全部' },
+              { key: 'ai', label: 'AI 内容' },
+              { key: 'resource', label: '资源' },
+              { key: 'note', label: '笔记' },
+              { key: 'rss', label: '资讯' },
+            ].map((t) => (
+              <button key={t.key} onClick={() => setKind(t.key)}
+                className={`chip border transition ${
+                  kind === t.key ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-subtle hover:border-brand-300'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
           <div className="space-y-1 p-3">
-            {feed.length === 0 && (
+            {filtered.length === 0 && (
               <EmptyState icon={Sparkles} title="还没有动态"
                 hint="上传第一个资源、写一篇笔记或让 AI 生成内容，这里就会热闹起来"
                 action={<Link to="/resources" className="btn-primary">去上传资源</Link>} />
             )}
-            {feed.map((f, i) => {
+            {filtered.map((f, i) => {
               const meta = KIND_META[f.kind] ?? KIND_META.announcement
               const href =
                 f.kind === 'resource' ? `/resources/${f.id}`
@@ -102,6 +127,14 @@ export function Dashboard() {
                 <div key={`${f.kind}-${f.id}-${i}`}>{body}</div>
               )
             })}
+            {feed.length >= limit && (
+              <div className="pt-2 text-center">
+                <button className="btn-ghost" disabled={loadingMore}
+                  onClick={() => setLimit((l) => l + 25)}>
+                  {loadingMore ? <Loader2 size={14} className="animate-spin" /> : null} 加载更多
+                </button>
+              </div>
+            )}
           </div>
         </BentoCard>
 

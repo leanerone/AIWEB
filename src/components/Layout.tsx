@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
-import { Bot, BookOpen, LayoutGrid, LogOut, Notebook, Search, Settings as SettingsIcon, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { Bot, BookOpen, LayoutGrid, LogOut, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../stores/auth'
 import { CommandPalette } from './CommandPalette'
@@ -17,6 +17,12 @@ export function Layout() {
   const { user, clear } = useAuth()
   const nav = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [dark, setDark] = useState(() => localStorage.getItem('aiweb_theme') === 'dark')
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    localStorage.setItem('aiweb_theme', dark ? 'dark' : 'light')
+  }, [dark])
 
   const logout = () => {
     clear()
@@ -69,6 +75,14 @@ export function Layout() {
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
           >
             <Search size={13} /> 搜索 <kbd className="rounded bg-gray-100 px-1 text-[10px]">Ctrl K</kbd>
+          </button>
+
+          <button
+            className="rounded-xl border border-gray-100 bg-white p-2 text-subtle shadow-sm transition hover:border-brand-200 hover:text-brand-600"
+            title={dark ? '切换到明亮模式' : '切换到深色模式'}
+            onClick={() => setDark((v) => !v)}
+          >
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
           <div className="relative">
