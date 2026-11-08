@@ -41,25 +41,27 @@ const TABS = [
   { key: 'plugin', label: '插件', icon: Puzzle },
 ]
 
-const TYPE_BADGE: Record<string, string> = {
-  skill: 'bg-brand-100 text-brand-700',
-  tool: 'bg-emerald-100 text-emerald-700',
-  plugin: 'bg-amber-100 text-amber-700',
-}
 const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件' }
+const TYPE_GRAD: Record<string, string> = {
+  skill: 'from-brand-500 to-violet-600',
+  tool: 'from-emerald-500 to-teal-600',
+  plugin: 'from-amber-500 to-orange-600',
+}
+const TYPE_ICON: Record<string, typeof Package> = { skill: FileText, tool: Wrench, plugin: Puzzle }
 
 export function Resources() {
   const [params, setParams] = useSearchParams()
   const type = params.get('type') ?? ''
   const me = useAuth((s) => s.user)
   const [showForm, setShowForm] = useState(false)
+  const [order, setOrder] = useState('new')
   const [likedMap, setLikedMap] = useState<Record<number, Pick<Resource, 'likes' | 'liked_by_me'>>>({})
 
   const { keyword, setKeyword, items, loading, reload } = useList<Resource>(
     (p) => api.get<never, { total: number; items: Resource[] }>(
-      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&page=${p.page}&limit=60`,
+      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&order=${order}&page=${p.page}&limit=60`,
     ),
-    [type],
+    [type, order],
     60,
   )
 
@@ -74,6 +76,12 @@ export function Resources() {
           <input className="input w-60 pl-9" placeholder="搜索资源…" value={keyword}
             onChange={(e) => setKeyword(e.target.value)} />
         </div>
+        <select className="input w-28 cursor-pointer" value={order} onChange={(e) => setOrder(e.target.value)}>
+          <option value="new">最新</option>
+          <option value="likes">最多点赞</option>
+          <option value="downloads">最多下载</option>
+          <option value="views">最多浏览</option>
+        </select>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus size={16} /> 上传资源
         </button>
@@ -104,27 +112,30 @@ export function Resources() {
           {items.map((r0, i) => {
             const r = { ...r0, ...(likedMap[r0.id] ?? {}) }
             return (
-            <BentoCard key={r.id} delay={Math.min(i * 0.04, 0.5)} className="p-5">
+            <BentoCard key={r.id} delay={Math.min(i * 0.04, 0.5)} className="overflow-hidden">
               <Link to={`/resources/${r.id}`} className="block">
-                <div className="flex items-start justify-between">
-                  <span className={`chip ${TYPE_BADGE[r.type]}`}>{TYPE_LABEL[r.type]}</span>
-                  <span className="text-[11px] text-gray-400">{r.created_at}</span>
+                <div className={`flex h-20 items-center justify-between bg-gradient-to-br px-5 ${TYPE_GRAD[r.type] ?? TYPE_GRAD.skill}`}>
+                  {(() => { const Icon = TYPE_ICON[r.type] ?? Package; return <Icon size={26} className="text-white/90" /> })()}
+                  <span className="chip bg-white/20 text-white">{TYPE_LABEL[r.type]}</span>
                 </div>
-                <h3 className="mt-2.5 truncate text-sm font-bold text-ink">{r.name}</h3>
-                <p className="mt-1 line-clamp-2 min-h-[2rem] text-xs leading-5 text-subtle">
-                  {r.summary || r.content.slice(0, 80) || '（无描述）'}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {r.tags.slice(0, 4).map((t) => (
-                    <span key={t} className="chip bg-gray-100 text-gray-600">#{t}</span>
-                  ))}
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3 text-[11px] text-gray-400">
-                  <span>{r.created_by}</span>
-                  <span className="flex items-center gap-2">
+                <div className="p-5">
+                  <div className="flex items-center justify-between text-[11px] text-gray-400">
+                    <span>{r.created_by}</span>
+                    <span>{r.created_at}</span>
+                  </div>
+                  <h3 className="mt-2 truncate text-sm font-bold text-ink">{r.name}</h3>
+                  <p className="mt-1 line-clamp-2 min-h-[2rem] text-xs leading-5 text-subtle">
+                    {r.summary || r.content.slice(0, 80) || '（无描述）'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {r.tags.slice(0, 4).map((t) => (
+                      <span key={t} className="chip bg-gray-100 text-gray-600">#{t}</span>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3 text-[11px] text-gray-400">
                     <span className="flex items-center gap-1"><Download size={12} /> {r.downloads}</span>
                     <LikeButton resource={r} onToggle={applyLike} />
-                  </span>
+                  </div>
                 </div>
               </Link>
             </BentoCard>

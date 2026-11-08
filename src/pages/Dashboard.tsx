@@ -8,6 +8,7 @@ import { BentoCard } from '../components/BentoCard'
 import { StatCard } from '../components/StatCard'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
+import { timeAgo } from '../utils/time'
 import type { Contributor, FeedItem, Stats } from '../types'
 
 const KIND_META: Record<string, { label: string; cls: string }> = {
@@ -136,7 +137,9 @@ export function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{f.title}</p>
                     <p className="truncate text-xs text-subtle">{f.summary}</p>
-                    <p className="mt-0.5 text-[11px] text-gray-400">{f.created_by} · {f.created_at}</p>
+                    <p className="mt-0.5 text-[11px] text-gray-400">
+                      {f.created_by} · <span title={f.created_at}>{timeAgo(f.created_at)}</span>
+                    </p>
                   </div>
                 </motion.div>
               )

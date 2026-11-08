@@ -38,6 +38,7 @@ def list_resources(
     keyword: str = "",
     type: str = "",
     tag: str = "",
+    order: str = "new",
     page: int = 1,
     limit: int = 20,
     db: Session = Depends(get_db),
@@ -53,8 +54,14 @@ def list_resources(
     if tag:
         query = query.filter(Resource.tags.contains(tag))
     total = query.count()
+    order_map = {
+        "new": Resource.created_at.desc(),
+        "downloads": Resource.downloads.desc(),
+        "likes": Resource.likes.desc(),
+        "views": Resource.views.desc(),
+    }
     items = (
-        query.order_by(Resource.created_at.desc())
+        query.order_by(order_map.get(order, order_map["new"]))
         .offset((page - 1) * limit)
         .limit(limit)
         .all()

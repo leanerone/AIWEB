@@ -5,6 +5,7 @@ import { useList } from '../hooks/useList'
 import { BentoCard } from '../components/BentoCard'
 import { MarkdownView } from '../components/MarkdownView'
 import { NotesLinkCard } from '../components/NotesLinkCard'
+import { NotesInlineLinks } from '../components/NotesInlineLinks'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
@@ -124,6 +125,7 @@ export function Memos() {
           </div>
           <textarea className="input min-h-[180px] font-mono text-[13px]" placeholder="正文，支持 Markdown…"
             value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+          <NotesInlineLinks text={form.content} />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input className="input w-64" placeholder="标签，逗号分隔" value={form.tags}
               onChange={(e) => setForm({ ...form, tags: e.target.value })} />
@@ -169,6 +171,7 @@ export function Memos() {
               </div>
               <div className="mt-2 max-h-40 overflow-hidden">
                 <MarkdownView text={m.content.slice(0, 300)} />
+                <NotesInlineLinks text={m.content} />
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-gray-50 pt-3">
                 {m.tags.map((t) => <span key={t} className="chip bg-gray-100 text-gray-600">#{t}</span>)}

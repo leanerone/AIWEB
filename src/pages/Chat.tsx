@@ -32,8 +32,8 @@ export function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const send = async () => {
-    const text = input.trim()
+  const send = async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim()
     if (!text || streaming) return
     setInput('')
     setStreaming(true)
@@ -156,9 +156,17 @@ export function Chat() {
       <BentoCard className="flex min-h-[70vh] flex-col p-0" delay={0.06}>
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           {messages.length === 0 && (
-            <EmptyState icon={Sparkles} title="开始与 AI 对话"
-              hint="配置好 AI Key 后即可流式对话；好回复可一键沉淀为首页内容卡"
-              action={<button className="btn-ghost" onClick={() => (location.href = '/settings')}>去配置 AI</button>} />
+            <>
+              <EmptyState icon={Sparkles} title="开始与 AI 对话"
+                hint="配置好 AI Key 后即可流式对话；好回复可一键沉淀为首页内容卡"
+                action={<button className="btn-ghost" onClick={() => (location.href = '/settings')}>去配置 AI</button>} />
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                {['用大白话解释 EAP 是什么', '帮我写一份周报模板', '机台通信超时怎么排查？', '总结今天的 AI 资讯要点'].map((p) => (
+                  <button key={p} className="chip border border-gray-200 bg-white text-subtle transition hover:border-brand-300 hover:text-brand-600"
+                    onClick={() => send(p)}>{p}</button>
+                ))}
+              </div>
+            </>
           )}
           {messages.map((m, i) => {
             const isLast = i === messages.length - 1
