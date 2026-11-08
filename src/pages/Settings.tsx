@@ -1,4 +1,4 @@
-import { BookmarkPlus, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2, UserPlus, Users } from 'lucide-react'
+import { BookmarkPlus, DatabaseBackup, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
@@ -75,6 +75,27 @@ function MemberAdmin() {
         </div>
         <button className="btn-primary w-full" onClick={create} disabled={busy}>
           {busy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} 创建成员
+        </button>
+        <button
+          className="btn-ghost w-full"
+          onClick={() => {
+            const token = localStorage.getItem('aiweb_token')
+            fetch('/api/admin/backup', { headers: { Authorization: `Bearer ${token}` } })
+              .then(async (r) => {
+                if (!r.ok) throw new Error('备份下载失败')
+                const blob = await r.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = 'aiweb-backup.sqlite'
+                a.click()
+                URL.revokeObjectURL(url)
+                toast('success', '备份已下载')
+              })
+              .catch((e) => toast('error', e.message))
+          }}
+        >
+          <DatabaseBackup size={15} /> 下载数据备份（SQLite）
         </button>
       </div>
     </BentoCard>

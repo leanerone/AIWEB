@@ -1,10 +1,11 @@
-import { Copy, Loader2, Plus, Send, Sparkles, Square, Trash2 } from 'lucide-react'
+import { Copy, FileDown, Loader2, Plus, Send, Sparkles, Square, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
 import { BentoCard } from '../components/BentoCard'
 import { MarkdownView } from '../components/MarkdownView'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
+import { downloadText } from '../utils/time'
 import type { ChatMsg, ChatSessionItem } from '../types'
 
 export function Chat() {
@@ -154,6 +155,20 @@ export function Chat() {
 
       {/* 对话区 */}
       <BentoCard className="flex min-h-[70vh] flex-col p-0" delay={0.06}>
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+          <span className="text-xs text-subtle">
+            {sessionId ? `会话 #${sessionId}` : '新对话'}
+          </span>
+          {messages.length > 0 && (
+            <button className="flex items-center gap-1 text-xs text-subtle hover:text-brand-600"
+              onClick={() => downloadText(
+                `aihub-对话-${sessionId ?? 'draft'}.md`,
+                messages.map((m) => `## ${m.role === 'user' ? '🙋 我' : '🤖 AI'}\n\n${m.content}`).join('\n\n---\n\n'),
+              )}>
+              <FileDown size={13} /> 导出对话
+            </button>
+          )}
+        </div>
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           {messages.length === 0 && (
             <>

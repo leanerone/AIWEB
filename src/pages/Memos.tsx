@@ -1,7 +1,8 @@
-import { ExternalLink, Layers, Loader2, Notebook, Pencil, Pin, PinOff, Plus, Save, Trash2, X } from 'lucide-react'
+import { ExternalLink, FileDown, Layers, Loader2, Notebook, Pencil, Pin, PinOff, Plus, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useList } from '../hooks/useList'
+import { downloadText } from '../utils/time'
 import { BentoCard } from '../components/BentoCard'
 import { MarkdownView } from '../components/MarkdownView'
 import { NotesLinkCard } from '../components/NotesLinkCard'
@@ -163,6 +164,14 @@ export function Memos() {
                   {m.title}
                 </h3>
                 <div className="flex shrink-0 gap-1">
+                  <button title="导出 Markdown"
+                    className="rounded-lg p-1.5 text-subtle hover:bg-gray-100 hover:text-brand-600"
+                    onClick={() => downloadText(
+                      `${m.title.replace(/[\\/:*?"<>|]/g, '_')}.md`,
+                      `---\ntitle: ${m.title}\ntags: [${m.tags.join(', ')}]\ncreated: ${m.created_at}\n---\n\n${m.content}\n`,
+                    )}>
+                    <FileDown size={14} />
+                  </button>
                   <button title={m.pinned ? '取消置顶' : '置顶'}
                     className={`rounded-lg p-1.5 ${m.pinned ? 'text-amber-500' : 'text-subtle hover:bg-gray-100 hover:text-amber-600'}`}
                     onClick={() => togglePin(m)}>

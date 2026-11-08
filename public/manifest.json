@@ -1,0 +1,17 @@
+{
+  "name": "AI Hub · AI 分享平台",
+  "short_name": "AI Hub",
+  "description": "公司内网 AI 分享平台：Skills / 工具 / 插件 / 笔记 / AI 对话 / 资讯",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

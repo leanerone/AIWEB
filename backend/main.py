@@ -24,11 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routes import ai, auth, chat, feed, memos, notes, resources, rss, settings as settings_routes  # noqa: E402
+from routes import (ai, admin, auth, chat, feed, memos, notes, resources, rss,
+                    settings as settings_routes)  # noqa: E402
 
 API = "/api"
 app.include_router(auth.router, prefix=API)
 app.include_router(ai.router, prefix=API)
+app.include_router(admin.router, prefix=API)
 app.include_router(resources.router, prefix=API)
 app.include_router(memos.router, prefix=API)
 app.include_router(notes.router, prefix=API)
@@ -53,6 +55,8 @@ def startup():
     finally:
         db.close()
     logging.getLogger("aiweb").info("数据库就绪，默认账号已播种")
+    from services.scheduler import start_scheduler
+    start_scheduler()
 
 
 # 生产模式：托管前端构建产物（backend/dist）

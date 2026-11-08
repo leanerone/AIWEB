@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, ExternalLink, Heart, Loader2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, Heart, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -58,7 +58,25 @@ export function ResourceDetail() {
   }
 
   if (!r) {
-    return <div className="flex justify-center py-24"><Loader2 className="animate-spin text-brand-400" size={28} /></div>
+    return (
+      <div className="space-y-4" data-testid="detail-skeleton">
+        <div className="h-5 w-28 animate-pulse rounded-lg bg-gray-200/70" />
+        <div className="rounded-bento border border-gray-100 bg-white p-6 shadow-bento">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200/70" />
+            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200/70" />
+          </div>
+          <div className="mt-3 h-7 w-2/3 animate-pulse rounded-lg bg-gray-200/70" />
+          <div className="mt-2 h-4 w-1/2 animate-pulse rounded bg-gray-100" />
+          <div className="mt-4 h-3 w-40 animate-pulse rounded bg-gray-100" />
+        </div>
+        <div className="rounded-bento border border-gray-100 bg-white p-6 shadow-bento">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="mb-3 h-4 animate-pulse rounded bg-gray-100" style={{ width: `${90 - i * 15}%` }} />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (

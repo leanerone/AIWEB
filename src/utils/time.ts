@@ -13,3 +13,14 @@ export function timeAgo(dateStr: string): string {
   if (day < 7) return `${day}天前`
   return dateStr.slice(0, 10)
 }
+
+/** 下载文本文件 */
+export function downloadText(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
