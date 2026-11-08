@@ -1,5 +1,5 @@
 import { ExternalLink, FileDown, Layers, Loader2, Notebook, Pencil, Pin, PinOff, Plus, Save, Trash2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
 import { useList } from '../hooks/useList'
 import { downloadText } from '../utils/time'
@@ -24,6 +24,30 @@ export function Memos() {
   const [batchOpen, setBatchOpen] = useState(false)
   const [batchText, setBatchText] = useState('')
   const [batchBusy, setBatchBusy] = useState(false)
+  const contentRef = useRef<HTMLTextAreaElement>(null)
+
+  /** 在光标选区处包裹 Markdown 语法 */
+  const wrapSel = (before: string, after = before, placeholder = '') => {
+    if (!form || !contentRef.current) return
+    const ta = contentRef.current
+    const { selectionStart: s, selectionEnd: e, value } = ta
+    const sel = value.slice(s, e) || placeholder
+    const next = value.slice(0, s) + before + sel + after + value.slice(e)
+    setForm({ ...form, content: next })
+    requestAnimationFrame(() => {
+      ta.focus()
+      ta.setSelectionRange(s + before.length, s + before.length + sel.length)
+    })
+  }
+  const linePrefix = (prefix: string) => {
+    if (!form || !contentRef.current) return
+    const ta = contentRef.current
+    const { selectionStart: s, value } = ta
+    const lineStart = value.lastIndexOf('\n', s - 1) + 1
+    const next = value.slice(0, lineStart) + prefix + value.slice(lineStart)
+    setForm({ ...form, content: next })
+    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(s + prefix.length, s + prefix.length) })
+  }
 
   const { keyword, setKeyword, items, loading, reload } = useList<Memo>(
     (p) => api.get<never, { total: number; items: Memo[] }>(
@@ -132,7 +156,21 @@ export function Memos() {
               {form.pinned ? <Pin size={15} /> : <PinOff size={15} />}
             </button>
           </div>
-          <textarea className="input min-h-[180px] font-mono text-[13px]" placeholder="正文，支持 Markdown…"
+          <div className="mb-2 flex flex-wrap items-center gap-1">
+            {[
+              { label: 'B', title: '粗体', act: () => wrapSel('**', '**', '粗体'), cls: 'font-bold' },
+              { label: 'I', title: '斜体', act: () => wrapSel('*', '*', '斜体'), cls: 'italic' },
+              { label: '</>', title: '行内代码', act: () => wrapSel('`', '`', 'code'), cls: 'font-mono text-[11px]' },
+              { label: 'H2', title: '标题', act: () => linePrefix('## '), cls: 'font-semibold text-[11px]' },
+              { label: '•', title: '列表', act: () => linePrefix('- '), cls: '' },
+              { label: '🔗', title: '链接', act: () => wrapSel('[', '](https://)', '链接文字'), cls: '' },
+            ].map((b) => (
+              <button key={b.title} title={b.title} type="button"
+                className={`h-7 min-w-7 rounded-lg border border-gray-200 px-1.5 text-xs text-subtle transition hover:border-brand-300 hover:text-brand-600 ${b.cls}`}
+                onClick={b.act}>{b.label}</button>
+            ))}
+          </div>
+          <textarea ref={contentRef} className="input min-h-[180px] font-mono text-[13px]" placeholder="正文，支持 Markdown…"
             value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
           <NotesInlineLinks text={form.content} />
           <div className="mt-3 flex flex-wrap items-center gap-2">

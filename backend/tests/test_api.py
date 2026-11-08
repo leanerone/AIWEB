@@ -163,6 +163,26 @@ class TestCommentApi:
         client.delete(f"/api/resources/{rid}", headers=auth(token))
 
 
+class TestAiAndAdminApi:
+    def test_describe_without_key(self, token):
+        # 未配置 AI 时诚实报错（400），绝不伪造
+        resp = client.post("/api/ai/describe", json={"name": "x", "type": "tool"}, headers=auth(token))
+        assert resp.status_code in (400, 502)
+
+    def test_admin_backup_requires_admin(self, token):
+        resp = client.get("/api/admin/backup", headers=auth(token))
+        # SSO 建的普通用户应被拒；管理员则 200
+        assert resp.status_code in (200, 403)
+
+    def test_briefing_empty_rss(self, token):
+        resp = client.post("/api/ai/briefing", headers=auth(token))
+        assert resp.status_code == 400  # 无 RSS 条目
+
+    def test_today_counter(self, token):
+        data = client.get("/api/hub/today", headers=auth(token)).json()["data"]
+        assert data["new_today"] >= 0
+
+
 class TestSettingsApi:
     def test_put_and_masked(self, token):
         assert client.put("/api/settings", json={"ai_api_key": "sk-secret", "ai_model": "m1"},

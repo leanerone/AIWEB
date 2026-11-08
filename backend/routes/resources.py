@@ -186,7 +186,7 @@ def like_resource(resource_id: int, db: Session = Depends(get_db),
 
 @router.put("/{resource_id}")
 def update_resource(resource_id: int, body: ResourceIn,
-                    db: Session = Depends(get_db), _: object = Depends(get_current_user)):
+                    db: Session = Depends(get_db), user: object = Depends(get_current_user)):
     r = db.query(Resource).get(resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
@@ -202,7 +202,7 @@ def update_resource(resource_id: int, body: ResourceIn,
         if r.source_type != "upload":
             r.source_type = "url"
     db.commit()
-    return {"success": True, "data": _serialize(r)}
+    return {"success": True, "data": _serialize(r, user.username)}
 
 
 @router.delete("/{resource_id}")
