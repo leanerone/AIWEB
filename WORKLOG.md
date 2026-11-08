@@ -90,3 +90,7 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 内容卡删除：DELETE /api/hub/cards/{id}，创建者或管理员；Feed 弹窗内删除按钮
 - 权限测试：非创建者 403 / 管理员 200
 - pytest 27 用例全过
+
+### 2026-11-09 00:41-00:42 · 心跳轮 3（已推送）
+- Chat 会话重命名：PUT /chat/sessions/{id} + 会话列表行内编辑（Enter 确认 / Esc 取消）
+- pytest 27 用例全过
