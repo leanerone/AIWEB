@@ -228,6 +228,36 @@ export function Dashboard() {
             </div>
           </BentoCard>
 
+          <BentoCard delay={0.31}>
+            <div className="p-5">
+              <h3 className="text-sm font-bold">近 7 天活跃</h3>
+              <div className="mt-3 flex h-20 items-end gap-1.5">
+                {(() => {
+                  const days: { label: string; count: number }[] = []
+                  for (let i = 6; i >= 0; i--) {
+                    const d = new Date(Date.now() - i * 86400000)
+                    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                    const count = feed.filter((f) => f.created_at.startsWith(key)).length
+                    days.push({ label: key, count })
+                  }
+                  const max = Math.max(1, ...days.map((d) => d.count))
+                  return days.map((d) => (
+                    <div key={d.label} className="flex flex-1 flex-col items-center gap-1" title={`${d.label}: ${d.count} 条`}>
+                      <div className="flex w-full flex-1 items-end">
+                        <div className="w-full rounded-t-md transition-all" style={{
+                          height: `${Math.max(6, (d.count / max) * 100)}%`,
+                          backgroundImage: d.count ? 'var(--brand-grad)' : undefined,
+                          backgroundColor: d.count ? undefined : 'rgba(107,114,128,.25)',
+                        }} />
+                      </div>
+                      <span className="text-[9px] text-gray-400">{d.label.slice(-2)}</span>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </div>
+          </BentoCard>
+
           <BentoCard delay={0.34}>
             <div className="p-5">
               <h3 className="text-sm font-bold">平台统计</h3>

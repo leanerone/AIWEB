@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { BookOpen, CornerDownLeft, Notebook, Search, Sparkles } from 'lucide-react'
+import { BookOpen, CornerDownLeft, Mail, Notebook, Search, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
-import type { Memo, Resource } from '../types'
+import type { Memo, NoteLinkItem, Resource } from '../types'
 
 const PAGES = [
   { label: '首页', to: '/' },
@@ -13,7 +13,7 @@ const PAGES = [
   { label: '设置', to: '/settings' },
 ]
 
-interface Hit { kind: 'page' | 'resource' | 'memo'; label: string; sub: string; to: string }
+interface Hit { kind: 'page' | 'resource' | 'memo' | 'noteslink'; label: string; sub: string; to: string }
 
 /** ⌘K / Ctrl+K 全局命令面板：搜页面 / 资源 / 笔记 */
 export function CommandPalette() {
@@ -48,9 +48,10 @@ export function CommandPalette() {
     const t = setTimeout(async () => {
       const pages: Hit[] = PAGES.filter((p) => p.label.toLowerCase().includes(kw))
         .map((p) => ({ kind: 'page', label: p.label, sub: '页面', to: p.to }))
-      const [res, memos] = await Promise.all([
+      const [res, memos, links] = await Promise.all([
         api.get<never, { items: Resource[] }>(`/resources?keyword=${encodeURIComponent(kw)}&limit=6`).catch(() => ({ items: [] })),
         api.get<never, { items: Memo[] }>(`/memos?keyword=${encodeURIComponent(kw)}&limit=6`).catch(() => ({ items: [] })),
+        api.get<never, { items: NoteLinkItem[] }>(`/notes/links?keyword=${encodeURIComponent(kw)}&limit=6`).catch(() => ({ items: [] })),
       ])
       if (cancelled) return
       const resHits: Hit[] = res.items.map((r) => ({
@@ -59,7 +60,10 @@ export function CommandPalette() {
       const memoHits: Hit[] = memos.items.map((m) => ({
         kind: 'memo', label: m.title, sub: `笔记 · ${m.created_by}`, to: '/memos',
       }))
-      setHits([...pages, ...resHits, ...memoHits])
+      const linkHits: Hit[] = links.items.map((l) => ({
+        kind: 'noteslink', label: l.title || l.document || l.url, sub: 'Notes 链接', to: '/memos',
+      }))
+      setHits([...pages, ...resHits, ...memoHits, ...linkHits])
       setCursor(0)
     }, 200)
     return () => { cancelled = true; clearTimeout(t) }
@@ -70,6 +74,7 @@ export function CommandPalette() {
   const iconFor = (kind: Hit['kind']) =>
     kind === 'resource' ? <BookOpen size={15} className="text-brand-500" />
     : kind === 'memo' ? <Notebook size={15} className="text-emerald-500" />
+    : kind === 'noteslink' ? <Mail size={15} className="text-amber-500" />
     : <Sparkles size={15} className="text-violet-500" />
 
   return (

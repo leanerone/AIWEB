@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, ExternalLink, Heart, Loader2, MessageSquare, Pencil, Send, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, Heart, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -148,6 +148,13 @@ export function ResourceDetail() {
                 <ExternalLink size={15} /> 打开外链
               </a>
             )}
+            <button className="btn-ghost" title="复制本页内网链接"
+              onClick={async () => {
+                await navigator.clipboard.writeText(location.href)
+                toast('success', '链接已复制，可发给同事')
+              }}>
+              <Share2 size={15} /> 分享
+            </button>
             {(me?.role === 'admin' || me?.username === r.created_by) && (
               <>
                 <button className="btn-ghost" onClick={() => {
