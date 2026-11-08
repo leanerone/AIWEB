@@ -1,7 +1,7 @@
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Bell, Bot, BookOpen, LayoutGrid, LogOut, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BackToTop } from './BackToTop'
@@ -18,6 +18,7 @@ const NAV = [
 export function Layout() {
   const { user, clear } = useAuth()
   const nav = useNavigate()
+  const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [dark, setDark] = useState(() => localStorage.getItem('aiweb_theme') === 'dark')
   const [todayCount, setTodayCount] = useState(0)
@@ -132,7 +133,17 @@ export function Layout() {
       <CommandPalette />
 
       <main className="mx-auto max-w-6xl px-6 py-6">
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <footer className="py-8 text-center text-xs text-gray-300">AI Hub · 内网 AI 分享平台</footer>

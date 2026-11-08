@@ -6,6 +6,12 @@
   --brand-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
 }
 
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -24px) scale(1.06); }
+  66% { transform: translate(-22px, 18px) scale(0.96); }
+}
+
 html, body, #root {
   height: 100%;
 }
