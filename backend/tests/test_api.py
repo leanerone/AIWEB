@@ -183,6 +183,25 @@ class TestAiAndAdminApi:
         assert data["new_today"] >= 0
 
 
+class TestScheduler:
+    def test_backup_creates_file(self):
+        from services.scheduler import run_backup
+
+        name = run_backup()
+        assert name and name.startswith("aiweb-")
+
+
+class TestFeedApi:
+    def test_feed_contains_resource_and_today(self, token):
+        rid = client.post("/api/resources", data={"type": "skill", "name": "feed-echo"},
+                          headers=auth(token)).json()["data"]["id"]
+        feed = client.get("/api/hub/feed?limit=30", headers=auth(token)).json()["data"]
+        assert any(f["kind"] == "resource" and f["id"] == rid for f in feed)
+        today = client.get("/api/hub/today", headers=auth(token)).json()["data"]
+        assert today["new_today"] >= 1
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+
 class TestSettingsApi:
     def test_put_and_masked(self, token):
         assert client.put("/api/settings", json={"ai_api_key": "sk-secret", "ai_model": "m1"},
