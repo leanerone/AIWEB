@@ -214,7 +214,7 @@ export function Chat() {
             />
             <button
               className={streaming ? 'btn self-end bg-red-50 text-red-500 border border-red-100' : 'btn-primary self-end'}
-              onClick={streaming ? stop : send}
+              onClick={streaming ? stop : () => send()}
               disabled={!streaming && !input.trim()}
             >
               {streaming ? <><Square size={14} /> 停止</> : <Send size={16} />}
