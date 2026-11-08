@@ -85,3 +85,8 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - Dashboard 统计卡/Feed 首屏加载骨架（消除数字跳变与空态闪烁）
 - **安全修复**：external_url 协议白名单（防 javascript: XSS）+ 测试用例
 - pytest 26 用例全过
+
+### 2026-11-09 00:37-00:38 · 心跳轮 2（已推送）
+- 内容卡删除：DELETE /api/hub/cards/{id}，创建者或管理员；Feed 弹窗内删除按钮
+- 权限测试：非创建者 403 / 管理员 200
+- pytest 27 用例全过
