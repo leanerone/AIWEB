@@ -21,6 +21,7 @@ export function Memos() {
   const [busy, setBusy] = useState(false)
   const [delId, setDelId] = useState<number | null>(null)
   const [links, setLinks] = useState<NoteLinkItem[]>([])
+  const [linkKw, setLinkKw] = useState('')
   const [batchOpen, setBatchOpen] = useState(false)
   const [batchText, setBatchText] = useState('')
   const [batchBusy, setBatchBusy] = useState(false)
@@ -57,10 +58,15 @@ export function Memos() {
     100,
   )
 
-  const loadLinks = () => {
-    api.get<never, { items: NoteLinkItem[] }>('/notes/links?limit=50').then((d) => setLinks(d.items)).catch(() => {})
+  const loadLinks = (kw = linkKw) => {
+    api.get<never, { items: NoteLinkItem[] }>(`/notes/links?keyword=${encodeURIComponent(kw)}&limit=50`)
+      .then((d) => setLinks(d.items)).catch(() => {})
   }
-  useEffect(loadLinks, [])
+  useEffect(() => {
+    const t = setTimeout(() => loadLinks(), 250)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkKw])
 
   const save = async () => {
     if (!form || !form.title.trim()) { toast('info', '标题不能为空'); return }
@@ -116,12 +122,16 @@ export function Memos() {
 
       {/* Notes 链接库 */}
       <BentoCard className="p-5" delay={0.05}>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold">Notes 链接库</h2>
             <p className="mb-3 text-xs text-subtle">保存解析过的 HCL Notes 文档链接，点击「打开」唤起本机 Notes 客户端</p>
           </div>
-          <button className="btn-ghost shrink-0" onClick={() => setBatchOpen(true)}><Layers size={14} /> 批量导入</button>
+          <div className="flex shrink-0 items-center gap-2">
+            <input className="input w-40 !py-1.5 text-xs" placeholder="搜索链接…" value={linkKw}
+              onChange={(e) => setLinkKw(e.target.value)} />
+            <button className="btn-ghost" onClick={() => setBatchOpen(true)}><Layers size={14} /> 批量导入</button>
+          </div>
         </div>
         <NotesLinkCard onSaved={() => { loadLinks(); toast('success', '链接已入库') }} />
         {links.length > 0 && (

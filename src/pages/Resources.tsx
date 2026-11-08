@@ -56,13 +56,14 @@ export function Resources() {
   const [showForm, setShowForm] = useState(false)
   const [order, setOrder] = useState('new')
   const [likedOnly, setLikedOnly] = useState(false)
+  const [tagFilter, setTagFilter] = useState('')
   const [likedMap, setLikedMap] = useState<Record<number, Pick<Resource, 'likes' | 'liked_by_me'>>>({})
 
   const { keyword, setKeyword, items, loading, reload } = useList<Resource>(
     (p) => api.get<never, { total: number; items: Resource[] }>(
-      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&order=${order}&liked=${likedOnly ? 1 : 0}&page=${p.page}&limit=60`,
+      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&order=${order}&liked=${likedOnly ? 1 : 0}&tag=${encodeURIComponent(tagFilter)}&page=${p.page}&limit=60`,
     ),
-    [type, order, likedOnly],
+    [type, order, likedOnly, tagFilter],
     60,
   )
 
@@ -75,6 +76,11 @@ export function Resources() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="mr-auto text-xl font-bold tracking-tight">资源库</h1>
+        {tagFilter && (
+          <button className="chip bg-brand-50 text-brand-700" onClick={() => setTagFilter('')}>
+            标签：{tagFilter} ✕
+          </button>
+        )}
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input className="input w-60 pl-9" placeholder="搜索资源…" value={keyword}
@@ -140,7 +146,11 @@ export function Resources() {
                   </p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {r.tags.slice(0, 4).map((t) => (
-                      <span key={t} className="chip bg-gray-100 text-gray-600">#{t}</span>
+                      <span key={t}
+                        className={`chip cursor-pointer transition ${tagFilter === t ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700'}`}
+                        onClick={(e) => { e.preventDefault(); setTagFilter(tagFilter === t ? '' : t) }}>
+                        #{t}
+                      </span>
                     ))}
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3 text-[11px] text-gray-400">

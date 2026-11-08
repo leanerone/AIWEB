@@ -49,7 +49,7 @@ export function Layout() {
             </span>
           </div>
 
-          <nav className="flex flex-1 items-center gap-1">
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
             {NAV.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
