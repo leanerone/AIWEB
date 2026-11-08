@@ -105,7 +105,7 @@ class ChatSession(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     id: Mapped[int] = mapped_column(primary_key=True)
-    session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id", ondelete="CASCADE"))
+    session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id", ondelete="CASCADE"), index=True)
     role: Mapped[str] = mapped_column(String(16))  # user / assistant
     content: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
@@ -126,7 +126,7 @@ class RssSource(Base):
 class RssItem(Base):
     __tablename__ = "rss_items"
     id: Mapped[int] = mapped_column(primary_key=True)
-    source_id: Mapped[int] = mapped_column(ForeignKey("rss_sources.id", ondelete="CASCADE"))
+    source_id: Mapped[int] = mapped_column(ForeignKey("rss_sources.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(512))
     link: Mapped[str] = mapped_column(String(768), default="")
     summary: Mapped[str] = mapped_column(Text, default="")

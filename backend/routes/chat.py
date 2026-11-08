@@ -40,7 +40,7 @@ def list_sessions(db: Session = Depends(get_db), user: object = Depends(get_curr
 @router.get("/sessions/{session_id}/messages")
 def get_messages(session_id: int, db: Session = Depends(get_db),
                  user: object = Depends(get_current_user)):
-    s = db.query(ChatSession).get(session_id)
+    s = db.get(ChatSession, session_id)
     if not s or s.created_by != user.username:
         raise HTTPException(status_code=404, detail="会话不存在")
     return {
@@ -56,7 +56,7 @@ def get_messages(session_id: int, db: Session = Depends(get_db),
 @router.delete("/sessions/{session_id}")
 def delete_session(session_id: int, db: Session = Depends(get_db),
                    user: object = Depends(get_current_user)):
-    s = db.query(ChatSession).get(session_id)
+    s = db.get(ChatSession, session_id)
     if not s or s.created_by != user.username:
         raise HTTPException(status_code=404, detail="会话不存在")
     db.delete(s)
@@ -73,7 +73,7 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
 
     session = None
     if body.session_id:
-        session = db.query(ChatSession).get(body.session_id)
+        session = db.get(ChatSession, body.session_id)
         if not session or session.created_by != user.username:
             raise HTTPException(status_code=404, detail="会话不存在")
     if not session:
@@ -98,7 +98,7 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
 
     # 引用资源作为对话上下文
     if body.context_resource_id:
-        res = db.query(Resource).get(body.context_resource_id)
+        res = db.get(Resource, body.context_resource_id)
         if res:
             sys_prompt = (
                 f"用户正在就平台上的资源向你提问，请结合该资源信息回答。\n"
@@ -145,7 +145,7 @@ def save_as_card(session_id: int, body: dict, db: Session = Depends(get_db),
     content = (body.get("content") or "").strip()
     if not content:
         raise HTTPException(status_code=400, detail="内容为空")
-    s = db.query(ChatSession).get(session_id)
+    s = db.get(ChatSession, session_id)
     card = FeedCard(
         kind="ai",
         title=(body.get("title") or (s.title if s else "AI 内容"))[:200],

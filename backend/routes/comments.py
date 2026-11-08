@@ -39,7 +39,7 @@ def add_comment(resource_id: int, body: CommentIn, db: Session = Depends(get_db)
     content = (body.content or "").strip()
     if not content:
         raise HTTPException(status_code=400, detail="评论不能为空")
-    if not db.query(Resource).get(resource_id):
+    if not db.get(Resource, resource_id):
         raise HTTPException(status_code=404, detail="资源不存在")
     c = ResourceComment(resource_id=resource_id, content=content[:2000], created_by=user.username)
     db.add(c)
@@ -52,7 +52,7 @@ def add_comment(resource_id: int, body: CommentIn, db: Session = Depends(get_db)
 @router.delete("/comments/{comment_id}")
 def delete_comment(comment_id: int, db: Session = Depends(get_db),
                    user: object = Depends(get_current_user)):
-    c = db.query(ResourceComment).get(comment_id)
+    c = db.get(ResourceComment, comment_id)
     if not c:
         raise HTTPException(status_code=404, detail="评论不存在")
     if user.role != "admin" and c.created_by != user.username:

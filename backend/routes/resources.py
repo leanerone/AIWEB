@@ -60,6 +60,7 @@ def list_resources(
     if tag:
         query = query.filter(Resource.tags.contains(tag))
     total = query.count()
+    limit = max(1, min(limit, 200))
     order_map = {
         "new": Resource.created_at.desc(),
         "downloads": Resource.downloads.desc(),
@@ -161,7 +162,7 @@ async def create_resource(
 @router.get("/{resource_id}")
 def get_resource(resource_id: int, db: Session = Depends(get_db),
                  user: object = Depends(get_current_user)):
-    r = db.query(Resource).get(resource_id)
+    r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
     r.views += 1
@@ -173,7 +174,7 @@ def get_resource(resource_id: int, db: Session = Depends(get_db),
 def like_resource(resource_id: int, db: Session = Depends(get_db),
                   user: object = Depends(get_current_user)):
     """点赞 / 取消点赞（按用户去重）"""
-    r = db.query(Resource).get(resource_id)
+    r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
     liked_by = list(r.liked_by or [])
@@ -190,7 +191,7 @@ def like_resource(resource_id: int, db: Session = Depends(get_db),
 @router.put("/{resource_id}")
 def update_resource(resource_id: int, body: ResourceIn,
                     db: Session = Depends(get_db), user: object = Depends(get_current_user)):
-    r = db.query(Resource).get(resource_id)
+    r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
     if body.type in ALLOWED_TYPES:
@@ -211,7 +212,7 @@ def update_resource(resource_id: int, body: ResourceIn,
 @router.delete("/{resource_id}")
 def delete_resource(resource_id: int, db: Session = Depends(get_db),
                     user: object = Depends(get_current_user)):
-    r = db.query(Resource).get(resource_id)
+    r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
     if user.role != "admin" and r.created_by != user.username:
@@ -228,7 +229,7 @@ def delete_resource(resource_id: int, db: Session = Depends(get_db),
 @router.get("/{resource_id}/download")
 def download_resource(resource_id: int, db: Session = Depends(get_db),
                       _: object = Depends(get_current_user)):
-    r = db.query(Resource).get(resource_id)
+    r = db.get(Resource, resource_id)
     if not r or not r.file_path:
         raise HTTPException(status_code=404, detail="该资源没有附件")
     path = Path(settings.UPLOAD_DIR) / r.file_path

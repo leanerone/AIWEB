@@ -39,6 +39,7 @@ def list_memos(keyword: str = "", tag: str = "", created_by: str = "", page: int
     if created_by:
         query = query.filter(Memo.created_by == created_by)
     total = query.count()
+    limit = max(1, min(limit, 200))
     items = (
         query.order_by(Memo.pinned.desc(), Memo.updated_at.desc())
         .offset((page - 1) * limit)
@@ -64,7 +65,7 @@ def create_memo(body: MemoIn, db: Session = Depends(get_db),
 @router.get("/{memo_id}")
 def get_memo(memo_id: int, db: Session = Depends(get_db),
              _: object = Depends(get_current_user)):
-    m = db.query(Memo).get(memo_id)
+    m = db.get(Memo, memo_id)
     if not m:
         raise HTTPException(status_code=404, detail="笔记不存在")
     return {"success": True, "data": _serialize(m)}
@@ -73,7 +74,7 @@ def get_memo(memo_id: int, db: Session = Depends(get_db),
 @router.put("/{memo_id}")
 def update_memo(memo_id: int, body: MemoIn, db: Session = Depends(get_db),
                 _: object = Depends(get_current_user)):
-    m = db.query(Memo).get(memo_id)
+    m = db.get(Memo, memo_id)
     if not m:
         raise HTTPException(status_code=404, detail="笔记不存在")
     m.title = body.title.strip() or m.title
@@ -87,7 +88,7 @@ def update_memo(memo_id: int, body: MemoIn, db: Session = Depends(get_db),
 @router.delete("/{memo_id}")
 def delete_memo(memo_id: int, db: Session = Depends(get_db),
                 _: object = Depends(get_current_user)):
-    m = db.query(Memo).get(memo_id)
+    m = db.get(Memo, memo_id)
     if not m:
         raise HTTPException(status_code=404, detail="笔记不存在")
     db.delete(m)

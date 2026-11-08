@@ -48,7 +48,7 @@ def create_source(body: SourceIn, db: Session = Depends(get_db),
 @router.put("/sources/{source_id}")
 def update_source(source_id: int, body: SourceIn, db: Session = Depends(get_db),
                   _: object = Depends(get_current_user)):
-    s = db.query(RssSource).get(source_id)
+    s = db.get(RssSource, source_id)
     if not s:
         raise HTTPException(status_code=404, detail="订阅源不存在")
     s.name = body.name.strip() or s.name
@@ -61,7 +61,7 @@ def update_source(source_id: int, body: SourceIn, db: Session = Depends(get_db),
 @router.delete("/sources/{source_id}")
 def delete_source(source_id: int, db: Session = Depends(get_db),
                   _: object = Depends(get_current_user)):
-    s = db.query(RssSource).get(source_id)
+    s = db.get(RssSource, source_id)
     if not s:
         raise HTTPException(status_code=404, detail="订阅源不存在")
     db.delete(s)
@@ -77,7 +77,7 @@ def refresh(db: Session = Depends(get_db), _: object = Depends(get_current_user)
 @router.post("/sources/{source_id}/refresh")
 def refresh_one(source_id: int, db: Session = Depends(get_db),
                 _: object = Depends(get_current_user)):
-    s = db.query(RssSource).get(source_id)
+    s = db.get(RssSource, source_id)
     if not s:
         raise HTTPException(status_code=404, detail="订阅源不存在")
     return {"success": True, "data": refresh_source(s, db)}
@@ -92,6 +92,7 @@ def list_items(keyword: str = "", source_id: int = 0, page: int = 1, limit: int 
     if keyword:
         query = query.filter(RssItem.title.like(f"%{keyword}%"))
     total = query.count()
+    limit = max(1, min(limit, 100))
     items = (query.order_by(RssItem.published_at.desc().nullslast(), RssItem.id.desc())
              .offset((page - 1) * limit).limit(limit).all())
     return {

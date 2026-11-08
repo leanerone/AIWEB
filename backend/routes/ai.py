@@ -67,7 +67,7 @@ def rss_to_card(body: dict, db: Session = Depends(get_db), user: object = Depend
     """把一条 RSS 资讯交给 AI 生成中文知识卡，沉淀到首页动态"""
     from database.models import RssItem
 
-    item = db.query(RssItem).get(int(body.get("rss_item_id", 0)))
+    item = db.get(RssItem, int(body.get("rss_item_id", 0)))
     if not item:
         raise HTTPException(status_code=404, detail="资讯条目不存在")
     prompt = (
