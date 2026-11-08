@@ -1,0 +1,154 @@
+import { motion } from 'framer-motion'
+import { ArrowUpRight, Bot, FileText, Newspaper, Package, Puzzle, Sparkles, StickyNote, Wrench } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { api } from '../services/api'
+import { useAuth } from '../stores/auth'
+import { BentoCard } from '../components/BentoCard'
+import { StatCard } from '../components/StatCard'
+import { EmptyState } from '../components/ui/EmptyState'
+import type { FeedItem, Stats } from '../types'
+
+const KIND_META: Record<string, { label: string; cls: string }> = {
+  ai: { label: 'AI 内容', cls: 'bg-violet-100 text-violet-700' },
+  note: { label: '笔记', cls: 'bg-emerald-100 text-emerald-700' },
+  announcement: { label: '公告', cls: 'bg-amber-100 text-amber-700' },
+  resource: { label: '资源', cls: 'bg-brand-100 text-brand-700' },
+  rss: { label: '资讯', cls: 'bg-sky-100 text-sky-700' },
+}
+
+export function Dashboard() {
+  const user = useAuth((s) => s.user)
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [feed, setFeed] = useState<FeedItem[]>([])
+
+  useEffect(() => {
+    api.get<never, Stats>('/hub/stats').then(setStats).catch(() => {})
+    api.get<never, FeedItem[]>('/hub/feed?limit=25').then(setFeed).catch(() => {})
+  }, [])
+
+  const hour = new Date().getHours()
+  const greeting = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
+
+  return (
+    <div className="space-y-5">
+      {/* 欢迎大卡 */}
+      <BentoCard className="overflow-hidden">
+        <div className="relative p-7">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-brand-100/70 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-24 right-32 h-48 w-48 rounded-full bg-violet-200/40 blur-2xl" />
+          <div className="relative">
+            <p className="text-sm text-subtle">
+              {greeting}，{user?.display_name || user?.username} 👋
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">
+              这是你的 <span className="gradient-text">AI 能力中枢</span>
+            </h1>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link to="/resources" className="btn-primary"><Package size={15} /> 上传资源</Link>
+              <Link to="/chat" className="btn-ghost"><Bot size={15} /> AI 对话</Link>
+              <Link to="/memos" className="btn-ghost"><StickyNote size={15} /> 写笔记</Link>
+            </div>
+          </div>
+        </div>
+      </BentoCard>
+
+      {/* 统计 Bento 行 */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard icon={FileText} label="Skills 技能包" value={stats?.skills ?? 0} to="/resources?type=skill" delay={0} />
+        <StatCard icon={Wrench} label="小工具" value={stats?.tools ?? 0} to="/resources?type=tool" delay={0.06} tone="emerald" />
+        <StatCard icon={Puzzle} label="插件" value={stats?.plugins ?? 0} to="/resources?type=plugin" delay={0.12} tone="amber" />
+        <StatCard icon={StickyNote} label="笔记" value={stats?.memos ?? 0} to="/memos" delay={0.18} tone="sky" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* 动态 Feed */}
+        <BentoCard className="lg:col-span-2" delay={0.1}>
+          <div className="flex items-center justify-between px-5 pt-5">
+            <h2 className="text-sm font-bold">最新动态</h2>
+            <Link to="/resources" className="flex items-center text-xs text-brand-600 hover:underline">
+              查看资源库 <ArrowUpRight size={13} />
+            </Link>
+          </div>
+          <div className="space-y-1 p-3">
+            {feed.length === 0 && (
+              <EmptyState icon={Sparkles} title="还没有动态"
+                hint="上传第一个资源、写一篇笔记或让 AI 生成内容，这里就会热闹起来"
+                action={<Link to="/resources" className="btn-primary">去上传资源</Link>} />
+            )}
+            {feed.map((f, i) => {
+              const meta = KIND_META[f.kind] ?? KIND_META.announcement
+              const href =
+                f.kind === 'resource' ? `/resources/${f.id}`
+                : f.kind === 'note' ? `/memos`
+                : f.source_url || undefined
+              const body = (
+                <motion.div
+                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: Math.min(i * 0.03, 0.4) }}
+                  className="flex items-start gap-3 rounded-2xl p-3 transition-colors hover:bg-gray-50"
+                >
+                  <span className={`chip mt-0.5 shrink-0 ${meta.cls}`}>{meta.label}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{f.title}</p>
+                    <p className="truncate text-xs text-subtle">{f.summary}</p>
+                    <p className="mt-0.5 text-[11px] text-gray-400">{f.created_by} · {f.created_at}</p>
+                  </div>
+                </motion.div>
+              )
+              return href ? (
+                <Link key={`${f.kind}-${f.id}-${i}`} to={href} className="block">{body}</Link>
+              ) : (
+                <div key={`${f.kind}-${f.id}-${i}`}>{body}</div>
+              )
+            })}
+          </div>
+        </BentoCard>
+
+        {/* 右列：AI + RSS */}
+        <div className="space-y-4">
+          <BentoCard delay={0.16} onClick={() => (location.href = '/chat')} className="cursor-pointer">
+            <div className="p-5">
+              <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl text-white" style={{ backgroundImage: 'var(--brand-grad)' }}>
+                <Bot size={20} />
+              </span>
+              <h3 className="text-sm font-bold">AI 助手</h3>
+              <p className="mt-1 text-xs leading-5 text-subtle">
+                在线对话、生成周报素材与知识卡片，好内容可一键沉淀到首页动态
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-600">
+                开始对话 <ArrowUpRight size={13} />
+              </div>
+            </div>
+          </BentoCard>
+
+          <BentoCard delay={0.22} onClick={() => (location.href = '/settings')} className="cursor-pointer">
+            <div className="p-5">
+              <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+                <Newspaper size={20} />
+              </span>
+              <h3 className="text-sm font-bold">AI 资讯订阅</h3>
+              <p className="mt-1 text-xs leading-5 text-subtle">
+                已订阅 {stats?.rss_sources ?? 0} 个源 · {stats?.rss_items ?? 0} 条资讯
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-sky-600">
+                管理订阅 <ArrowUpRight size={13} />
+              </div>
+            </div>
+          </BentoCard>
+
+          <BentoCard delay={0.28}>
+            <div className="p-5">
+              <h3 className="text-sm font-bold">平台统计</h3>
+              <ul className="mt-3 space-y-2 text-xs text-subtle">
+                <li className="flex justify-between"><span>AI 内容卡</span><b className="text-ink">{stats?.cards ?? 0}</b></li>
+                <li className="flex justify-between"><span>AI 对话会话</span><b className="text-ink">{stats?.chats ?? 0}</b></li>
+                <li className="flex justify-between"><span>资讯条目</span><b className="text-ink">{stats?.rss_items ?? 0}</b></li>
+              </ul>
+            </div>
+          </BentoCard>
+        </div>
+      </div>
+    </div>
+  )
+}

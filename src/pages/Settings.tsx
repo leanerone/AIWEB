@@ -1,0 +1,178 @@
+import { ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { api } from '../services/api'
+import { BentoCard } from '../components/BentoCard'
+import { useToast } from '../components/ui/Toast'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import type { RssItem, RssSourceItem, SettingsData } from '../types'
+
+export function Settings() {
+  const toast = useToast()
+  const [cfg, setCfg] = useState<SettingsData | null>(null)
+  const [apiKey, setApiKey] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const [sources, setSources] = useState<RssSourceItem[]>([])
+  const [items, setItems] = useState<RssItem[]>([])
+  const [newName, setNewName] = useState('')
+  const [newUrl, setNewUrl] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [delId, setDelId] = useState<number | null>(null)
+
+  const load = () => {
+    api.get<never, SettingsData>('/settings').then(setCfg).catch((e) => toast('error', (e as Error).message))
+    api.get<never, RssSourceItem[]>('/rss/sources').then(setSources).catch(() => {})
+    api.get<never, { items: RssItem[] }>('/rss/items?limit=30').then((d) => setItems(d.items)).catch(() => {})
+  }
+  useEffect(load, [])
+
+  const saveAi = async () => {
+    if (!cfg) return
+    setBusy(true)
+    try {
+      const body: Record<string, string> = {}
+      if (cfg.ai_api_base) body.ai_api_base = cfg.ai_api_base
+      if (cfg.ai_model) body.ai_model = cfg.ai_model
+      if (apiKey && !/^\*+$/.test(apiKey)) body.ai_api_key = apiKey
+      await api.put('/settings', body)
+      toast('success', 'AI 配置已保存')
+      setApiKey('')
+      load()
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const addSource = async () => {
+    if (!newUrl.trim()) { toast('info', '请填写 RSS 地址'); return }
+    try {
+      await api.post('/rss/sources', { name: newName || newUrl.slice(0, 40), url: newUrl })
+      toast('success', '订阅源已添加')
+      setNewName(''); setNewUrl('')
+      load()
+    } catch (e) {
+      toast('error', (e as Error).message)
+    }
+  }
+
+  const refreshAll = async () => {
+    setRefreshing(true)
+    try {
+      const r = await api.post<never, { new: number }>('/rss/refresh')
+      toast('success', `刷新完成，新增 ${r.new} 条`)
+      load()
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const delSource = async () => {
+    if (!delId) return
+    await api.delete(`/rss/sources/${delId}`).catch((e) => toast('error', (e as Error).message))
+    setDelId(null)
+    load()
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* AI 配置 */}
+      <BentoCard className="h-fit p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><Cog size={17} /></span>
+          <h2 className="text-sm font-bold">AI 配置（OpenAI 兼容）</h2>
+        </div>
+        {cfg ? (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-subtle">API Base</label>
+              <input className="input" placeholder="https://api.openai.com/v1" value={cfg.ai_api_base}
+                onChange={(e) => setCfg({ ...cfg, ai_api_base: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-subtle">
+                API Key {cfg.effective.has_key && <span className="ml-1 text-emerald-600">✓ 已配置</span>}
+              </label>
+              <input className="input" type="password" placeholder={cfg.ai_api_key || 'sk-...'} value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-subtle">模型</label>
+              <input className="input" placeholder="gpt-4o-mini" value={cfg.ai_model}
+                onChange={(e) => setCfg({ ...cfg, ai_model: e.target.value })} />
+            </div>
+            <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-subtle">
+              当前生效：{cfg.effective.api_base} · {cfg.effective.model} ·
+              Key {cfg.effective.has_key ? '已就绪' : '未配置（对话将诚实报错）'}
+            </p>
+            <button className="btn-primary" onClick={saveAi} disabled={busy}>
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} 保存配置
+            </button>
+          </div>
+        ) : (
+          <Loader2 className="mx-auto animate-spin text-brand-400" size={24} />
+        )}
+      </BentoCard>
+
+      {/* RSS 订阅 */}
+      <div className="space-y-4">
+        <BentoCard className="p-6" delay={0.06}>
+          <div className="mb-4 flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600"><Rss size={17} /></span>
+            <h2 className="mr-auto text-sm font-bold">AI 资讯订阅</h2>
+            <button className="btn-ghost !py-1.5" onClick={refreshAll} disabled={refreshing}>
+              {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} 全部刷新
+            </button>
+          </div>
+          <div className="mb-3 flex gap-2">
+            <input className="input w-28 shrink-0" placeholder="名称" value={newName} onChange={(e) => setNewName(e.target.value)} />
+            <input className="input flex-1" placeholder="RSS 地址，如 https://hnrss.org/newest?q=AI" value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addSource()} />
+            <button className="btn-primary shrink-0" onClick={addSource}><Plus size={15} /></button>
+          </div>
+          <div className="space-y-1.5">
+            {sources.map((s) => (
+              <div key={s.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-sm">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${s.enabled ? 'bg-emerald-400' : 'bg-gray-300'}`} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{s.name}</p>
+                  <p className="truncate text-[11px] text-gray-400">{s.url}</p>
+                </div>
+                <button className="rounded-lg p-1.5 text-red-400 hover:bg-red-50" onClick={() => setDelId(s.id)}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {sources.length === 0 && (
+              <p className="py-4 text-center text-xs text-gray-400">还没有订阅源，先添加一个试试</p>
+            )}
+          </div>
+        </BentoCard>
+
+        <BentoCard className="p-5" delay={0.12}>
+          <h3 className="mb-3 text-sm font-bold">最新资讯</h3>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {items.map((it) => (
+              <a key={it.id} href={it.link} target="_blank" rel="noreferrer"
+                className="flex items-start gap-2 rounded-xl p-2.5 transition hover:bg-gray-50">
+                <ExternalLink size={13} className="mt-1 shrink-0 text-sky-500" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{it.title}</p>
+                  <p className="text-[11px] text-gray-400">{it.source} · {it.published_at || ''}</p>
+                </div>
+              </a>
+            ))}
+            {items.length === 0 && <p className="py-6 text-center text-xs text-gray-400">暂无资讯，点「全部刷新」抓取</p>}
+          </div>
+        </BentoCard>
+      </div>
+
+      <ConfirmDialog open={!!delId} danger title="删除订阅源" message="删除后该源的资讯条目也会清除。"
+        onConfirm={delSource} onCancel={() => setDelId(null)} />
+    </div>
+  )
+}
