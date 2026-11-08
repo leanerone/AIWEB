@@ -72,7 +72,11 @@ if _DIST.exists():
 
     @app.get("/{full_path:path}")
     def spa(full_path: str):
+        from fastapi import HTTPException
+
+        if not full_path or full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="Not Found")
         file = _DIST / full_path
-        if full_path and file.is_file():
+        if file.is_file():
             return FileResponse(file)
         return FileResponse(_DIST / "index.html")
