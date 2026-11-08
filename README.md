@@ -82,15 +82,21 @@ FastAPI 会自动托管前端静态文件，单端口 8000 即可服务全站。
 ```
 aiweb/
 ├── src/                    # 前端
-│   ├── components/         # BentoCard / StatCard / Layout / NotesLinkCard / ui/*
-│   ├── pages/              # Login / Dashboard / Resources / Memos / Chat / Settings
-│   ├── stores/  hooks/  services/  styles/
+│   ├── components/         # BentoCard / StatCard / Layout / CommandPalette / NotesLinkCard / ui/*
+│   ├── pages/              # Login / Dashboard / Resources / ResourceDetail / Memos / Chat / Settings
+│   ├── stores/  hooks/  services/  utils/
 ├── backend/
-│   ├── routes/             # auth / resources / memos / notes / chat / rss / feed / settings
-│   ├── services/           # auth(移植自 test1) / notes解析 / ai / rss
+│   ├── routes/             # auth / ai / admin / resources / comments / memos / notes / chat / rss / feed / settings
+│   ├── services/           # auth(移植自 test1) / notes解析 / skill_meta / ai / rss / scheduler
 │   ├── database/           # models + session（create_all 自动建表）
+│   ├── tests/              # pytest（19 用例，独立测试库）
+│   ├── seed_demo.py        # SEED_DEMO=1 演示数据
 │   └── config/  uploads/  data/
+├── docs/USER_GUIDE.md      # 使用指南
+├── scripts/smoke.bat       # 一键冒烟自测
 └── start-all.bat
 ```
+
+详细使用说明见 [docs/USER_GUIDE.md](docs/USER_GUIDE.md)。
 
 MIT License
