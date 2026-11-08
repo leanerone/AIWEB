@@ -127,5 +127,6 @@ export interface SettingsData {
   ai_api_base: string
   ai_api_key: string
   ai_model: string
+  ai_system_prompt: string
   effective: { api_base: string; has_key: boolean; model: string }
 }

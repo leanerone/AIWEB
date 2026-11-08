@@ -131,6 +131,7 @@ export function Settings() {
       const body: Record<string, string> = {}
       if (cfg.ai_api_base) body.ai_api_base = cfg.ai_api_base
       if (cfg.ai_model) body.ai_model = cfg.ai_model
+      body.ai_system_prompt = cfg.ai_system_prompt
       if (apiKey && !/^\*+$/.test(apiKey)) body.ai_api_key = apiKey
       await api.put('/settings', body)
       toast('success', 'AI 配置已保存')
@@ -201,6 +202,12 @@ export function Settings() {
               <label className="mb-1 block text-xs text-subtle">模型</label>
               <input className="input" placeholder="gpt-4o-mini" value={cfg.ai_model}
                 onChange={(e) => setCfg({ ...cfg, ai_model: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-subtle">AI 人设 / 系统提示词（可选，对所有对话生效）</label>
+              <textarea className="input min-h-[72px]" placeholder="例：你是半导体 CIM 团队的 AI 助手，回答简洁专业，使用中文。"
+                value={cfg.ai_system_prompt}
+                onChange={(e) => setCfg({ ...cfg, ai_system_prompt: e.target.value })} />
             </div>
             <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-subtle">
               当前生效：{cfg.effective.api_base} · {cfg.effective.model} ·

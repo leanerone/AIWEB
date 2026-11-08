@@ -96,15 +96,22 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
     )
     messages = [{"role": m.role, "content": m.content} for m in reversed(history)]
 
-    # 引用资源作为对话上下文
+    # 系统提示词：人设（设置页可配）+ 引用资源上下文
+    from database.models import Setting
+
+    system_parts = []
+    persona = next((s.value for s in db.query(Setting).all() if s.key == "ai_system_prompt"), "")
+    if persona.strip():
+        system_parts.append(persona.strip()[:2000])
     if body.context_resource_id:
         res = db.get(Resource, body.context_resource_id)
         if res:
-            sys_prompt = (
+            system_parts.append(
                 f"用户正在就平台上的资源向你提问，请结合该资源信息回答。\n"
                 f"资源：[{res.type}] {res.name}\n简介：{res.summary}\n详情：\n{res.content[:3000]}"
             )
-            messages = [{"role": "system", "content": sys_prompt}] + messages
+    if system_parts:
+        messages = [{"role": "system", "content": "\n\n".join(system_parts)}] + messages
 
     session_id = session.id
     session_title = session.title

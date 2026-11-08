@@ -10,7 +10,7 @@ from services.ai_service import get_ai_config
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 MASKED_KEYS = {"ai_api_key"}
-ALLOWED_KEYS = {"ai_api_base", "ai_api_key", "ai_model"}
+ALLOWED_KEYS = {"ai_api_base", "ai_api_key", "ai_model", "ai_system_prompt"}
 
 
 @router.get("")
@@ -21,6 +21,7 @@ def get_settings(db: Session = Depends(get_db), _: object = Depends(get_current_
         "ai_api_base": kv.get("ai_api_base", ""),
         "ai_api_key": ("*" * 8) if kv.get("ai_api_key") else "",
         "ai_model": kv.get("ai_model", ""),
+        "ai_system_prompt": kv.get("ai_system_prompt", ""),
         "effective": {
             "api_base": cfg["api_base"],
             "has_key": bool(cfg["api_key"]),
