@@ -52,6 +52,7 @@ const TYPE_ICON: Record<string, typeof Package> = { skill: FileText, tool: Wrenc
 export function Resources() {
   const [params, setParams] = useSearchParams()
   const type = params.get('type') ?? ''
+  const userFilter = params.get('user') ?? ''
   const me = useAuth((s) => s.user)
   const [showForm, setShowForm] = useState(false)
   const [order, setOrder] = useState('new')
@@ -61,9 +62,9 @@ export function Resources() {
 
   const { keyword, setKeyword, items, loading, reload } = useList<Resource>(
     (p) => api.get<never, { total: number; items: Resource[] }>(
-      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&order=${order}&liked=${likedOnly ? 1 : 0}&tag=${encodeURIComponent(tagFilter)}&page=${p.page}&limit=60`,
+      `/resources?keyword=${encodeURIComponent(p.keyword)}&type=${type}&order=${order}&liked=${likedOnly ? 1 : 0}&tag=${encodeURIComponent(tagFilter)}&created_by=${encodeURIComponent(userFilter)}&page=${p.page}&limit=60`,
     ),
-    [type, order, likedOnly, tagFilter],
+    [type, order, likedOnly, tagFilter, userFilter],
     60,
   )
 
@@ -79,6 +80,11 @@ export function Resources() {
         {tagFilter && (
           <button className="chip bg-brand-50 text-brand-700" onClick={() => setTagFilter('')}>
             标签：{tagFilter} ✕
+          </button>
+        )}
+        {userFilter && (
+          <button className="chip bg-violet-100 text-violet-700" onClick={() => setParams({})}>
+            作者：{userFilter} ✕
           </button>
         )}
         <div className="relative">

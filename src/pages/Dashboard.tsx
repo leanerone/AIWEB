@@ -214,9 +214,9 @@ export function Dashboard() {
               <div className="mt-3 space-y-2.5">
                 {contributors.length === 0 && <p className="text-xs text-gray-400">还没有贡献记录</p>}
                 {contributors.map((c) => (
-                  <div key={c.user}>
+                  <div key={c.user} className="cursor-pointer" onClick={() => (location.href = `/resources?user=${encodeURIComponent(c.user)}`)}>
                     <div className="flex justify-between text-xs">
-                      <span className="truncate font-medium text-ink">{c.user}</span>
+                      <span className="truncate font-medium text-ink transition-colors hover:text-brand-600">{c.user}</span>
                       <span className="text-subtle">{c.count}</span>
                     </div>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100">

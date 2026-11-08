@@ -40,6 +40,7 @@ def list_resources(
     tag: str = "",
     order: str = "new",
     liked: int = 0,
+    created_by: str = "",
     page: int = 1,
     limit: int = 20,
     db: Session = Depends(get_db),
@@ -50,6 +51,8 @@ def list_resources(
         query = query.filter(Resource.type == type)
     if liked:
         query = query.filter(Resource.liked_by.contains(user.username))
+    if created_by:
+        query = query.filter(Resource.created_by == created_by)
     if keyword:
         like = f"%{keyword}%"
         query = query.filter(or_(Resource.name.like(like), Resource.summary.like(like),

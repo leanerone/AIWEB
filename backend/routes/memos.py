@@ -28,7 +28,7 @@ def _serialize(m: Memo) -> dict:
 
 
 @router.get("")
-def list_memos(keyword: str = "", tag: str = "", page: int = 1, limit: int = 50,
+def list_memos(keyword: str = "", tag: str = "", created_by: str = "", page: int = 1, limit: int = 50,
                db: Session = Depends(get_db), _: object = Depends(get_current_user)):
     query = db.query(Memo)
     if keyword:
@@ -36,6 +36,8 @@ def list_memos(keyword: str = "", tag: str = "", page: int = 1, limit: int = 50,
         query = query.filter(or_(Memo.title.like(like), Memo.content.like(like)))
     if tag:
         query = query.filter(Memo.tags.contains(tag))
+    if created_by:
+        query = query.filter(Memo.created_by == created_by)
     total = query.count()
     items = (
         query.order_by(Memo.pinned.desc(), Memo.updated_at.desc())
