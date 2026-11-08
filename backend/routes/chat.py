@@ -21,6 +21,10 @@ class ChatRequest(BaseModel):
     context_resource_id: int | None = None
 
 
+class RenameIn(BaseModel):
+    title: str
+
+
 @router.get("/sessions")
 def list_sessions(db: Session = Depends(get_db), user: object = Depends(get_current_user)):
     sessions = (
@@ -51,6 +55,21 @@ def get_messages(session_id: int, db: Session = Depends(get_db),
             for m in s.messages
         ],
     }
+
+
+@router.put("/sessions/{session_id}")
+def rename_session(session_id: int, body: RenameIn, db: Session = Depends(get_db),
+                   user: object = Depends(get_current_user)):
+    """重命名会话"""
+    s = db.get(ChatSession, session_id)
+    if not s or s.created_by != user.username:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="标题不能为空")
+    s.title = title[:120]
+    db.commit()
+    return {"success": True, "data": {"id": s.id, "title": s.title}}
 
 
 @router.delete("/sessions/{session_id}")

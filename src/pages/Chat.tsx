@@ -1,4 +1,4 @@
-import { BookMarked, Copy, FileDown, Loader2, Plus, Send, Sparkles, Square, Trash2, X } from 'lucide-react'
+import { BookMarked, Copy, FileDown, Loader2, Pencil, Plus, Send, Sparkles, Square, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
 import { BentoCard } from '../components/BentoCard'
@@ -19,6 +19,7 @@ export function Chat() {
   const abortRef = useRef<AbortController | null>(null)
   const [contextRes, setContextRes] = useState<Resource | null>(null)
   const [allResources, setAllResources] = useState<Resource[]>([])
+  const [renaming, setRenaming] = useState<{ id: number; title: string } | null>(null)
 
   useEffect(() => {
     api.get<never, { items: Resource[] }>('/resources?limit=100').then((d) => setAllResources(d.items)).catch(() => {})
@@ -137,6 +138,18 @@ export function Chat() {
     }
   }
 
+  const renameSession = async (id: number, title: string) => {
+    if (!title.trim()) { setRenaming(null); return }
+    try {
+      await api.put(`/chat/sessions/${id}`, { title: title.trim() })
+      setSessions((list) => list.map((s) => (s.id === id ? { ...s, title: title.trim() } : s)))
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setRenaming(null)
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
       {/* 会话列表 */}
@@ -150,7 +163,21 @@ export function Chat() {
               className={`group flex items-center gap-1 rounded-xl px-2.5 py-2 text-sm transition ${
                 sessionId === s.id ? 'bg-brand-50 text-brand-700' : 'text-subtle hover:bg-gray-50'
               }`}>
-              <button className="min-w-0 flex-1 truncate text-left" onClick={() => setSessionId(s.id)}>{s.title}</button>
+              {renaming?.id === s.id ? (
+                <input autoFocus className="input !px-2 !py-1 text-xs" value={renaming.title}
+                  onChange={(e) => setRenaming({ id: s.id, title: e.target.value })}
+                  onBlur={() => renameSession(s.id, renaming.title)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') renameSession(s.id, renaming.title)
+                    if (e.key === 'Escape') setRenaming(null)
+                  }} />
+              ) : (
+                <>
+                  <button className="min-w-0 flex-1 truncate text-left" onClick={() => setSessionId(s.id)}>{s.title}</button>
+                  <button title="重命名" className="hidden shrink-0 rounded p-1 text-subtle hover:text-brand-600 group-hover:block"
+                    onClick={() => setRenaming({ id: s.id, title: s.title })}><Pencil size={12} /></button>
+                </>
+              )}
               <button className="hidden shrink-0 rounded p-1 text-red-400 hover:bg-red-50 group-hover:block"
                 onClick={() => delSession(s.id)}><Trash2 size={13} /></button>
             </div>
