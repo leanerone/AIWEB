@@ -2,7 +2,14 @@
 
 公司内网 AI 分享平台：聚合 **Skills（SKILL.md 技能包）/ 小工具 / 插件**，内置 **AI 流式对话 + 内容沉淀**、**RSS 资讯订阅**、**Markdown 笔记**，兼容 **HCL Notes 链接**（解析 + 一键唤起本机 Notes 客户端），支持 **Windows 域自动登录**。
 
-视觉风格：明亮 Bento 网格（大圆角 / 柔和阴影 / 蓝紫渐变 / framer-motion 微动效）。
+视觉风格：明亮 Bento 网格（大圆角 / 柔和阴影 / 蓝紫渐变 / framer-motion 微动效），支持深色模式。
+
+## 界面预览
+
+| 明亮 | 深色 |
+|---|---|
+| ![明亮](docs/screenshots/dashboard-light.png) | ![深色](docs/screenshots/dashboard-dark.png) |
+
 
 ## 功能总览
 
@@ -38,7 +45,9 @@ python run.py        # http://localhost:8000，SQLite 自动建表 + 播种默�
 
 或直接双击 `start-all.bat` 一键启动两端。
 
-**测试**：`cd backend && python -m pytest tests/ -q`（17 个用例，自动使用独立测试库）
+**演示模式**：想首次打开就有示例内容？在 `backend/.env` 加 `SEED_DEMO=1` 再启动（自动播种示例 Skills/笔记/简报/RSS 源；已有数据时不重复播种）。
+
+**测试**：`cd backend && python -m pytest tests/ -q`（19 个用例，自动使用独立测试库）
 
 **登录**：打开页面自动尝试 Windows 域 SSO（在公司域内电脑本机启动后端即直登）；
 失败时手动登录，内置账号 `administrator` / `eap.engineer` / `cim.user`，初始密码 `cim123456`

@@ -56,6 +56,11 @@ def startup():
     finally:
         db.close()
     logging.getLogger("aiweb").info("数据库就绪，默认账号已播种")
+    import os
+
+    if os.getenv("SEED_DEMO", "").strip() == "1":
+        from seed_demo import seed_demo
+        seed_demo()
     from services.scheduler import start_scheduler
     start_scheduler()
 

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
+import { MarkdownView } from '../components/MarkdownView'
 import { StatCard } from '../components/StatCard'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
@@ -29,6 +30,7 @@ export function Dashboard() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [contributors, setContributors] = useState<Contributor[]>([])
   const [briefing, setBriefing] = useState(false)
+  const [viewing, setViewing] = useState<FeedItem | null>(null)
 
   useEffect(() => {
     api.get<never, Stats>('/hub/stats').then(setStats).catch(() => {})
@@ -123,6 +125,7 @@ export function Dashboard() {
             )}
             {filtered.map((f, i) => {
               const meta = KIND_META[f.kind] ?? KIND_META.announcement
+              const expandable = f.kind === 'ai' || f.kind === 'announcement'
               const href =
                 f.kind === 'resource' ? `/resources/${f.id}`
                 : f.kind === 'note' ? `/memos`
@@ -131,7 +134,8 @@ export function Dashboard() {
                 <motion.div
                   initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: Math.min(i * 0.03, 0.4) }}
-                  className="flex items-start gap-3 rounded-2xl p-3 transition-colors hover:bg-gray-50"
+                  onClick={expandable ? () => setViewing(f) : undefined}
+                  className={`flex items-start gap-3 rounded-2xl p-3 transition-colors hover:bg-gray-50 ${expandable ? 'cursor-pointer' : ''}`}
                 >
                   <span className={`chip mt-0.5 shrink-0 ${meta.cls}`}>{meta.label}</span>
                   <div className="min-w-0 flex-1">
@@ -143,6 +147,7 @@ export function Dashboard() {
                   </div>
                 </motion.div>
               )
+              if (expandable) return <div key={`${f.kind}-${f.id}-${i}`}>{body}</div>
               return href ? (
                 <Link key={`${f.kind}-${f.id}-${i}`} to={href} className="block">{body}</Link>
               ) : (
@@ -235,6 +240,33 @@ export function Dashboard() {
           </BentoCard>
         </div>
       </div>
+
+      {/* 内容卡全文弹窗 */}
+      {viewing && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm"
+          onClick={() => setViewing(null)}>
+          <div className="max-h-[82vh] w-full max-w-xl overflow-y-auto rounded-bento2 bg-white p-6 shadow-bentoHover"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <span className={`chip ${KIND_META[viewing.kind]?.cls ?? KIND_META.announcement.cls}`}>
+                  {KIND_META[viewing.kind]?.label}
+                </span>
+                <h2 className="mt-2 text-lg font-bold tracking-tight">{viewing.title}</h2>
+                <p className="text-xs text-gray-400">{viewing.created_by} · {viewing.created_at}</p>
+              </div>
+              <button className="rounded-lg p-1.5 text-subtle hover:bg-gray-100" onClick={() => setViewing(null)}>✕</button>
+            </div>
+            {viewing.source_url && (
+              <a href={viewing.source_url} target="_blank" rel="noreferrer"
+                className="mb-3 block truncate text-xs text-brand-600 hover:underline">
+                {viewing.source_url}
+              </a>
+            )}
+            <MarkdownView text={viewing.content || viewing.summary} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
