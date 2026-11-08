@@ -12,6 +12,31 @@ from services.ai_service import AiNotConfigured, stream_chat
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
+@router.get("/test")
+def test_connection(db: Session = Depends(get_db), _: object = Depends(get_current_user)):
+    """测试 AI 连接：GET {base}/models，诚实返回结果"""
+    import requests as rq
+
+    from services.ai_service import get_ai_config
+
+    cfg = get_ai_config(db)
+    if not cfg["api_key"]:
+        return {"success": False, "message": "未配置 API Key"}
+    try:
+        resp = rq.get(f"{cfg['api_base']}/models",
+                      headers={"Authorization": f"Bearer {cfg['api_key']}"}, timeout=(8, 20))
+        resp.raise_for_status()
+        data = resp.json()
+        models = [m.get("id") for m in data.get("data", []) if m.get("id")][:10]
+        return {"success": True, "data": {"base": cfg["api_base"], "model": cfg["model"],
+                 "available": models, "count": len(models)}}
+    except Exception as e:
+        detail = ""
+        if getattr(e, "response", None) is not None:
+            detail = e.response.text[:200]
+        return {"success": False, "message": f"连接失败：{e} {detail}"}
+
+
 @router.post("/describe")
 def describe(body: dict, db: Session = Depends(get_db), user: object = Depends(get_current_user)):
     """AI 生成资源简介：根据名称/类型/补充说明写一句话摘要"""

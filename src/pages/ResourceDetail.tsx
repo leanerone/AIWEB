@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, ExternalLink, Heart, Loader2, MessageSquare, Send, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, Heart, Loader2, MessageSquare, Pencil, Send, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -29,6 +29,9 @@ export function ResourceDetail() {
   const [comments, setComments] = useState<CommentItem[]>([])
   const [newComment, setNewComment] = useState('')
   const [sending, setSending] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editBusy, setEditBusy] = useState(false)
+  const [edit, setEdit] = useState({ type: 'skill', name: '', summary: '', content: '', tags: '', external_url: '' })
 
   const loadComments = (id: number) => {
     api.get<never, CommentItem[]>(`/resources/${id}/comments`).then(setComments).catch(() => {})
@@ -146,7 +149,14 @@ export function ResourceDetail() {
               </a>
             )}
             {(me?.role === 'admin' || me?.username === r.created_by) && (
-              <button className="btn-danger" onClick={() => setConfirmDel(true)}><Trash2 size={15} /> 删除</button>
+              <>
+                <button className="btn-ghost" onClick={() => {
+                  setEdit({ type: r.type, name: r.name, summary: r.summary, content: r.content,
+                    tags: r.tags.join(','), external_url: r.external_url || '' })
+                  setEditOpen(true)
+                }}><Pencil size={15} /> 编辑</button>
+                <button className="btn-danger" onClick={() => setConfirmDel(true)}><Trash2 size={15} /> 删除</button>
+              </>
             )}
           </div>
         </div>
@@ -201,6 +211,59 @@ export function ResourceDetail() {
           </button>
         </div>
       </BentoCard>
+
+      {/* 编辑弹窗 */}
+      {editOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm" onClick={() => setEditOpen(false)}>
+          <div className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-bento2 bg-white p-6 shadow-bentoHover"
+            onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-lg font-bold">编辑资源</h2>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <select className="input cursor-pointer" value={edit.type}
+                  onChange={(e) => setEdit({ ...edit, type: e.target.value })}>
+                  <option value="skill">Skill</option>
+                  <option value="tool">小工具</option>
+                  <option value="plugin">插件</option>
+                </select>
+                <input className="input" placeholder="名称" value={edit.name}
+                  onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+              </div>
+              <input className="input" placeholder="一句话简介" value={edit.summary}
+                onChange={(e) => setEdit({ ...edit, summary: e.target.value })} />
+              <textarea className="input min-h-[130px]" placeholder="详细介绍（Markdown）" value={edit.content}
+                onChange={(e) => setEdit({ ...edit, content: e.target.value })} />
+              <input className="input" placeholder="标签，逗号分隔" value={edit.tags}
+                onChange={(e) => setEdit({ ...edit, tags: e.target.value })} />
+              <input className="input" placeholder="外链地址" value={edit.external_url}
+                onChange={(e) => setEdit({ ...edit, external_url: e.target.value })} />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setEditOpen(false)}>取消</button>
+              <button className="btn-primary" disabled={editBusy}
+                onClick={async () => {
+                  setEditBusy(true)
+                  try {
+                    const d = await api.put<never, Resource>(`/resources/${r!.id}`, {
+                      type: edit.type, name: edit.name, summary: edit.summary, content: edit.content,
+                      tags: edit.tags.split(/[,，]/).map((t) => t.trim()).filter(Boolean),
+                      author: r!.author, source_type: r!.source_type, external_url: edit.external_url || null,
+                    })
+                    setR({ ...r!, ...d })
+                    setEditOpen(false)
+                    toast('success', '已保存')
+                  } catch (e) {
+                    toast('error', (e as Error).message)
+                  } finally {
+                    setEditBusy(false)
+                  }
+                }}>
+                {editBusy && <Loader2 size={15} className="animate-spin" />} 保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={confirmDel} danger

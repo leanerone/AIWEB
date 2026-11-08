@@ -114,6 +114,8 @@ export function Settings() {
   const [newUrl, setNewUrl] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [delId, setDelId] = useState<number | null>(null)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState('')
 
   const load = () => {
     api.get<never, SettingsData>('/settings').then(setCfg).catch((e) => toast('error', (e as Error).message))
@@ -204,9 +206,35 @@ export function Settings() {
               当前生效：{cfg.effective.api_base} · {cfg.effective.model} ·
               Key {cfg.effective.has_key ? '已就绪' : '未配置（对话将诚实报错）'}
             </p>
-            <button className="btn-primary" onClick={saveAi} disabled={busy}>
-              {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} 保存配置
-            </button>
+            {testResult && (
+              <p className={`rounded-xl px-3 py-2 text-xs ${testResult.startsWith('✓') ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {testResult}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button className="btn-primary flex-1" onClick={saveAi} disabled={busy}>
+                {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} 保存配置
+              </button>
+              <button className="btn-ghost flex-1" disabled={testing}
+                onClick={async () => {
+                  setTesting(true)
+                  setTestResult('')
+                  try {
+                    const r = await api.get<never, { success: boolean; message?: string; data?: { base: string; model: string; count: number; available: string[] } }>('/ai/test')
+                    if (r.success && r.data) {
+                      setTestResult(`✓ 连接成功：${r.data.base} · 可用模型 ${r.data.count} 个${r.data.available.includes(r.data.model) ? `（含当前 ${r.data.model}）` : `（⚠ 未找到 ${r.data.model}）`}`)
+                    } else {
+                      setTestResult(`✗ ${r.message || '连接失败'}`)
+                    }
+                  } catch (e) {
+                    setTestResult(`✗ ${(e as Error).message}`)
+                  } finally {
+                    setTesting(false)
+                  }
+                }}>
+                {testing ? <Loader2 size={15} className="animate-spin" /> : null} 测试连接
+              </button>
+            </div>
           </div>
         ) : (
           <Loader2 className="mx-auto animate-spin text-brand-400" size={24} />
