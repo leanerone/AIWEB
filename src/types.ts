@@ -21,6 +21,8 @@ export interface Resource {
   external_url: string | null
   downloads: number
   views: number
+  likes: number
+  liked_by_me: boolean
   created_by: string
   created_at: string
   updated_at: string
@@ -101,6 +103,12 @@ export interface FeedItem {
   ref_id?: number
   created_by: string
   created_at: string
+}
+
+export interface Contributor {
+  user: string
+  count: number
+  percent: number
 }
 
 export interface Stats {

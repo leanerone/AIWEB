@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, ExternalLink, Loader2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, Heart, Loader2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -81,6 +81,17 @@ export function ResourceDetail() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              className={r.liked_by_me ? 'btn bg-rose-50 text-rose-500 border border-rose-100' : 'btn-ghost'}
+              onClick={async () => {
+                try {
+                  const d = await api.post<never, { likes: number; liked_by_me: boolean }>(`/resources/${r.id}/like`)
+                  setR({ ...r, likes: d.likes, liked_by_me: d.liked_by_me })
+                } catch (e) { toast('error', (e as Error).message) }
+              }}
+            >
+              <Heart size={15} fill={r.liked_by_me ? 'currentColor' : 'none'} /> {r.likes}
+            </button>
             {r.source_type === 'upload' && (
               <button className="btn-primary" onClick={download}><Download size={15} /> 下载附件</button>
             )}

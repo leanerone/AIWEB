@@ -24,10 +24,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routes import auth, chat, feed, memos, notes, resources, rss, settings as settings_routes  # noqa: E402
+from routes import ai, auth, chat, feed, memos, notes, resources, rss, settings as settings_routes  # noqa: E402
 
 API = "/api"
 app.include_router(auth.router, prefix=API)
+app.include_router(ai.router, prefix=API)
 app.include_router(resources.router, prefix=API)
 app.include_router(memos.router, prefix=API)
 app.include_router(notes.router, prefix=API)

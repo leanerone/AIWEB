@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { Download, FileText, FileUp, Loader2, Package, Plus, Puzzle, Search, Wrench } from 'lucide-react'
+import { Download, FileText, FileUp, Heart, Loader2, Package, Plus, Puzzle, Search, Wrench } from 'lucide-react'
 import { useState } from 'react'
+import type { MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
@@ -9,6 +10,29 @@ import { BentoCard } from '../components/BentoCard'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import type { Resource } from '../types'
+
+/** 点赞按钮（乐观更新） */
+export function LikeButton({ resource, onToggle }: { resource: Resource; onToggle?: (r: Resource) => void }) {
+  const toast = useToast()
+  const like = async (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      const d = await api.post<never, { likes: number; liked_by_me: boolean }>(`/resources/${resource.id}/like`)
+      onToggle?.({ ...resource, likes: d.likes, liked_by_me: d.liked_by_me })
+    } catch (err) {
+      toast('error', (err as Error).message)
+    }
+  }
+  return (
+    <button onClick={like}
+      className={`flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] transition ${
+        resource.liked_by_me ? 'text-rose-500' : 'text-gray-400 hover:text-rose-400'
+      }`} title={resource.liked_by_me ? '取消点赞' : '点赞'}>
+      <Heart size={13} fill={resource.liked_by_me ? 'currentColor' : 'none'} /> {resource.likes}
+    </button>
+  )
+}
 
 const TABS = [
   { key: '', label: '全部', icon: Package },
@@ -29,6 +53,7 @@ export function Resources() {
   const type = params.get('type') ?? ''
   const me = useAuth((s) => s.user)
   const [showForm, setShowForm] = useState(false)
+  const [likedMap, setLikedMap] = useState<Record<number, Pick<Resource, 'likes' | 'liked_by_me'>>>({})
 
   const { keyword, setKeyword, items, loading, reload } = useList<Resource>(
     (p) => api.get<never, { total: number; items: Resource[] }>(
@@ -37,6 +62,8 @@ export function Resources() {
     [type],
     60,
   )
+
+  const applyLike = (r: Resource) => setLikedMap((m) => ({ ...m, [r.id]: { likes: r.likes, liked_by_me: r.liked_by_me } }))
 
   return (
     <div className="space-y-4">
@@ -74,7 +101,9 @@ export function Resources() {
           action={<button className="btn-primary" onClick={() => setShowForm(true)}><Plus size={15} /> 上传第一个</button>} />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {items.map((r, i) => (
+          {items.map((r0, i) => {
+            const r = { ...r0, ...(likedMap[r0.id] ?? {}) }
+            return (
             <BentoCard key={r.id} delay={Math.min(i * 0.04, 0.5)} className="p-5">
               <Link to={`/resources/${r.id}`} className="block">
                 <div className="flex items-start justify-between">
@@ -92,11 +121,15 @@ export function Resources() {
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3 text-[11px] text-gray-400">
                   <span>{r.created_by}</span>
-                  <span className="flex items-center gap-1"><Download size={12} /> {r.downloads}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-1"><Download size={12} /> {r.downloads}</span>
+                    <LikeButton resource={r} onToggle={applyLike} />
+                  </span>
                 </div>
               </Link>
             </BentoCard>
-          ))}
+            )
+          })}
         </div>
       )}
 

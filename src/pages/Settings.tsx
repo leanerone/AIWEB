@@ -1,4 +1,4 @@
-import { ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2 } from 'lucide-react'
+import { BookmarkPlus, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { BentoCard } from '../components/BentoCard'
@@ -157,14 +157,26 @@ export function Settings() {
           <h3 className="mb-3 text-sm font-bold">最新资讯</h3>
           <div className="max-h-72 space-y-1 overflow-y-auto">
             {items.map((it) => (
-              <a key={it.id} href={it.link} target="_blank" rel="noreferrer"
-                className="flex items-start gap-2 rounded-xl p-2.5 transition hover:bg-gray-50">
+              <div key={it.id} className="group flex items-start gap-2 rounded-xl p-2.5 transition hover:bg-gray-50">
                 <ExternalLink size={13} className="mt-1 shrink-0 text-sky-500" />
-                <div className="min-w-0">
+                <a href={it.link} target="_blank" rel="noreferrer" className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{it.title}</p>
                   <p className="text-[11px] text-gray-400">{it.source} · {it.published_at || ''}</p>
-                </div>
-              </a>
+                </a>
+                <button title="保存为笔记" className="hidden shrink-0 rounded-lg p-1.5 text-subtle hover:bg-brand-50 hover:text-brand-600 group-hover:block"
+                  onClick={async () => {
+                    try {
+                      await api.post('/memos', {
+                        title: it.title,
+                        content: `${it.summary || it.title}\n\n原文：${it.link}\n来源：${it.source}`,
+                        tags: ['rss', it.source || '资讯'],
+                      })
+                      toast('success', '已保存为笔记')
+                    } catch (e) { toast('error', (e as Error).message) }
+                  }}>
+                  <BookmarkPlus size={14} />
+                </button>
+              </div>
             ))}
             {items.length === 0 && <p className="py-6 text-center text-xs text-gray-400">暂无资讯，点「全部刷新」抓取</p>}
           </div>

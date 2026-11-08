@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Sparkles, StickyNote, Wrench } from 'lucide-react'
+import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Sparkles, StickyNote, Trophy, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
@@ -7,7 +7,8 @@ import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
 import { StatCard } from '../components/StatCard'
 import { EmptyState } from '../components/ui/EmptyState'
-import type { FeedItem, Stats } from '../types'
+import { useToast } from '../components/ui/Toast'
+import type { Contributor, FeedItem, Stats } from '../types'
 
 const KIND_META: Record<string, { label: string; cls: string }> = {
   ai: { label: 'AI 内容', cls: 'bg-violet-100 text-violet-700' },
@@ -19,14 +20,18 @@ const KIND_META: Record<string, { label: string; cls: string }> = {
 
 export function Dashboard() {
   const user = useAuth((s) => s.user)
+  const toast = useToast()
   const [stats, setStats] = useState<Stats | null>(null)
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [kind, setKind] = useState('')
   const [limit, setLimit] = useState(25)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [contributors, setContributors] = useState<Contributor[]>([])
+  const [briefing, setBriefing] = useState(false)
 
   useEffect(() => {
     api.get<never, Stats>('/hub/stats').then(setStats).catch(() => {})
+    api.get<never, Contributor[]>('/hub/contributors').then(setContributors).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -35,6 +40,20 @@ export function Dashboard() {
   }, [limit])
 
   const filtered = kind ? feed.filter((f) => f.kind === kind) : feed
+
+  const genBriefing = async () => {
+    setBriefing(true)
+    try {
+      const d = await api.post<never, { id: number; title: string }>('/ai/briefing')
+      toast('success', `简报已生成：${d.title}`)
+      setLoadingMore(true)
+      api.get<never, FeedItem[]>(`/hub/feed?limit=${limit}`).then(setFeed).catch(() => {}).finally(() => setLoadingMore(false))
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setBriefing(false)
+    }
+  }
 
   const hour = new Date().getHours()
   const greeting = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
@@ -149,9 +168,20 @@ export function Dashboard() {
               <p className="mt-1 text-xs leading-5 text-subtle">
                 在线对话、生成周报素材与知识卡片，好内容可一键沉淀到首页动态
               </p>
-              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-600">
-                开始对话 <ArrowUpRight size={13} />
+              <div className="mt-3 flex items-center gap-2">
+                <span className="flex items-center gap-1 text-xs font-medium text-brand-600">
+                  开始对话 <ArrowUpRight size={13} />
+                </span>
               </div>
+              <button
+                className="btn-ghost mt-3 w-full !text-xs"
+                disabled={briefing}
+                onClick={(e) => { e.stopPropagation(); genBriefing() }}
+                title="抓取最新 RSS 资讯，AI 生成今日简报并沉淀到动态"
+              >
+                {briefing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                生成今日 AI 简报
+              </button>
             </div>
           </BentoCard>
 
@@ -171,6 +201,26 @@ export function Dashboard() {
           </BentoCard>
 
           <BentoCard delay={0.28}>
+            <div className="p-5">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold"><Trophy size={15} className="text-amber-500" /> 贡献者榜</h3>
+              <div className="mt-3 space-y-2.5">
+                {contributors.length === 0 && <p className="text-xs text-gray-400">还没有贡献记录</p>}
+                {contributors.map((c) => (
+                  <div key={c.user}>
+                    <div className="flex justify-between text-xs">
+                      <span className="truncate font-medium text-ink">{c.user}</span>
+                      <span className="text-subtle">{c.count}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                      <div className="h-full rounded-full" style={{ width: `${c.percent}%`, backgroundImage: 'var(--brand-grad)' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </BentoCard>
+
+          <BentoCard delay={0.34}>
             <div className="p-5">
               <h3 className="text-sm font-bold">平台统计</h3>
               <ul className="mt-3 space-y-2 text-xs text-subtle">

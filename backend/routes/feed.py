@@ -30,6 +30,32 @@ def stats(db: Session = Depends(get_db), _: object = Depends(get_current_user)):
     }
 
 
+@router.get("/contributors")
+def contributors(db: Session = Depends(get_db), _: object = Depends(get_current_user)):
+    """贡献者榜：资源 + 笔记 + 内容卡计数 Top 8"""
+    from collections import Counter
+
+    counter: Counter = Counter()
+    for name, in db.query(Resource.created_by).all():
+        if name:
+            counter[name] += 2  # 资源权重更高
+    for name, in db.query(Memo.created_by).all():
+        if name:
+            counter[name] += 1
+    for name, in db.query(FeedCard.created_by).all():
+        if name:
+            counter[name] += 1
+    top = counter.most_common(8)
+    max_count = top[0][1] if top else 1
+    return {
+        "success": True,
+        "data": [
+            {"user": name, "count": count, "percent": round(count * 100 / max_count)}
+            for name, count in top
+        ],
+    }
+
+
 @router.get("/feed")
 def feed(limit: int = 30, db: Session = Depends(get_db),
          _: object = Depends(get_current_user)):

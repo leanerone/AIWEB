@@ -13,6 +13,7 @@ from config import settings
 from database.models import Resource
 from database.session import get_db
 from routes.deps import get_current_user
+from services.skill_meta import extract_from_upload
 
 router = APIRouter(prefix="/resources", tags=["resources"])
 
@@ -38,7 +39,7 @@ def list_resources(
     page: int = 1,
     limit: int = 20,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_user),
+    user: object = Depends(get_current_user),
 ):
     query = db.query(Resource)
     if type in ALLOWED_TYPES:
@@ -58,17 +59,19 @@ def list_resources(
     )
     return {
         "success": True,
-        "data": {"total": total, "items": [_serialize(r) for r in items]},
+        "data": {"total": total, "items": [_serialize(r, user.username) for r in items]},
     }
 
 
-def _serialize(r: Resource) -> dict:
+def _serialize(r: Resource, viewer: str | None = None) -> dict:
     return {
         "id": r.id, "type": r.type, "name": r.name, "summary": r.summary,
         "content": r.content, "tags": r.tags or [], "author": r.author,
         "source_type": r.source_type, "file_name": r.file_name,
         "external_url": r.external_url, "downloads": r.downloads,
-        "views": r.views, "created_by": r.created_by,
+        "views": r.views, "likes": r.likes,
+        "liked_by_me": bool(viewer and viewer in (r.liked_by or [])),
+        "created_by": r.created_by,
         "created_at": r.created_at.strftime("%Y-%m-%d %H:%M"),
         "updated_at": r.updated_at.strftime("%Y-%m-%d %H:%M"),
     }
@@ -77,7 +80,7 @@ def _serialize(r: Resource) -> dict:
 @router.post("")
 async def create_resource(
     type: str = Form(...),
-    name: str = Form(...),
+    name: str = Form(""),
     summary: str = Form(""),
     content: str = Form(""),
     tags: str = Form(""),
@@ -100,6 +103,10 @@ async def create_resource(
     if file is not None:
         r.source_type = "upload"
         r.file_name = file.filename
+        if not r.name:
+            r.name = Path(file.filename).stem  # 先用文件名占位，稍后被 frontmatter 覆盖
+    if not r.name:
+        raise HTTPException(status_code=400, detail="名称不能为空（或选择可解析的附件）")
     db.add(r)
     db.commit()
     db.refresh(r)
@@ -110,20 +117,50 @@ async def create_resource(
         safe_name = f"{uuid.uuid4().hex[:8]}_{Path(file.filename).name}"
         with open(dest_dir / safe_name, "wb") as f:
             shutil.copyfileobj(file.file, f)
-        r.file_path = str((dest_dir / safe_name).relative_to(settings.UPLOAD_DIR))
+        rel_path = str((dest_dir / safe_name).relative_to(settings.UPLOAD_DIR))
+        r.file_path = rel_path
+
+        # SKILL.md / README frontmatter 自动填充
+        meta = extract_from_upload(Path(settings.UPLOAD_DIR) / rel_path)
+        if meta["name"]:
+            r.name = meta["name"]
+        if meta["description"] and not r.summary:
+            r.summary = meta["description"]
+        if meta["description"] and not r.content:
+            r.content = f"> 自动提取自 {r.file_name}\n\n{meta['description']}"
+        if meta["tags"] and not tag_list:
+            r.tags = meta["tags"]
         db.commit()
-    return {"success": True, "data": _serialize(r)}
+    return {"success": True, "data": _serialize(r, user.username)}
 
 
 @router.get("/{resource_id}")
 def get_resource(resource_id: int, db: Session = Depends(get_db),
-                 _: object = Depends(get_current_user)):
+                 user: object = Depends(get_current_user)):
     r = db.query(Resource).get(resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
     r.views += 1
     db.commit()
-    return {"success": True, "data": _serialize(r)}
+    return {"success": True, "data": _serialize(r, user.username)}
+
+
+@router.post("/{resource_id}/like")
+def like_resource(resource_id: int, db: Session = Depends(get_db),
+                  user: object = Depends(get_current_user)):
+    """点赞 / 取消点赞（按用户去重）"""
+    r = db.query(Resource).get(resource_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    liked_by = list(r.liked_by or [])
+    if user.username in liked_by:
+        liked_by.remove(user.username)
+    else:
+        liked_by.append(user.username)
+    r.liked_by = liked_by
+    r.likes = len(liked_by)
+    db.commit()
+    return {"success": True, "data": {"likes": r.likes, "liked_by_me": user.username in liked_by}}
 
 
 @router.put("/{resource_id}")
