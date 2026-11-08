@@ -31,6 +31,7 @@ export function Dashboard() {
   const [contributors, setContributors] = useState<Contributor[]>([])
   const [briefing, setBriefing] = useState(false)
   const [viewing, setViewing] = useState<FeedItem | null>(null)
+  const [feedLoading, setFeedLoading] = useState(true)
 
   useEffect(() => {
     api.get<never, Stats>('/hub/stats').then(setStats).catch(() => {})
@@ -39,7 +40,8 @@ export function Dashboard() {
 
   useEffect(() => {
     setLoadingMore(true)
-    api.get<never, FeedItem[]>(`/hub/feed?limit=${limit}`).then(setFeed).catch(() => {}).finally(() => setLoadingMore(false))
+    if (feed.length === 0) setFeedLoading(true)
+    api.get<never, FeedItem[]>(`/hub/feed?limit=${limit}`).then(setFeed).catch(() => {}).finally(() => { setLoadingMore(false); setFeedLoading(false) })
   }, [limit])
 
   const filtered = kind ? feed.filter((f) => f.kind === kind) : feed
@@ -84,12 +86,24 @@ export function Dashboard() {
         </div>
       </BentoCard>
 
-      {/* 统计 Bento 行 */}
+      {/* 统计 Bento 行（加载中显示骨架） */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard icon={FileText} label="Skills 技能包" value={stats?.skills ?? 0} to="/resources?type=skill" delay={0} />
-        <StatCard icon={Wrench} label="小工具" value={stats?.tools ?? 0} to="/resources?type=tool" delay={0.06} tone="emerald" />
-        <StatCard icon={Puzzle} label="插件" value={stats?.plugins ?? 0} to="/resources?type=plugin" delay={0.12} tone="amber" />
-        <StatCard icon={StickyNote} label="笔记" value={stats?.memos ?? 0} to="/memos" delay={0.18} tone="sky" />
+        {stats === null
+          ? [...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 rounded-bento border border-gray-100 bg-white p-5 shadow-bento">
+                <div className="h-12 w-12 shrink-0 animate-pulse rounded-2xl bg-gray-100" />
+                <div className="flex-1">
+                  <div className="mb-1.5 h-6 w-10 animate-pulse rounded bg-gray-100" />
+                  <div className="h-3 w-16 animate-pulse rounded bg-gray-100" />
+                </div>
+              </div>
+            ))
+          : <>
+              <StatCard icon={FileText} label="Skills 技能包" value={stats.skills} to="/resources?type=skill" />
+              <StatCard icon={Wrench} label="小工具" value={stats.tools} to="/resources?type=tool" delay={0.06} tone="emerald" />
+              <StatCard icon={Puzzle} label="插件" value={stats.plugins} to="/resources?type=plugin" delay={0.12} tone="amber" />
+              <StatCard icon={StickyNote} label="笔记" value={stats.memos} to="/memos" delay={0.18} tone="sky" />
+            </>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -118,7 +132,20 @@ export function Dashboard() {
             ))}
           </div>
           <div className="space-y-1 p-3">
-            {filtered.length === 0 && (
+            {feedLoading && filtered.length === 0 && (
+              <div className="space-y-1 p-1">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-2xl p-3">
+                    <div className="h-5 w-12 shrink-0 animate-pulse rounded-full bg-gray-100" />
+                    <div className="flex-1">
+                      <div className="mb-1.5 h-3.5 w-1/3 animate-pulse rounded bg-gray-100" />
+                      <div className="h-3 w-2/3 animate-pulse rounded bg-gray-100" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!feedLoading && filtered.length === 0 && (
               <EmptyState icon={Sparkles} title="还没有动态"
                 hint="上传第一个资源、写一篇笔记或让 AI 生成内容，这里就会热闹起来"
                 action={<Link to="/resources" className="btn-primary">去上传资源</Link>} />
