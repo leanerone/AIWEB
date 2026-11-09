@@ -1,5 +1,25 @@
 # 更新日志
 
+## v0.8 · 2026-11-09 液态玻璃质感
+
+配方取自 motionsites 数据集（Unlicense）：Max Reed `.liquid-glass` 高光描边 + Coffee Rewards `feDisplacementMap` 折射。
+
+- **卡片玻璃 `.card-lg` + 边光 `.lg-edge`**：`BentoCard` 全局升级
+  - 浅色：`rgba(255,255,255,.68)` + `blur(14px) saturate(1.35)`，边缘描边用**暗色**渐变（浅底才看得见）
+  - 深色：`rgba(18,23,30,.62)` + `blur(16px) saturate(1.4)`，边缘描边用**亮色**渐变
+  - 边光实现：`::before` + `mask-composite: exclude`，只在 1.2px 边框环上画渐变，`pointer-events: none`
+- **浮层真折射**：`<filter id="liquid-glass">`（feTurbulence→feGaussianBlur→feDisplacementMap scale=20）
+  注入 `index.html`，经 `backdrop-filter: url(#liquid-glass) blur(10px) saturate(1.5)` 作用于
+  ⌘K 面板、通知/用户下拉、MegaMenu 面板；**能力探测**（`CSS.supports` + `.has-refract`）
+  ——Firefox/Safari 不支持带 `url()` 的 backdrop-filter，自动回退普通磨砂，不会失去模糊
+- **深色输入框/幽灵按钮**：半透明玻璃 + inset 顶部高光（浅色主题保持实色，避免对比度下降）
+- **Toast / ConfirmDialog** 同步玻璃语言
+- `prefers-reduced-motion` 下关闭全部 backdrop-filter（降级为半透明平涂）
+- 修自身引入的回归：新加的 `position: relative` 误覆盖 `.mega-dd` 的 `position: absolute`，
+  导致下拉被挤进文档流（宽度 664→306）；改为仅设 `overflow`，⌘K 面板由组件自带 `relative`
+- 实测：MegaMenu 恢复 664×358、`inFlow=true(absolute)`、边光 `pointer-events:none`、行可点；
+  5 个页面（资源库/笔记/对话/设置/简报）均无横向溢出；卡片数 1–12 视页面而定
+
 ## v0.7 · 2026-11-09 简报归档页 + 字体自托管 + 浮层统一
 
 - **`/briefings` AI 简报归档页**（新）：`GET /api/hub/briefings` 按 `ref_type=briefing` 倒序分页；

@@ -32,7 +32,7 @@ export function ConfirmDialog({ open, title = '确认操作', message, danger, o
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-            className="w-full max-w-sm rounded-bento2 bg-white p-6 shadow-bentoHover"
+            className="lg-edge glass-pop w-full max-w-sm rounded-bento2 p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center gap-2.5">

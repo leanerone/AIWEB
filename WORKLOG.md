@@ -103,6 +103,16 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
 - pytest 27 → 40 全过；npm run build 通过；已推送
 
+### 2026-11-09 14:50-15:20 · v0.8 液态玻璃质感（B 高光边 + A 折射）
+- 配方来自 zip：Max Reed `.liquid-glass`（mask-composite 边光）+ Coffee Rewards `feDisplacementMap`（折射）
+- BentoCard 全站升 `.card-lg + .lg-edge`（浅/深两套 --lg-edge 渐变，浅底用暗描边才可见）
+- 浮层折射 #liquid-glass 注入 index.html；CSS.supports 探测加 .has-refract，Firefox/Safari 回退普通磨砂
+- 深色 input/ghost 按钮改半透玻璃 + inset 高光；Toast/ConfirmDialog 同语言；reduce-motion 关 backdrop-filter
+- **自造回归并修掉**：新规则 `position: relative` 覆盖了 .mega-dd 的 absolute → 下拉被挤进文档流(664→306)；
+  改为只设 overflow，⌘K 面板自己带 relative。教训：改公共样式要复查定位属性是否被后写规则顶掉
+- 实测：dd 恢复 664×358、backdrop=url() 生效、边光不吃点击；5 页面零溢出
+- 已推送
+
 ### 2026-11-09 14:10-14:40 · v0.7 简报归档页 + 字体自托管 + 浮层统一（"把剩下的做完"）
 - 新增 /briefings 页面 + GET /api/hub/briefings（ref_type=briefing 倒序分页），导航三处一致入口；
   首页 AI 卡加归档链接；seed 简报卡补 ref_type 并回填演示库

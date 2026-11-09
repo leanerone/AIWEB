@@ -19,7 +19,7 @@ export function BentoCard({ children, className = '', delay = 0, onClick, id }: 
       transition={{ duration: 0.4, delay, ease: 'easeOut' }}
       whileHover={{ y: -3 }}
       onClick={onClick}
-      className={`rounded-bento border border-gray-100 bg-white shadow-bento transition-shadow hover:shadow-bentoHover ${className}`}
+      className={`lg-edge card-lg rounded-bento border border-gray-100 bg-white shadow-bento transition-shadow hover:shadow-bentoHover ${className}`}
     >
       {children}
     </motion.div>

@@ -38,7 +38,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-              className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 px-4 py-2.5 text-sm shadow-bento backdrop-blur"
+              className="lg-edge glass-pop flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm shadow-bento"
             >
               {icons[t.kind]}
               <span className="max-w-md">{t.text}</span>

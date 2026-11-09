@@ -92,7 +92,7 @@ export function CommandPalette() {
             initial={{ opacity: 0, scale: 0.96, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: -6 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="glass-pop w-full max-w-lg overflow-hidden rounded-bento2"
+            className="glass-pop relative w-full max-w-lg overflow-hidden rounded-bento2"
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
               <Search size={16} className="text-gray-400" />
