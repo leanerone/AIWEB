@@ -390,3 +390,6 @@ pytest 82 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 16（04:01）
 pytest 82 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 17（04:10）
+pytest 82 ✓ · e2e_check 10/10 ✓
