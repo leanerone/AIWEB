@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { BookOpen, CornerDownLeft, Mail, Notebook, Search, Sparkles } from 'lucide-react'
+import { BookOpen, CornerDownLeft, Mail, Newspaper, Notebook, Search, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
-import type { Memo, NoteLinkItem, Resource } from '../types'
+import type { NoteLinkItem, SearchHit } from '../types'
 
 const PAGES = [
   { label: '首页', to: '/' },
@@ -13,7 +13,7 @@ const PAGES = [
   { label: '设置', to: '/settings' },
 ]
 
-interface Hit { kind: 'page' | 'resource' | 'memo' | 'noteslink'; label: string; sub: string; to: string }
+interface Hit { kind: 'page' | 'resource' | 'memo' | 'rss' | 'noteslink'; label: string; sub: string; to: string }
 
 /** ⌘K / Ctrl+K 全局命令面板：搜页面 / 资源 / 笔记 */
 export function CommandPalette() {
@@ -48,22 +48,26 @@ export function CommandPalette() {
     const t = setTimeout(async () => {
       const pages: Hit[] = PAGES.filter((p) => p.label.toLowerCase().includes(kw))
         .map((p) => ({ kind: 'page', label: p.label, sub: '页面', to: p.to }))
-      const [res, memos, links] = await Promise.all([
-        api.get<never, { items: Resource[] }>(`/resources?keyword=${encodeURIComponent(kw)}&limit=6`).catch(() => ({ items: [] })),
-        api.get<never, { items: Memo[] }>(`/memos?keyword=${encodeURIComponent(kw)}&limit=6`).catch(() => ({ items: [] })),
-        api.get<never, { items: NoteLinkItem[] }>(`/notes/links?keyword=${encodeURIComponent(kw)}&limit=6`).catch(() => ({ items: [] })),
+      const [found, links] = await Promise.all([
+        api.get<never, SearchHit[]>(`/search?q=${encodeURIComponent(kw)}&limit=12`)
+          .catch(() => [] as SearchHit[]),
+        api.get<never, { items: NoteLinkItem[] }>(`/notes/links?keyword=${encodeURIComponent(kw)}&limit=6`)
+          .catch(() => ({ items: [] })),
       ])
       if (cancelled) return
-      const resHits: Hit[] = res.items.map((r) => ({
-        kind: 'resource', label: r.name, sub: `资源 · ${r.type} · ${r.created_by}`, to: `/resources/${r.id}`,
-      }))
-      const memoHits: Hit[] = memos.items.map((m) => ({
-        kind: 'memo', label: m.title, sub: `笔记 · ${m.created_by}`, to: '/memos',
+      const toPath = (h: SearchHit) =>
+        h.kind === 'resource' ? `/resources/${h.id}` : h.kind === 'memo' ? '/memos' : '/settings'
+      const foundHits: Hit[] = found.map((h) => ({
+        kind: h.kind,
+        label: h.title,
+        sub: (h.kind === 'resource' ? '资源' : h.kind === 'memo' ? '笔记' : '资讯') +
+             ` · ${h.created_by}`,
+        to: toPath(h),
       }))
       const linkHits: Hit[] = links.items.map((l) => ({
         kind: 'noteslink', label: l.title || l.document || l.url, sub: 'Notes 链接', to: '/memos',
       }))
-      setHits([...pages, ...resHits, ...memoHits, ...linkHits])
+      setHits([...pages, ...foundHits, ...linkHits])
       setCursor(0)
     }, 200)
     return () => { cancelled = true; clearTimeout(t) }
@@ -74,6 +78,7 @@ export function CommandPalette() {
   const iconFor = (kind: Hit['kind']) =>
     kind === 'resource' ? <BookOpen size={15} className="text-brand-500" />
     : kind === 'memo' ? <Notebook size={15} className="text-emerald-500" />
+    : kind === 'rss' ? <Newspaper size={15} className="text-sky-500" />
     : kind === 'noteslink' ? <Mail size={15} className="text-amber-500" />
     : <Sparkles size={15} className="text-violet-500" />
 
@@ -91,7 +96,7 @@ export function CommandPalette() {
             <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
               <Search size={16} className="text-gray-400" />
               <input ref={inputRef} className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
-                placeholder="搜索页面、资源、笔记…" value={q}
+                placeholder="搜索页面、资源、笔记、资讯…" value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') { e.preventDefault(); setCursor((c) => Math.min(c + 1, hits.length - 1)) }

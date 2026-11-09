@@ -23,6 +23,12 @@ async def lifespan(_app: FastAPI):
     try:
         from routes.auth import seed_users
         seed_users(db)
+        try:
+            from services import fts
+            fts.rebuild(db)  # 全文索引全量重建（顺带自愈遗漏的增量同步）
+        except Exception:
+            logging.getLogger("aiweb").warning("FTS5 初始化失败，全文搜索将使用 LIKE 回落",
+                                               exc_info=True)
     finally:
         db.close()
     logging.getLogger("aiweb").info("数据库就绪，默认账号已播种")
@@ -46,8 +52,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routes import (ai, admin, auth, chat, comments, feed, memos, notes,
-                    resources, rss, settings as settings_routes)  # noqa: E402
+from routes import (ai, admin, auth, bookmarks, chat, comments, feed, memos,
+                    notes, notifications, resources, rss, search,
+                    settings as settings_routes)  # noqa: E402
 
 API = "/api"
 app.include_router(auth.router, prefix=API)
@@ -61,6 +68,9 @@ app.include_router(chat.router, prefix=API)
 app.include_router(rss.router, prefix=API)
 app.include_router(feed.router, prefix=API)
 app.include_router(settings_routes.router, prefix=API)
+app.include_router(search.router, prefix=API)
+app.include_router(bookmarks.router, prefix=API)
+app.include_router(notifications.router, prefix=API)
 
 
 @app.get("/api/health")

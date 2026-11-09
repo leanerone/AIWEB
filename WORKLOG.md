@@ -102,3 +102,13 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - RSS 启动即刷新 + ENABLE_SCHEDULER 开关 + lifespan 迁移（修 on_event 弃用）
 - 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
 - pytest 27 → 40 全过；npm run build 通过；已推送
+
+### 2026-11-09 08:45-09:05 · v0.4 P1 功能增强轮（FTS 搜索 / 收藏夹 / 通知中心）
+- FTS5 全文搜索：/api/search 统一检索 资源/笔记/RSS；CJK 逐字切分+短语匹配支持 2 字中文；
+  增删改与 RSS 抓取实时同步索引；启动全量重建；⌘K 接入
+- 收藏夹：Bookmark 模型 + toggle/list；资源卡片/详情/笔记卡片 ☆ 星标；首页「我的收藏」卡；
+  bookmarked_by_me 批量查询防 N+1；目标删除自动清理悬挂收藏
+- 通知中心：Notification 模型 + 评论/点赞投递（自评不投、取消赞不投）；铃铛改通知面板
+  （未读轮询、点击直达、全部已读）
+- 坑：external-content FTS5 表按 rowid DELETE 会报 malformed database —— 改普通 FTS 表解决
+- pytest 40 → 43 全过；build 通过；真实服务器冒烟（中文检索/收藏/通知）通过；已推送

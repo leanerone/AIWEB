@@ -7,6 +7,7 @@ import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { useList } from '../hooks/useList'
 import { BentoCard } from '../components/BentoCard'
+import { BookmarkButton } from '../components/BookmarkButton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import type { Resource } from '../types'
@@ -59,6 +60,7 @@ export function Resources() {
   const [likedOnly, setLikedOnly] = useState(false)
   const [tagFilter, setTagFilter] = useState('')
   const [likedMap, setLikedMap] = useState<Record<number, Pick<Resource, 'likes' | 'liked_by_me'>>>({})
+  const [markedMap, setMarkedMap] = useState<Record<number, boolean>>({})
 
   const { keyword, setKeyword, items, loading, reload } = useList<Resource>(
     (p) => api.get<never, { total: number; items: Resource[] }>(
@@ -133,7 +135,7 @@ export function Resources() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((r0, i) => {
-            const r = { ...r0, ...(likedMap[r0.id] ?? {}) }
+            const r = { ...r0, ...(likedMap[r0.id] ?? {}), bookmarked_by_me: markedMap[r0.id] ?? r0.bookmarked_by_me }
             return (
             <BentoCard key={r.id} delay={Math.min(i * 0.04, 0.5)} className="overflow-hidden">
               <Link to={`/resources/${r.id}`} className="block">
@@ -161,7 +163,12 @@ export function Resources() {
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3 text-[11px] text-gray-400">
                     <span className="flex items-center gap-1"><Download size={12} /> {r.downloads}</span>
-                    <LikeButton resource={r} onToggle={applyLike} />
+                    <span className="flex items-center gap-2">
+                      <BookmarkButton targetType="resource" targetId={r.id} size={13}
+                        bookmarked={!!r.bookmarked_by_me}
+                        onToggle={(b) => setMarkedMap((m) => ({ ...m, [r.id]: b }))} />
+                      <LikeButton resource={r} onToggle={applyLike} />
+                    </span>
                   </div>
                 </div>
               </Link>

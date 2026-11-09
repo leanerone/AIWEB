@@ -10,9 +10,11 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from config import settings
-from database.models import Resource
+from database.models import Bookmark, Resource
 from database.session import get_db
 from routes.deps import get_current_user
+from routes.notifications import notify
+from services import fts
 from services.skill_meta import extract_from_upload
 
 router = APIRouter(prefix="/resources", tags=["resources"])
@@ -83,13 +85,21 @@ def list_resources(
         .limit(limit)
         .all()
     )
+    # 当前用户在本页资源上的收藏状态（一次批量查询，避免 N+1）
+    marked: set[int] = set()
+    if items:
+        marked = {b.target_id for b in db.query(Bookmark)
+                  .filter(Bookmark.username == user.username,
+                          Bookmark.target_type == "resource",
+                          Bookmark.target_id.in_([r.id for r in items])).all()}
     return {
         "success": True,
-        "data": {"total": total, "items": [_serialize(r, user.username) for r in items]},
+        "data": {"total": total,
+                 "items": [_serialize(r, user.username, r.id in marked) for r in items]},
     }
 
 
-def _serialize(r: Resource, viewer: str | None = None) -> dict:
+def _serialize(r: Resource, viewer: str | None = None, bookmarked: bool = False) -> dict:
     return {
         "id": r.id, "type": r.type, "name": r.name, "summary": r.summary,
         "content": r.content, "tags": r.tags or [], "author": r.author,
@@ -97,6 +107,7 @@ def _serialize(r: Resource, viewer: str | None = None) -> dict:
         "external_url": r.external_url, "downloads": r.downloads,
         "views": r.views, "likes": r.likes,
         "liked_by_me": bool(viewer and viewer in (r.liked_by or [])),
+        "bookmarked_by_me": bool(bookmarked),
         "created_by": r.created_by,
         "created_at": r.created_at.strftime("%Y-%m-%d %H:%M"),
         "updated_at": r.updated_at.strftime("%Y-%m-%d %H:%M"),
@@ -167,6 +178,9 @@ async def create_resource(
         if meta["tags"] and not tag_list:
             r.tags = meta["tags"]
         db.commit()
+
+    fts.index_resource(db, r)  # 全文索引同步
+    db.commit()
     return {"success": True, "data": _serialize(r, user.username)}
 
 
@@ -177,24 +191,33 @@ def get_resource(resource_id: int, db: Session = Depends(get_db),
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
     r.views += 1
+    bookmarked = bool(db.query(Bookmark)
+                      .filter(Bookmark.username == user.username,
+                              Bookmark.target_type == "resource",
+                              Bookmark.target_id == resource_id).first())
     db.commit()
-    return {"success": True, "data": _serialize(r, user.username)}
+    return {"success": True, "data": _serialize(r, user.username, bookmarked)}
 
 
 @router.post("/{resource_id}/like")
 def like_resource(resource_id: int, db: Session = Depends(get_db),
                   user: object = Depends(get_current_user)):
-    """点赞 / 取消点赞（按用户去重）"""
+    """点赞 / 取消点赞（按用户去重）；点赞时通知资源创建者"""
     r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
     liked_by = list(r.liked_by or [])
-    if user.username in liked_by:
-        liked_by.remove(user.username)
-    else:
+    turning_on = user.username not in liked_by
+    if turning_on:
         liked_by.append(user.username)
+    else:
+        liked_by.remove(user.username)
     r.liked_by = liked_by
     r.likes = len(liked_by)
+    if turning_on and r.created_by and r.created_by != user.username:
+        notify(db, r.created_by, "like",
+               f"{user.display_name or user.username} 赞了你的资源「{r.name}」",
+               ref_type="resource", ref_id=r.id)
     db.commit()
     return {"success": True, "data": {"likes": r.likes, "liked_by_me": user.username in liked_by}}
 
@@ -219,6 +242,8 @@ def update_resource(resource_id: int, body: ResourceIn,
             if r.source_type != "upload":
                 r.source_type = "url"
     db.commit()
+    fts.index_resource(db, r)  # 全文索引同步
+    db.commit()
     return {"success": True, "data": _serialize(r, user.username)}
 
 
@@ -234,6 +259,7 @@ def delete_resource(resource_id: int, db: Session = Depends(get_db),
         p = Path(settings.UPLOAD_DIR) / r.file_path
         if p.exists():
             p.unlink(missing_ok=True)
+    fts.deindex_resource(db, resource_id)  # 全文索引同步
     db.delete(r)
     db.commit()
     return {"success": True}

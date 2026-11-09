@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, Bot, BookOpen, LayoutGrid, LogOut, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BackToTop } from './BackToTop'
 import { CommandPalette } from './CommandPalette'
+import type { NotificationItem } from '../types'
 
 const NAV = [
   { to: '/', label: '首页', icon: LayoutGrid },
@@ -21,16 +22,50 @@ export function Layout() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [dark, setDark] = useState(() => localStorage.getItem('aiweb_theme') === 'dark')
-  const [todayCount, setTodayCount] = useState(0)
+  const [unread, setUnread] = useState(0)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifItems, setNotifItems] = useState<NotificationItem[]>([])
+  const notifTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('aiweb_theme', dark ? 'dark' : 'light')
   }, [dark])
 
+  const loadUnread = () =>
+    api.get<never, { unread: number }>('/notifications/unread-count')
+      .then((d) => setUnread(d.unread)).catch(() => {})
+
   useEffect(() => {
-    api.get<never, { new_today: number }>('/hub/today').then((d) => setTodayCount(d.new_today)).catch(() => {})
-  }, [])
+    loadUnread()
+    notifTimer.current = window.setInterval(loadUnread, 60_000) // 每分钟轮询未读数
+    return () => window.clearInterval(notifTimer.current)
+  }, [location.pathname])
+
+  const openNotif = async () => {
+    setNotifOpen((v) => !v)
+    if (!notifOpen) {
+      const d = await api.get<never, { unread: number; items: NotificationItem[] }>(
+        '/notifications?limit=20').catch(() => null)
+      if (d) { setNotifItems(d.items); setUnread(d.unread) }
+    }
+  }
+
+  const markRead = async (ids?: number[]) => {
+    try {
+      await api.post('/notifications/read', ids ? { ids } : { all: true })
+      setNotifItems((list) => list.map((n) => (!ids || ids.includes(n.id) ? { ...n, read: true } : n)))
+      loadUnread()
+    } catch { /* 静默失败即可 */ }
+  }
+
+  const gotoNotif = async (n: NotificationItem) => {
+    if (!n.read) markRead([n.id])
+    setNotifOpen(false)
+    if (n.ref_type === 'resource' && n.ref_id) nav(`/resources/${n.ref_id}`)
+    else if (n.ref_type === 'memo') nav('/memos')
+    else nav('/')
+  }
 
   const logout = () => {
     clear()
@@ -85,18 +120,60 @@ export function Layout() {
             <Search size={13} /> 搜索 <kbd className="rounded bg-gray-100 px-1 text-[10px]">Ctrl K</kbd>
           </button>
 
-          <button
-            className="relative rounded-xl border border-gray-100 bg-white p-2 text-subtle shadow-sm transition hover:border-brand-200 hover:text-brand-600"
-            title="今日新增动态"
-            onClick={() => nav('/')}
-          >
-            <Bell size={16} />
-            {todayCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-                {todayCount > 99 ? '99+' : todayCount}
-              </span>
+          <div className="relative">
+            <button
+              className="relative rounded-xl border border-gray-100 bg-white p-2 text-subtle shadow-sm transition hover:border-brand-200 hover:text-brand-600"
+              title="通知中心"
+              onClick={openNotif}
+            >
+              <Bell size={16} />
+              {unread > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                  {unread > 99 ? '99+' : unread}
+                </span>
+              )}
+            </button>
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-bento">
+                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
+                  <span className="text-sm font-bold">通知中心</span>
+                  {unread > 0 && (
+                    <button className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                      onClick={() => markRead()}>
+                      <CheckCheck size={13} /> 全部已读
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifItems.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-xs text-gray-400">暂无通知</p>
+                  ) : notifItems.map((n) => (
+                    <button key={n.id} onClick={() => gotoNotif(n)}
+                      className={`flex w-full items-start gap-2.5 border-b border-gray-50 px-4 py-3 text-left transition hover:bg-gray-50 ${n.read ? 'opacity-60' : ''}`}>
+                      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                        n.ntype === 'like' ? 'bg-rose-50 text-rose-500'
+                        : n.ntype === 'comment' ? 'bg-brand-50 text-brand-600'
+                        : 'bg-gray-100 text-gray-500'}`}>
+                        {n.ntype === 'like' ? <Heart size={13} fill="currentColor" />
+                        : n.ntype === 'comment' ? <MessageCircle size={13} />
+                        : <Bell size={13} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium text-ink">{n.title}</span>
+                        {n.content && <span className="mt-0.5 block line-clamp-2 text-[11px] text-subtle">{n.content}</span>}
+                        <span className="mt-1 block text-[10px] text-gray-400">{n.created_at}</span>
+                      </span>
+                      {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-rose-500" />}
+                    </button>
+                  ))}
+                </div>
+                <button className="w-full border-t border-gray-100 py-2 text-xs text-subtle hover:text-brand-600"
+                  onClick={() => { setNotifOpen(false); nav('/') }}>
+                  查看今日动态 →
+                </button>
+              </div>
             )}
-          </button>
+          </div>
 
           <button
             className="rounded-xl border border-gray-100 bg-white p-2 text-subtle shadow-sm transition hover:border-brand-200 hover:text-brand-600"

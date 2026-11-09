@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Sparkles, StickyNote, Trash2, Trophy, Wrench } from 'lucide-react'
+import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Sparkles, Star, StickyNote, Trash2, Trophy, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
@@ -10,7 +10,7 @@ import { StatCard } from '../components/StatCard'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import { timeAgo } from '../utils/time'
-import type { Contributor, FeedItem, Stats } from '../types'
+import type { BookmarkItem, Contributor, FeedItem, Memo, Resource, Stats } from '../types'
 
 const KIND_META: Record<string, { label: string; cls: string }> = {
   ai: { label: 'AI 内容', cls: 'bg-violet-100 text-violet-700' },
@@ -19,6 +19,10 @@ const KIND_META: Record<string, { label: string; cls: string }> = {
   resource: { label: '资源', cls: 'bg-brand-100 text-brand-700' },
   rss: { label: '资讯', cls: 'bg-sky-100 text-sky-700' },
 }
+
+type DashBookmark =
+  | { bookmark_id: number; bookmarked_at: string; target: import('../types').Resource; _kind: 'resource' }
+  | { bookmark_id: number; bookmarked_at: string; target: import('../types').Memo; _kind: 'memo' }
 
 export function Dashboard() {
   const user = useAuth((s) => s.user)
@@ -32,10 +36,23 @@ export function Dashboard() {
   const [briefing, setBriefing] = useState(false)
   const [viewing, setViewing] = useState<FeedItem | null>(null)
   const [feedLoading, setFeedLoading] = useState(true)
+  const [bookmarks, setBookmarks] = useState<DashBookmark[]>([])
 
   useEffect(() => {
     api.get<never, Stats>('/hub/stats').then(setStats).catch(() => {})
     api.get<never, Contributor[]>('/hub/contributors').then(setContributors).catch(() => {})
+    // 我的收藏：资源 + 笔记合并，取最新几条
+    Promise.all([
+      api.get<never, { items: BookmarkItem[] }>('/bookmarks?type=resource').catch(() => ({ items: [] })),
+      api.get<never, { items: BookmarkItem[] }>('/bookmarks?type=memo').catch(() => ({ items: [] })),
+    ]).then(([res, memos]) => {
+      const merged: DashBookmark[] = [
+        ...res.items.map((b) => ({ ...b, _kind: 'resource' as const, target: b.target as Resource })),
+        ...memos.items.map((b) => ({ ...b, _kind: 'memo' as const, target: b.target as Memo })),
+      ]
+      merged.sort((a, b) => b.bookmarked_at.localeCompare(a.bookmarked_at))
+      setBookmarks(merged.slice(0, 6))
+    })
   }, [])
 
   useEffect(() => {
@@ -231,6 +248,31 @@ export function Dashboard() {
               </p>
               <div className="mt-3 flex items-center gap-1 text-xs font-medium text-sky-600">
                 管理订阅 <ArrowUpRight size={13} />
+              </div>
+            </div>
+          </BentoCard>
+
+          <BentoCard delay={0.25}>
+            <div className="p-5">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold"><Star size={15} className="text-amber-500" /> 我的收藏</h3>
+              <div className="mt-3 space-y-1">
+                {bookmarks.length === 0 && (
+                  <p className="text-xs text-gray-400">在资源或笔记上点 ☆ 收藏，稍后在这里快速直达</p>
+                )}
+                {bookmarks.map((b) => {
+                  const isRes = b._kind === 'resource'
+                  const label = isRes ? b.target.name : b.target.title
+                  return (
+                    <Link key={b.bookmark_id} to={isRes ? `/resources/${b.target.id}` : '/memos'}
+                      className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs transition hover:bg-gray-50">
+                      {isRes
+                        ? <FileText size={13} className="shrink-0 text-brand-500" />
+                        : <StickyNote size={13} className="shrink-0 text-emerald-500" />}
+                      <span className="min-w-0 flex-1 truncate font-medium text-ink">{label}</span>
+                      <span className="shrink-0 text-[10px] text-gray-400">{b.bookmarked_at}</span>
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           </BentoCard>

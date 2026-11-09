@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
+import { BookmarkButton } from '../components/BookmarkButton'
 import { MarkdownView } from '../components/MarkdownView'
 import { NotesLinkCard } from '../components/NotesLinkCard'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -148,6 +149,9 @@ export function ResourceDetail() {
                 <ExternalLink size={15} /> 打开外链
               </a>
             )}
+            <BookmarkButton targetType="resource" targetId={r.id}
+              bookmarked={!!r.bookmarked_by_me}
+              onToggle={(b) => setR({ ...r, bookmarked_by_me: b })} withText />
             <button className="btn-ghost" title="复制本页内网链接"
               onClick={async () => {
                 await navigator.clipboard.writeText(location.href)

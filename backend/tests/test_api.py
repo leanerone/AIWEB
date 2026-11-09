@@ -403,6 +403,126 @@ class TestSecretPersistence:
         assert not (tmp_path / "data" / "secret.key").exists()
 
 
+class TestSearchApi:
+    """FTS5 统一全文搜索：中文逐字切分 + 英文 + 删除同步。"""
+
+    def test_cjk_english_and_delete_sync(self, token):
+        rid = client.post("/api/resources",
+                          data={"type": "tool", "name": "Excel 批量工具",
+                                "summary": "用于机台数据导出",
+                                "content": "支持 golden batch 数据查询"},
+                          headers=auth(token)).json()["data"]["id"]
+        mid = client.post("/api/memos",
+                          json={"title": "排障笔记", "content": "EAP 通信超时的排查思路"},
+                          headers=auth(token)).json()["data"]["id"]
+
+        # 中文 2 字查询命中资源
+        hits = client.get("/api/search?q=批量", headers=auth(token)).json()["data"]
+        assert any(h["kind"] == "resource" and h["id"] == rid for h in hits)
+        # 英文查询命中资源详情
+        hits = client.get("/api/search?q=golden", headers=auth(token)).json()["data"]
+        assert any(h["kind"] == "resource" and h["id"] == rid for h in hits)
+        # 中文查询命中笔记
+        hits = client.get("/api/search?q=通信超时", headers=auth(token)).json()["data"]
+        assert any(h["kind"] == "memo" and h["id"] == mid for h in hits)
+        # 空查询返回空列表
+        assert client.get("/api/search?q=", headers=auth(token)).json()["data"] == []
+
+        # 删除后索引同步，不再命中
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+        client.delete(f"/api/memos/{mid}", headers=auth(token))
+        hits = client.get("/api/search?q=批量", headers=auth(token)).json()["data"]
+        assert not any(h["kind"] == "resource" and h["id"] == rid for h in hits)
+
+
+class TestBookmarkApi:
+    """收藏夹：toggle / 列表 / 非法参数。"""
+
+    def test_resource_and_memo_bookmark(self, token):
+        rid = client.post("/api/resources", data={"type": "tool", "name": "bm-tool"},
+                          headers=auth(token)).json()["data"]["id"]
+        one = client.get(f"/api/resources/{rid}", headers=auth(token)).json()["data"]
+        assert one["bookmarked_by_me"] is False
+
+        d1 = client.post("/api/bookmarks/toggle",
+                         json={"target_type": "resource", "target_id": rid},
+                         headers=auth(token)).json()["data"]
+        assert d1["bookmarked"] is True
+        one = client.get(f"/api/resources/{rid}", headers=auth(token)).json()["data"]
+        assert one["bookmarked_by_me"] is True
+
+        # 列表含目标详情
+        lst = client.get("/api/bookmarks?type=resource", headers=auth(token)).json()["data"]
+        assert lst["total"] == 1 and lst["items"][0]["target"]["id"] == rid
+
+        # toggle 关
+        d2 = client.post("/api/bookmarks/toggle",
+                         json={"target_type": "resource", "target_id": rid},
+                         headers=auth(token)).json()["data"]
+        assert d2["bookmarked"] is False
+        assert client.get("/api/bookmarks?type=resource",
+                          headers=auth(token)).json()["data"]["total"] == 0
+
+        # 笔记收藏
+        mid = client.post("/api/memos", json={"title": "bm-note", "content": "c"},
+                          headers=auth(token)).json()["data"]["id"]
+        client.post("/api/bookmarks/toggle",
+                    json={"target_type": "memo", "target_id": mid}, headers=auth(token))
+        assert client.get("/api/bookmarks?type=memo",
+                          headers=auth(token)).json()["data"]["total"] == 1
+
+        # 非法类型 400 / 目标不存在 404
+        assert client.post("/api/bookmarks/toggle", json={"target_type": "evil", "target_id": 1},
+                           headers=auth(token)).status_code == 400
+        assert client.get("/api/bookmarks?type=evil", headers=auth(token)).status_code == 400
+        assert client.post("/api/bookmarks/toggle",
+                           json={"target_type": "resource", "target_id": 999999},
+                           headers=auth(token)).status_code == 404
+
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+        client.delete(f"/api/memos/{mid}", headers=auth(token))
+
+
+class TestNotificationApi:
+    """通知中心：评论/点赞投递给创建者，取消点赞不通知，已读操作。"""
+
+    def test_comment_like_notify_creator(self, token):
+        from services.auth_service import generate_token
+
+        admin_tok = generate_token("administrator", "admin")
+        rid = client.post("/api/resources", data={"type": "tool", "name": "notify-target"},
+                          headers=auth(admin_tok)).json()["data"]["id"]
+
+        # SSO 用户评论 + 点赞 → admin 收到通知
+        client.post(f"/api/resources/{rid}/comments", json={"content": "不错"},
+                    headers=auth(token))
+        client.post(f"/api/resources/{rid}/like", headers=auth(token))
+        data = client.get("/api/notifications", headers=auth(admin_tok)).json()["data"]
+        assert data["unread"] >= 2
+        assert {"comment", "like"} <= {n["ntype"] for n in data["items"]}
+
+        # 取消点赞不再产生通知
+        n_before = client.get("/api/notifications/unread-count",
+                              headers=auth(admin_tok)).json()["data"]["unread"]
+        client.post(f"/api/resources/{rid}/like", headers=auth(token))  # toggle off
+        n_after = client.get("/api/notifications/unread-count",
+                             headers=auth(admin_tok)).json()["data"]["unread"]
+        assert n_after == n_before
+
+        # 全部已读 → 0
+        client.post("/api/notifications/read", json={"all": True}, headers=auth(admin_tok))
+        assert client.get("/api/notifications/unread-count",
+                          headers=auth(admin_tok)).json()["data"]["unread"] == 0
+
+        # 自己评论自己的资源 → 不通知
+        client.post(f"/api/resources/{rid}/comments", json={"content": "self"},
+                    headers=auth(admin_tok))
+        assert client.get("/api/notifications/unread-count",
+                          headers=auth(admin_tok)).json()["data"]["unread"] == 0
+
+        client.delete(f"/api/resources/{rid}", headers=auth(admin_tok))
+
+
 class TestFeedApi:
     def test_feed_contains_resource_and_today(self, token):
         rid = client.post("/api/resources", data={"type": "skill", "name": "feed-echo"},

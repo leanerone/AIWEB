@@ -1,7 +1,7 @@
-"""数据模型：用户 / 资源库 / 笔记 / Notes 链接 / AI 会话 / RSS / 内容卡 / 设置。"""
+"""数据模型：用户 / 资源库 / 笔记 / Notes 链接 / AI 会话 / RSS / 内容卡 / 设置 / 收藏 / 通知。"""
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.session import Base
@@ -155,3 +155,30 @@ class Setting(Base):
     __tablename__ = "settings"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(Text, default="")
+
+
+class Bookmark(Base):
+    """用户收藏：资源 / 笔记"""
+
+    __tablename__ = "bookmarks"
+    __table_args__ = (UniqueConstraint("username", "target_type", "target_id", name="uq_bookmark"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), index=True)
+    target_type: Mapped[str] = mapped_column(String(16))  # resource / memo
+    target_id: Mapped[int] = mapped_column(Integer, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
+class Notification(Base):
+    """站内通知：评论 / 点赞 / 系统公告，按用户投递"""
+
+    __tablename__ = "notifications"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), index=True)  # 收件人
+    ntype: Mapped[str] = mapped_column(String(16), default="system")  # comment / like / system
+    title: Mapped[str] = mapped_column(String(256))
+    content: Mapped[str] = mapped_column(String(512), default="")
+    ref_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)

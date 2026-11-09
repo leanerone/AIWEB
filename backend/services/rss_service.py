@@ -53,6 +53,7 @@ def refresh_source(source: RssSource, db) -> dict:
         i.link for i in db.query(RssItem).filter(RssItem.source_id == source.id).all()
     }
     added = 0
+    new_items: list[RssItem] = []
     for entry in feed.entries[:50]:
         link = getattr(entry, "link", "") or ""
         title = _strip_html(getattr(entry, "title", ""))[:500]
@@ -66,9 +67,15 @@ def refresh_source(source: RssSource, db) -> dict:
             published_at=_to_dt(entry),
         )
         db.add(item)
+        new_items.append(item)
         existing_links.add(link)
         added += 1
     source.last_fetch_at = datetime.now()
+    if new_items:
+        db.flush()  # 拿到 id 后同步全文索引
+        from services import fts
+        for item in new_items:
+            fts.index_rss_item(db, item)
     db.commit()
     return {"fetched": len(feed.entries), "new": added}
 

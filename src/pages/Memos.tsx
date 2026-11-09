@@ -4,6 +4,7 @@ import { api } from '../services/api'
 import { useList } from '../hooks/useList'
 import { downloadText } from '../utils/time'
 import { BentoCard } from '../components/BentoCard'
+import { BookmarkButton } from '../components/BookmarkButton'
 import { MarkdownView } from '../components/MarkdownView'
 import { NotesLinkCard } from '../components/NotesLinkCard'
 import { NotesInlineLinks } from '../components/NotesInlineLinks'
@@ -25,6 +26,7 @@ export function Memos() {
   const [batchOpen, setBatchOpen] = useState(false)
   const [batchText, setBatchText] = useState('')
   const [batchBusy, setBatchBusy] = useState(false)
+  const [markedMap, setMarkedMap] = useState<Record<number, boolean>>({})
   const contentRef = useRef<HTMLTextAreaElement>(null)
 
   /** 在光标选区处包裹 Markdown 语法 */
@@ -212,6 +214,11 @@ export function Memos() {
                   {m.title}
                 </h3>
                 <div className="flex shrink-0 gap-1">
+                  <span className="flex items-center rounded-lg p-1.5">
+                    <BookmarkButton targetType="memo" targetId={m.id} size={14}
+                      bookmarked={markedMap[m.id] ?? !!m.bookmarked_by_me}
+                      onToggle={(b) => setMarkedMap((mm) => ({ ...mm, [m.id]: b }))} />
+                  </span>
                   <button title="导出 Markdown"
                     className="rounded-lg p-1.5 text-subtle hover:bg-gray-100 hover:text-brand-600"
                     onClick={() => downloadText(

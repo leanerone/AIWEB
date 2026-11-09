@@ -23,6 +23,7 @@ export interface Resource {
   views: number
   likes: number
   liked_by_me: boolean
+  bookmarked_by_me?: boolean
   created_by: string
   created_at: string
   updated_at: string
@@ -35,8 +36,35 @@ export interface Memo {
   tags: string[]
   pinned: boolean
   created_by: string
+  bookmarked_by_me?: boolean
   created_at: string
   updated_at: string
+}
+
+export interface SearchHit {
+  kind: 'resource' | 'memo' | 'rss'
+  id: number
+  title: string
+  snippet: string
+  created_by: string
+  created_at: string
+}
+
+export interface NotificationItem {
+  id: number
+  ntype: 'comment' | 'like' | 'system'
+  title: string
+  content: string
+  ref_type: string | null
+  ref_id: number | null
+  read: boolean
+  created_at: string
+}
+
+export interface BookmarkItem {
+  bookmark_id: number
+  bookmarked_at: string
+  target: Resource | Memo
 }
 
 export interface NoteLinkItem {
