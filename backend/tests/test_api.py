@@ -1155,3 +1155,39 @@ class TestAgentExtras:
         assert resp.status_code == 400 and "未配置" in resp.json()["detail"]
         after = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
         assert len(after) == len(before)  # 无孤儿会话/消息
+
+
+class TestAgentRegenerate:
+    """Agent 重新生成：删除上一轮助手消息并重答最后用户问题。"""
+
+    def test_regenerate_flow(self, token, monkeypatch):
+        from services import agent_service
+
+        it = iter([
+            {"choices": [{"message": {"role": "assistant", "content": "第一版回答"}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "第二版回答（更完整）"}}]},
+        ])
+        monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
+        real_cfg = agent_service.get_ai_config
+        monkeypatch.setattr(agent_service, "get_ai_config",
+                            lambda db, username=None, _real=real_cfg: {**_real(db, username), "api_key": "sk-mock"})
+
+        r1 = client.post("/api/agent/run", json={"message": "问题A"}, headers=auth(token))
+        sid = json.loads(r1.text.split("data:")[1].split(chr(10))[0])["session_id"]
+
+        r2 = client.post("/api/agent/run", json={"session_id": sid, "regenerate": True},
+                         headers=auth(token))
+        assert r2.status_code == 200
+        evs = []
+        for block in r2.text.split(chr(10) + chr(10)):
+            ev = next((l[6:].strip() for l in block.split(chr(10)) if l.startswith("event:")), None)
+            if ev:
+                evs.append(ev)
+        assert "done" in evs
+        msgs = client.get(f"/api/chat/sessions/{sid}/messages", headers=auth(token)).json()["data"]
+        assert [m["role"] for m in msgs] == ["user", "assistant"]      # 无重复用户消息
+        assert msgs[-1]["content"] == "第二版回答（更完整）"
+
+    def test_regenerate_without_session_rejected(self, token):
+        resp = client.post("/api/agent/run", json={"regenerate": True}, headers=auth(token))
+        assert resp.status_code == 400

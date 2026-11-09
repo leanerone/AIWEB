@@ -22,6 +22,7 @@ class AgentRequest(BaseModel):
     session_id: int | None = None
     message: str = ""
     page_context: str | None = None
+    regenerate: bool = False  # 重新生成：重答该会话最后一个用户问题，不加新消息
 
 
 class ResumeRequest(BaseModel):
@@ -33,29 +34,49 @@ class ResumeRequest(BaseModel):
 @router.post("/run")
 def run(body: AgentRequest, db: Session = Depends(get_db),
         user: object = Depends(get_current_user)):
-    if not body.message.strip():
-        raise HTTPException(status_code=400, detail="消息不能为空")
-    # AI 配置预检：在任何落库之前拦截（与 /chat/completions 行为一致）
+    from database.models import ChatMessage
+
     from services.ai_service import get_ai_config
 
+    # AI 配置预检：在任何落库之前拦截（与 /chat/completions 行为一致）
     if not get_ai_config(db, user.username)["api_key"]:
         raise HTTPException(status_code=400,
                             detail="AI 未配置：请到「设置 → 个人 AI 设置」填写你的 API Key")
+
     session = None
     if body.session_id:
         session = db.get(ChatSession, body.session_id)
         if not session or session.created_by != user.username:
             raise HTTPException(status_code=404, detail="会话不存在")
-    else:
-        session = ChatSession(title=body.message.strip()[:40], created_by=user.username)
-        db.add(session)
-        db.commit()
-        db.refresh(session)
-    from database.models import ChatMessage
 
-    db.add(ChatMessage(session_id=session.id, role="user", content=body.message))
-    db.commit()
-    gen = stream_run(db, user, session, body.message.strip(), body.page_context or "")
+    question = body.message.strip()
+    page_context = body.page_context or ""
+    if body.regenerate:
+        if not session:
+            raise HTTPException(status_code=400, detail="请先选择要重新生成的会话")
+        all_msgs = (db.query(ChatMessage)
+                    .filter(ChatMessage.session_id == session.id)
+                    .order_by(ChatMessage.id).all())
+        last_user = next((m for m in reversed(all_msgs) if m.role == "user"), None)
+        if not last_user:
+            raise HTTPException(status_code=400, detail="没有可重新生成的用户消息")
+        for m in all_msgs:
+            if m.id > last_user.id and m.role == "assistant":
+                db.delete(m)  # 删除上一轮助手回答（含任务卡），随后重答
+        db.commit()
+        question = last_user.content
+    else:
+        if not question:
+            raise HTTPException(status_code=400, detail="消息不能为空")
+        if not session:
+            session = ChatSession(title=question[:40], created_by=user.username)
+            db.add(session)
+            db.commit()
+            db.refresh(session)
+        db.add(ChatMessage(session_id=session.id, role="user", content=question))
+        db.commit()
+
+    gen = stream_run(db, user, session, question, page_context)
     return StreamingResponse(gen, media_type="text/event-stream", headers=SSE_HEADERS)
 
 

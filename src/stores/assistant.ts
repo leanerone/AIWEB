@@ -255,7 +255,8 @@ export const useAssistant = create<AssistantState>((set, get) => {
         while (copy.length && copy[copy.length - 1].role === 'assistant') copy.pop()
         return copy.length ? { messages: [...copy, { role: 'assistant', content: '' }] } : s
       })
-      run('/api/chat/completions', { session_id: state.sessionId, regenerate: true })
+      // 助手回答都出自 Agent 循环，重新生成同样走 Agent 通道（保留工具上下文）
+      run('/api/agent/run', { session_id: state.sessionId, regenerate: true })
         .catch((e) => console.warn(e.message))
     },
 

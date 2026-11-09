@@ -147,6 +147,7 @@ export function FloatingAssistant() {
   const [input, setInput] = useState('')
   const [renaming, setRenaming] = useState<{ id: number; title: string } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollBoxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (open && sessions.length === 0) loadSessions()
@@ -160,7 +161,12 @@ export function FloatingAssistant() {
   }, [open, loadSuggestions])
 
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // 仅当用户停留在底部附近时自动跟随滚动，回看历史时不打扰
+    if (!open) return
+    const box = scrollBoxRef.current
+    if (!box) { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); return }
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90
+    if (nearBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, open])
 
   const doSend = (text?: string) => {
@@ -257,7 +263,7 @@ export function FloatingAssistant() {
             )}
 
             {/* 消息区 */}
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div ref={scrollBoxRef} className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.length === 0 && (
                 <div className="pt-2">
                   {suggestions.length > 0 && (
