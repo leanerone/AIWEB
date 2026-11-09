@@ -103,6 +103,16 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
 - pytest 27 → 40 全过；npm run build 通过；已推送
 
+### 2026-11-09 09:10-09:40 · v0.5 P2 AI 深化 + P3 工程化
+- 资源问答 RAG：对话未引用资源时自动 FTS 检索 Top3 资源注入系统提示词（📎 优先，检索失败不阻断）
+- 定时自动简报：调度器每天 AI_BRIEFING_HOUR（默认 8）生成简报卡，当天去重；
+  逻辑抽为 services/briefing.py 供路由/调度共用
+- 搜索召回升级：查询改 ASCII 词 + 中文二元组 OR（长查询不再零命中）；纯标点安全跳过
+- **Bug 修复**：`PRAGMA foreign_keys` 默认未开 → 所有 ondelete=CASCADE 实际无效（删源留孤儿条目）；
+  现已启用，且删 RSS 源同步清理 FTS 索引
+- P3：GitHub Actions CI（pytest+build）/ docs/DEPLOY.md / requirements-dev.txt
+- pytest 43 → 49 全过；已推送
+
 ### 2026-11-09 08:45-09:05 · v0.4 P1 功能增强轮（FTS 搜索 / 收藏夹 / 通知中心）
 - FTS5 全文搜索：/api/search 统一检索 资源/笔记/RSS；CJK 逐字切分+短语匹配支持 2 字中文；
   增删改与 RSS 抓取实时同步索引；启动全量重建；⌘K 接入
