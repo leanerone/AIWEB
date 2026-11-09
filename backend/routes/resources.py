@@ -228,6 +228,7 @@ def update_resource(resource_id: int, body: ResourceIn,
     r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
+    old_summary, old_content = r.summary, r.content
     # 更新前快照旧状态（版本历史）
     from database.models import ResourceVersion
 
@@ -250,6 +251,21 @@ def update_resource(resource_id: int, body: ResourceIn,
     db.commit()
     fts.index_resource(db, r)  # 全文索引同步
     db.commit()
+    # 通知收藏过/点赞过的用户（更新者本人除外），内容实质变化才通知
+    if body.summary != old_summary or body.content != old_content:
+        watchers: set[str] = set()
+        for b in db.query(Bookmark).filter(Bookmark.target_type == "resource",
+                                           Bookmark.target_id == r.id).all():
+            watchers.add(b.username)
+        watchers.update(r.liked_by or [])
+        watchers.discard(user.username)
+        from routes.notifications import notify
+
+        for name in list(watchers)[:50]:  # 上限保护，避免大范围刷屏
+            notify(db, name, "system",
+                   f"你关注的资源「{r.name}」有更新",
+                   ref_type="resource", ref_id=r.id)
+        db.commit()
     return {"success": True, "data": _serialize(r, user.username)}
 
 

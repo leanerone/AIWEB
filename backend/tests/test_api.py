@@ -1340,3 +1340,30 @@ class TestBookmarkNotify:
         client.post("/api/bookmarks/toggle", json={"target_type": "resource", "target_id": rid},
                     headers=auth(plain_user_token()))
         client.delete(f"/api/resources/{rid}", headers=auth(plain_user_token()))
+
+
+class TestUpdateNotify:
+    """资源更新 → 收藏者/点赞者收到通知（更新者本人除外）。"""
+
+    def test_update_notifies_watchers(self, token):
+        rid = client.post("/api/resources", data={"type": "tool", "name": "watched-tool",
+                                                  "summary": "s1", "content": "c1"},
+                          headers=auth(plain_user_token())).json()["data"]["id"]
+        # admin 收藏 + 点赞
+        client.post("/api/bookmarks/toggle", json={"target_type": "resource", "target_id": rid},
+                    headers=auth(token))
+        client.post(f"/api/resources/{rid}/like", headers=auth(token))
+        # plain.user（创建者）更新内容
+        client.put(f"/api/resources/{rid}", json={"type": "tool", "name": "watched-tool",
+                                                  "summary": "s2", "content": "c2", "tags": []},
+                   headers=auth(plain_user_token()))
+        data = client.get("/api/notifications", headers=auth(token)).json()["data"]
+        assert any("有更新" in n["title"] for n in data["items"])
+        # 仅元数据变化（同内容）不通知
+        client.post("/api/notifications/read", json={"all": True}, headers=auth(token))
+        client.put(f"/api/resources/{rid}", json={"type": "tool", "name": "watched-tool-renamed",
+                                                  "summary": "s2", "content": "c2", "tags": []},
+                   headers=auth(plain_user_token()))
+        data2 = client.get("/api/notifications/unread-count", headers=auth(token)).json()["data"]
+        assert data2["unread"] == 0
+        client.delete(f"/api/resources/{rid}", headers=auth(plain_user_token()))
