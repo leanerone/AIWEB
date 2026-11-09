@@ -21,8 +21,8 @@
 | 资源库 | skill / tool / plugin 统一管理：Markdown 详情、标签、搜索、zip/脚本附件上传下载、下载计数、**点赞**、**SKILL.md 元数据自动提取** |
 | 笔记 | Markdown 编辑、置顶、标签、搜索 |
 | Notes 链接库 | 粘贴 notes:// 链接 / NDL / 富文本 → 解析服务器/数据库/文档 → 点「打开」唤起 Notes 客户端 |
-| AI 对话 | OpenAI 兼容 API、SSE 流式输出（可**停止生成**）、Markdown 渲染、多会话、**资源问答 RAG**（自动检索平台资源注入上下文），好回复一键「沉淀为内容卡」 |
-| AI 每日简报 | 一键抓取 RSS 最新资讯 → AI 生成中文简报 → 沉淀到首页动态；**每天 8 点自动生成**（`AI_BRIEFING_HOUR` 可配） |
+| AI 对话 | OpenAI 兼容 API、SSE 流式输出（可**停止生成**、**重新生成**）、Markdown 渲染、多会话、**资源问答 RAG**（自动检索平台资源注入上下文），好回复一键「沉淀为内容卡」 |
+| AI 每日简报 | 一键抓取 RSS 最新资讯 → AI 生成中文简报 → 沉淀到首页动态；**每天 8 点自动生成**；**`/briefings` 归档页**可回看历史简报 |
 | RSS 资讯 | 设置页管理订阅源，手动刷新抓取（feedparser），条目可**一键存为笔记** |
 | 认证 | Windows 域 SSO（后端进程账号自动登录）+ 手动账密兜底，JWT 鉴权 |
 | 全局 | **深色模式**（顶栏切换）、⌘K **FTS5 全文搜索**（页面/资源/笔记/资讯，中文分词）、**收藏夹**（资源/笔记 ☆）、**通知中心**（评论/点赞提醒）、Toast/确认弹窗/空状态 |
@@ -49,7 +49,7 @@ python run.py        # http://localhost:8000，SQLite 自动建表 + 播种默�
 
 **演示模式**：想首次打开就有示例内容？在 `backend/.env` 加 `SEED_DEMO=1` 再启动（自动播种示例 Skills/笔记/简报/RSS 源；已有数据时不重复播种）。
 
-**测试**：`cd backend && python -m pytest tests/ -q`（50 个用例，自动使用独立测试库）
+**测试**：`cd backend && python -m pytest tests/ -q`（51 个用例，自动使用独立测试库）
 
 **登录**：打开页面自动尝试 Windows 域 SSO（在公司域内电脑本机启动后端即直登）；
 失败时手动登录，内置账号 `administrator` / `eap.engineer` / `cim.user`，初始密码 `cim123456`

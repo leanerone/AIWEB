@@ -151,6 +151,15 @@ export interface Stats {
   cards: number
 }
 
+export interface BriefingItem {
+  id: number
+  title: string
+  summary: string
+  content: string
+  created_by: string
+  created_at: string
+}
+
 export interface SettingsData {
   ai_api_base: string
   ai_api_key: string

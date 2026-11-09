@@ -103,6 +103,15 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
 - pytest 27 → 40 全过；npm run build 通过；已推送
 
+### 2026-11-09 14:10-14:40 · v0.7 简报归档页 + 字体自托管 + 浮层统一（"把剩下的做完"）
+- 新增 /briefings 页面 + GET /api/hub/briefings（ref_type=briefing 倒序分页），导航三处一致入口；
+  首页 AI 卡加归档链接；seed 简报卡补 ref_type 并回填演示库
+- Geist 自托管：googleapis/gstatic 在本环境不可达 → 改 jsDelivr @fontsource 取 woff2（latin 400/500，
+  latin-ext 该包无此子集 404 → 只用 latin，中文回退 YaHei/PingFang）
+- .glass-pop 统一 ⌘K / 通知下拉 / 用户菜单，随明暗主题
+- pytest 50 → 51；浏览器实测字体已加载、页面渲染高亮、浮层双色正确；重启后端 token 仍有效
+- 已推送
+
 ### 2026-11-09 13:00-13:10 · v0.6.3 导航入口去重（用户："首页和每日简报不是一个东西吗"）
 - 根因：AI 能力面板的「每日简报」链到 `/`，与「首页」同目的地——简报是功能不是页面
 - 改：「资讯订阅」→ `/settings#rss`；`Notes 链接库` → `/memos#links`；BentoCard 增 id 透传 + scroll-mt-24；

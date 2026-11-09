@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
+import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Newspaper, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
@@ -12,8 +12,9 @@ import type { NotificationItem } from '../types'
 const NAV = [
   { to: '/', label: '首页', icon: LayoutGrid },
   { to: '/resources', label: '资源库', icon: BookOpen },
-  { to: '/memos', label: '笔记', icon: Notebook },
   { to: '/chat', label: 'AI 对话', icon: Sparkles },
+  { to: '/briefings', label: '简报', icon: Newspaper },
+  { to: '/memos', label: '笔记', icon: Notebook },
   { to: '/settings', label: '设置', icon: SettingsIcon },
 ]
 
@@ -126,7 +127,7 @@ export function Layout() {
               )}
             </button>
             {notifOpen && (
-              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-bento">
+              <div className="glass-pop absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl">
                 <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
                   <span className="text-sm font-bold">通知中心</span>
                   {unread > 0 && (
@@ -186,7 +187,7 @@ export function Layout() {
               <span className="max-w-[120px] truncate">{user?.display_name || user?.username}</span>
             </button>
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-bento" onMouseLeave={() => setMenuOpen(false)}>
+              <div className="glass-pop absolute right-0 mt-2 w-44 rounded-2xl p-1.5" onMouseLeave={() => setMenuOpen(false)}>
                 <div className="px-3 py-2 text-xs text-subtle">
                   {user?.domain ? `${user.domain} \\ ` : ''}{user?.username}
                 </div>

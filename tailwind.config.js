@@ -24,7 +24,7 @@ export default {
         bentoHover: '0 2px 4px rgba(16,24,40,.05), 0 18px 44px -12px rgba(79,70,229,.20)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'PingFang SC',
+        sans: ['Geist', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'PingFang SC',
           'Microsoft YaHei', 'sans-serif'],
       },
     },

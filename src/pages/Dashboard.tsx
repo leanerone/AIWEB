@@ -233,6 +233,10 @@ export function Dashboard() {
                 {briefing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
                 生成今日 AI 简报
               </button>
+              <Link to="/briefings" onClick={(e) => e.stopPropagation()}
+                className="mt-2 block text-center text-[11px] text-gray-400 transition hover:text-brand-600">
+                查看简报归档 →
+              </Link>
             </div>
           </BentoCard>
 

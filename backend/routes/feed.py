@@ -85,6 +85,31 @@ def contributors(db: Session = Depends(get_db), _: object = Depends(get_current_
     }
 
 
+@router.get("/briefings")
+def list_briefings(page: int = 1, limit: int = 20,
+                   db: Session = Depends(get_db), _: object = Depends(get_current_user)):
+    """AI 简报归档：历次生成的每日简报（ref_type=briefing），倒序分页"""
+    page = max(1, page)
+    limit = max(1, min(limit, 100))
+    query = (db.query(FeedCard)
+             .filter(FeedCard.ref_type == "briefing")
+             .order_by(FeedCard.created_at.desc(), FeedCard.id.desc()))
+    total = query.count()
+    items = query.offset((page - 1) * limit).limit(limit).all()
+    return {
+        "success": True,
+        "data": {
+            "total": total,
+            "items": [
+                {"id": c.id, "title": c.title, "summary": c.summary, "content": c.content,
+                 "created_by": c.created_by,
+                 "created_at": c.created_at.strftime("%Y-%m-%d %H:%M")}
+                for c in items
+            ],
+        },
+    }
+
+
 @router.get("/feed")
 def feed(limit: int = 30, db: Session = Depends(get_db),
          _: object = Depends(get_current_user)):

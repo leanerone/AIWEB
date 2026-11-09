@@ -700,6 +700,42 @@ class TestFeedApi:
         client.delete(f"/api/resources/{rid}", headers=auth(token))
 
 
+class TestBriefingsApi:
+    """简报归档接口：/api/hub/briefings 分页 + page 钳制 + 只含 briefing 卡"""
+
+    def test_list_clamped_and_filtered(self, token):
+        from database.models import FeedCard
+        from database.session import SessionLocal
+
+        db = SessionLocal()
+        c1 = FeedCard(kind="ai", title="简报A", content="正文A", summary="s1",
+                      ref_type="briefing", created_by="administrator")
+        c2 = FeedCard(kind="ai", title="其他卡", content="x", summary="s2",
+                      ref_type="chat", created_by="administrator")
+        db.add_all([c1, c2])
+        db.commit()
+        c1_id, c2_id = c1.id, c2.id
+        db.close()
+
+        data = client.get("/api/hub/briefings?limit=50", headers=auth(token)).json()["data"]
+        ids = [i["id"] for i in data["items"]]
+        assert c1_id in ids
+        assert c2_id not in ids              # 非 briefing 不进归档
+        assert data["total"] >= 1
+
+        # page<1 不再 500
+        assert client.get("/api/hub/briefings?page=0&limit=999",
+                          headers=auth(token)).status_code == 200
+
+        db = SessionLocal()
+        for cid in (c1_id, c2_id):
+            row = db.get(FeedCard, cid)
+            if row:
+                db.delete(row)
+        db.commit()
+        db.close()
+
+
 class TestSpaHosting:
     """生产托管：根路径与 SPA 深链返回 index.html，/api 前缀仍兜底 404（需已 npm run build）"""
 

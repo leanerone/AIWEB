@@ -194,6 +194,7 @@ export function MegaMenu() {
         {plain('/', '首页', true)}
         {trigger('resources', '资源库')}
         {trigger('ai', 'AI 能力')}
+        {plain('/briefings', '简报')}
         {plain('/memos', '笔记')}
         {plain('/settings', '设置')}
       </div>

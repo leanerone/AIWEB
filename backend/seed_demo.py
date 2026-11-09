@@ -59,7 +59,7 @@ def seed_demo() -> None:
         db.add(FeedCard(kind="ai", title="AI 每日简报 · 示例",
                         content="### 今日要点\n- **大模型端侧化加速**：多家厂商推出离线推理方案，内网工具可直接集成\n- **代码助手普及**：ZCode/Claude Code 类 CLI 成为新工作流\n- **企业知识库 RAG** 落地成本继续下降\n\n# 亮点\n端侧模型让「不出内网也能用 AI」变得现实，适合我们公司的数据安全要求。",
                         summary="端侧模型 / 代码助手 CLI / 企业 RAG 三条趋势速览（示例卡片）",
-                        created_by="administrator"))
+                        ref_type="briefing", created_by="administrator"))
         db.add(RssSource(name="Hacker News · AI", url="https://hnrss.org/newest?q=AI", enabled=True))
         db.commit()
         logger.info("演示数据已播种（SEED_DEMO=1）")

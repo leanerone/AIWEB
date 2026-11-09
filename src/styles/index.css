@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Geist 自托管（Halden 风格字体，内网离线可用；无 CJK 子集，中文自动回退 PingFang/YaHei） */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/geist-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/geist-500.woff2") format("woff2");
+}
+
 :root {
   --brand-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   /* Halden 适配版令牌（docs/design/halden-hero-morphing-nav-spec.txt） */
@@ -271,6 +287,12 @@ body {
   background:
     linear-gradient(to bottom, rgba(6,10,12,.5) 0%, rgba(6,10,12,.15) 30%),
     linear-gradient(to top, rgba(6,9,11,.86) 0%, rgba(6,9,11,.35) 45%, rgba(6,9,11,.1) 80%);
+}
+/* 浮层统一玻璃：⌘K / 通知下拉 / 各类弹层，随明暗主题切换 */
+.glass-pop {
+  background: var(--dd-bg); border: 1px solid var(--dd-line); color: var(--dd-text);
+  box-shadow: var(--dd-shadow);
+  backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
 .glass-panel {
   background: var(--h-panel); border: 1px solid var(--h-line); color: #fff;

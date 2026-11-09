@@ -10,6 +10,7 @@ const PAGES = [
   { label: '资源库', to: '/resources' },
   { label: '笔记', to: '/memos' },
   { label: 'AI 对话', to: '/chat' },
+  { label: '简报', to: '/briefings' },
   { label: '设置', to: '/settings' },
 ]
 
@@ -91,7 +92,7 @@ export function CommandPalette() {
             initial={{ opacity: 0, scale: 0.96, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: -6 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="w-full max-w-lg overflow-hidden rounded-bento2 bg-white shadow-bentoHover"
+            className="glass-pop w-full max-w-lg overflow-hidden rounded-bento2"
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
               <Search size={16} className="text-gray-400" />

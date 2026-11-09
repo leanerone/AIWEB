@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { Layout } from './components/Layout'
 import { useAuth } from './stores/auth'
+import { Briefings } from './pages/Briefings'
 import { Chat } from './pages/Chat'
 import { Dashboard } from './pages/Dashboard'
 import { Login } from './pages/Login'
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/resources/:id" element={<ResourceDetail />} />
         <Route path="/memos" element={<Memos />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/briefings" element={<Briefings />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
