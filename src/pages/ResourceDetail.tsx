@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, ExternalLink, Heart, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -12,6 +12,7 @@ import { useToast } from '../components/ui/Toast'
 import type { Resource } from '../types'
 
 interface CommentItem { id: number; content: string; created_by: string; created_at: string }
+interface VersionItem { id: number; name: string; summary: string; tags: string[]; file_name: string | null; updated_by: string; created_at: string }
 
 const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件' }
 const TYPE_BADGE: Record<string, string> = {
@@ -28,6 +29,8 @@ export function ResourceDetail() {
   const [r, setR] = useState<Resource | null>(null)
   const [confirmDel, setConfirmDel] = useState(false)
   const [comments, setComments] = useState<CommentItem[]>([])
+  const [versions, setVersions] = useState<VersionItem[]>([])
+  const [restoring, setRestoring] = useState(false)
   const [newComment, setNewComment] = useState('')
   const [sending, setSending] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -36,6 +39,7 @@ export function ResourceDetail() {
 
   const loadComments = (id: number) => {
     api.get<never, CommentItem[]>(`/resources/${id}/comments`).then(setComments).catch(() => {})
+    api.get<never, VersionItem[]>(`/resources/${id}/versions`).then(setVersions).catch(() => {})
   }
 
   useEffect(() => {
@@ -177,6 +181,36 @@ export function ResourceDetail() {
         <BentoCard className="p-6" delay={0.08}>
           <h2 className="mb-3 text-sm font-bold">详细介绍</h2>
           <MarkdownView text={r.content} />
+        </BentoCard>
+      )}
+
+      {(me?.role === 'admin' || me?.username === r.created_by) && versions.length > 0 && (
+        <BentoCard className="p-5" delay={0.14}>
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold">
+            <History size={15} className="text-violet-500" /> 历史版本 <span className="text-xs text-gray-400">({versions.length})</span>
+          </h2>
+          <p className="mb-3 text-xs text-subtle">每次更新前的自动快照，可一键回滚；回滚前当前内容也会被快照</p>
+          <div className="space-y-1.5">
+            {versions.map((v) => (
+              <div key={v.id} className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/5">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{v.name}</p>
+                  <p className="truncate text-[11px] text-gray-400">{v.summary || '（无简介）'}</p>
+                  <p className="text-[11px] text-gray-400">{v.updated_by} · {v.created_at}</p>
+                </div>
+                <button className="btn-ghost shrink-0 !px-2.5 !py-1 text-xs" disabled={restoring}
+                  onClick={async () => {
+                    if (!window.confirm(`回滚到 ${v.created_at} 的版本？当前内容会先被快照。`)) return
+                    setRestoring(true)
+                    try {
+                      await api.post(`/resources/${r.id}/restore/${v.id}`)
+                      toast('success', '已回滚，页面即将刷新')
+                      window.setTimeout(() => window.location.reload(), 600)
+                    } catch (e) { toast('error', (e as Error).message) } finally { setRestoring(false) }
+                  }}>回滚</button>
+              </div>
+            ))}
+          </div>
         </BentoCard>
       )}
 

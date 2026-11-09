@@ -98,6 +98,22 @@ class Resource(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
 
 
+class ResourceVersion(Base):
+    """资源历史版本：每次更新前自动快照旧状态，可一键回滚。"""
+
+    __tablename__ = "resource_versions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    resource_id: Mapped[int] = mapped_column(ForeignKey("resources.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(128), default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    content: Mapped[str] = mapped_column(Text, default="")
+    tags: Mapped[list] = mapped_column(JSON, default=list)
+    file_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    external_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    updated_by: Mapped[str] = mapped_column(String(64), default="")  # 触发这次更新的人
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class ResourceComment(Base):
     """资源下的讨论/评论"""
 

@@ -228,6 +228,12 @@ def update_resource(resource_id: int, body: ResourceIn,
     r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
+    # 更新前快照旧状态（版本历史）
+    from database.models import ResourceVersion
+
+    db.add(ResourceVersion(resource_id=r.id, name=r.name, summary=r.summary,
+                           content=r.content, tags=r.tags or [], file_name=r.file_name,
+                           external_url=r.external_url, updated_by=user.username))
     if body.type in ALLOWED_TYPES:
         r.type = body.type
     r.name = body.name.strip() or r.name
@@ -277,3 +283,55 @@ def download_resource(resource_id: int, db: Session = Depends(get_db),
     r.downloads += 1
     db.commit()
     return FileResponse(path, filename=r.file_name or path.name)
+
+
+@router.get("/{resource_id}/versions")
+def list_versions(resource_id: int, db: Session = Depends(get_db),
+                  user: object = Depends(get_current_user)):
+    """资源历史版本（最新在前，最多 20 条）"""
+    from database.models import ResourceVersion
+
+    r = db.get(Resource, resource_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    rows = (db.query(ResourceVersion)
+            .filter(ResourceVersion.resource_id == resource_id)
+            .order_by(ResourceVersion.id.desc())
+            .limit(20).all())
+    return {"success": True, "data": [
+        {"id": v.id, "name": v.name, "summary": v.summary,
+         "tags": v.tags or [], "file_name": v.file_name,
+         "updated_by": v.updated_by,
+         "created_at": v.created_at.strftime("%Y-%m-%d %H:%M")}
+        for v in rows]}
+
+
+@router.post("/{resource_id}/restore/{version_id}")
+def restore_version(resource_id: int, version_id: int, db: Session = Depends(get_db),
+                    user: object = Depends(get_current_user)):
+    """回滚到指定版本：先快照当前状态，再套用历史版本字段"""
+    from database.models import ResourceVersion
+
+    r = db.get(Resource, resource_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    if user.role != "admin" and r.created_by != user.username:
+        raise HTTPException(status_code=403, detail="只能回滚自己的资源")
+    v = db.get(ResourceVersion, version_id)
+    if not v or v.resource_id != resource_id:
+        raise HTTPException(status_code=404, detail="版本不存在")
+    # 回滚前也快照当前状态（可再滚回来）
+    db.add(ResourceVersion(resource_id=r.id, name=r.name, summary=r.summary,
+                           content=r.content, tags=r.tags or [], file_name=r.file_name,
+                           external_url=r.external_url, updated_by=user.username))
+    r.name = v.name
+    r.summary = v.summary
+    r.content = v.content
+    r.tags = v.tags
+    r.file_name = v.file_name
+    if v.external_url:
+        r.external_url = v.external_url
+    db.commit()
+    fts.index_resource(db, r)
+    db.commit()
+    return {"success": True, "data": _serialize(r, user.username)}

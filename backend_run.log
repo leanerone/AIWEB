@@ -214,3 +214,12 @@ INFO:     127.0.0.1:64603 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
 INFO:     127.0.0.1:57863 - "POST /api/agent/run HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60066 - "GET /api/chat/sessions HTTP/1.1" 200 OK
 INFO:     127.0.0.1:61360 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61853 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53748 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52075 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52078 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52083 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52082 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52085 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52084 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64107 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK

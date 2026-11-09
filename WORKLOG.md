@@ -299,3 +299,10 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - **修复**：客户端中止/断连时未完结 AgentRun 落为 stopped（此前永远卡 running）
 - **修复**：BackToTop 与悬浮球桌面端重叠 → 上移让位（移动 bottom-44 / 桌面 lg:bottom-24）
 - resolveConfirm/answerAsk 自动关历史抽屉
+
+### 2026-11-10 03:00-03:10 · v0.9.11 轮次 K：资源版本历史（新特性）
+- ResourceVersion 表：每次更新前自动快照旧状态（name/summary/content/tags/file_name/external_url + 触发人）
+- GET /api/resources/{id}/versions（最新在前 ≤20 条）；POST /{id}/restore/{vid}（创建者/管理员，
+  回滚前先快照当前状态可再滚回，FTS 索引同步）
+- ResourceDetail 页新增「历史版本」折叠卡（仅创建者/管理员可见），一键回滚 + confirm 二次确认
+- 测试：75 → 77（快照链/回滚生效/回滚再快照/他人资源 403 管理员 200）

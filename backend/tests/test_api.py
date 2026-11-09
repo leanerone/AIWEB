@@ -1232,3 +1232,63 @@ class TestAgentRoundF:
         db.delete(fresh)
         db.commit()
         db.close()
+
+
+class TestResourceVersions:
+    """资源版本历史：更新自动快照 / 回滚 / 权限。"""
+
+    def _create(self, token, name="versioned-skill"):
+        return client.post("/api/resources",
+                           data={"type": "skill", "name": name, "summary": "v1简介", "content": "v1正文"},
+                           headers=auth(token)).json()["data"]["id"]
+
+    def test_update_snapshots_and_restore(self, token):
+        rid = self._create(token)
+        # 第一次更新（JSON body）→ 快照 v1
+        client.put(f"/api/resources/{rid}", json={"type": "skill", "name": "versioned-skill",
+                                                  "summary": "v2简介", "content": "v2正文", "tags": []},
+                   headers=auth(token))
+        vs = client.get(f"/api/resources/{rid}/versions", headers=auth(token)).json()["data"]
+        assert len(vs) == 1 and vs[0]["summary"] == "v1简介"
+
+        # 第二次更新 → 再快照 v2
+        client.put(f"/api/resources/{rid}", json={"type": "skill", "name": "versioned-skill",
+                                                  "summary": "v3简介", "content": "v3正文", "tags": []},
+                   headers=auth(token))
+        vs = client.get(f"/api/resources/{rid}/versions", headers=auth(token)).json()["data"]
+        assert len(vs) == 2 and vs[0]["summary"] == "v2简介"   # 最新在前
+
+        # 回滚到 v1 快照
+        vid = vs[1]["id"]
+        st = client.post(f"/api/resources/{rid}/restore/{vid}", headers=auth(token))
+        assert st.status_code == 200
+        detail = client.get(f"/api/resources/{rid}", headers=auth(token)).json()["data"]
+        assert detail["summary"] == "v1简介" and detail["content"] == "v1正文"
+        # 回滚本身也产生快照（v3）
+        vs2 = client.get(f"/api/resources/{rid}/versions", headers=auth(token)).json()["data"]
+        assert any(x["summary"] == "v3简介" for x in vs2)
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+    def test_restore_permission(self, token):
+        # 他人资源不可回滚（非创建者非管理员）
+        from database.session import SessionLocal
+        from database.models import Resource, ResourceVersion
+
+        db = SessionLocal()
+        r = Resource(type="tool", name="别人的资源", created_by="someone-else")
+        db.add(r)
+        db.commit()
+        db.refresh(r)
+        v = ResourceVersion(resource_id=r.id, name="x", summary="old")
+        db.add(v)
+        db.commit()
+        rid, vid = r.id, v.id
+        db.close()
+        # SSO 用户是普通用户（非资源创建者）
+        st = client.post(f"/api/resources/{rid}/restore/{vid}", headers=auth(token))
+        assert st.status_code in (403,)  # 普通用户 403
+        from services.auth_service import generate_token
+        admin = auth(generate_token("administrator", "admin"))
+        st2 = client.post(f"/api/resources/{rid}/restore/{vid}", headers=admin)
+        assert st2.status_code == 200  # 管理员可以
+        client.delete(f"/api/resources/{rid}", headers=admin)
