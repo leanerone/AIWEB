@@ -1402,3 +1402,29 @@ class TestSessionNaming:
         sessions2 = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
         mine2 = next(s for s in sessions2 if s["id"] == sid)
         assert mine2["title"] == "我的名字"
+
+
+class TestAppendToMemo:
+    """append_to_memo 工具：追加不覆盖原文；笔记不存在诚实报错。"""
+
+    def test_append_keeps_original(self, token):
+        from database.session import SessionLocal
+        from services.agent_tools import tool_append_to_memo
+
+        mid = client.post("/api/memos", json={"title": "追加目标", "content": "原始内容"},
+                          headers=auth(token)).json()["data"]["id"]
+        db = SessionLocal()
+        ok, summary, result = tool_append_to_memo(db, None, {"memo_id": mid, "content": "追加段落"})
+        db.close()
+        assert ok and "已追加" in summary
+        memo = client.get(f"/api/memos/{mid}", headers=auth(token)).json()["data"]
+        assert memo["content"].startswith("原始内容") and "追加段落" in memo["content"]
+
+    def test_append_missing_memo(self):
+        from database.session import SessionLocal
+        from services.agent_tools import tool_append_to_memo
+
+        db = SessionLocal()
+        ok, _, result = tool_append_to_memo(db, None, {"memo_id": 999999, "content": "x"})
+        db.close()
+        assert not ok and "不存在" in result

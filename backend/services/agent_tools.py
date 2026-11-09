@@ -177,6 +177,23 @@ def tool_create_memo(db: Session, user: User, args: dict) -> tuple[bool, str, st
     return True, f"已创建笔记「{m.title}」", f"笔记已创建：#{m.id} {m.title}"
 
 
+def tool_append_to_memo(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
+    """往已有笔记末尾追加一段内容（Markdown），保留原内容"""
+    mid = int(args.get("memo_id") or 0)
+    m = db.get(Memo, mid)
+    if not m:
+        return False, f"笔记 #{mid} 不存在", f"错误：笔记 #{mid} 不存在"
+    addition = str(args.get("content") or "").strip()
+    if not addition:
+        return False, "追加内容为空", "错误：content 不能为空"
+    sep = chr(10) * 2 if (m.content and not m.content.endswith(chr(10))) else (chr(10) if m.content else "")
+    m.content = f"{m.content}{sep}{addition}" + chr(10)
+    db.commit()
+    fts.index_memo(db, m)
+    db.commit()
+    return True, f"已追加到笔记「{m.title}」", f"已向笔记 #{m.id}「{m.title}」追加 {len(addition)} 字。"
+
+
 def tool_bookmark_resource(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
     rid = int(args.get("resource_id") or 0)
     from database.models import Resource
@@ -320,6 +337,14 @@ _register("create_memo",
               "tags": {"type": "array", "items": {"type": "string"}}},
            "required": ["title", "content"]},
           tool_create_memo, write=True, summary_args=["title"])
+
+_register("append_to_memo",
+          "向已有笔记末尾追加一段 Markdown 内容（不覆盖原文）",
+          {"type": "object", "properties": {
+              "memo_id": {"type": "integer"},
+              "content": {"type": "string", "description": "要追加的 Markdown"}},
+           "required": ["memo_id", "content"]},
+          tool_append_to_memo, write=True, summary_args=["memo_id"])
 
 _register("bookmark_resource",
           "收藏/取消收藏一个资源（toggle）",
