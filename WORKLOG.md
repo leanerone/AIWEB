@@ -288,3 +288,9 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - scripts/e2e_check.py：对真实服务跑 10 项全链路检查（健康/登录/Agent 只读/建议卡/个人配置/防爆破 429/SPA 托管），
   AI 未配 Key 时自动切换到「诚实报错」路径断言；--base 可指服务地址，退出码 CI 可用
 - 实测对运行中服务 10/10 全过
+
+### 2026-11-10 02:40-02:45 · v0.9.9 轮次 I：启动脚本与工具扩展
+- start-all.bat：检测到 backend/.env 指向 mock(9377) 时自动一并启动 Mock LLM
+- 新工具 list_comments（读资源评论区，agent 回答"这资源口碑如何"类问题）；工具总数 14
+- live 库自检：chat_messages.meta 迁移生效；agent_runs 17 条 / 审计 12 条 / 个人配置 2 条
+- 测试 75 全过

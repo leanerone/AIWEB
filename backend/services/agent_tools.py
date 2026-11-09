@@ -97,6 +97,25 @@ def tool_list_memos(db: Session, user: User, args: dict) -> tuple[bool, str, str
     return True, f"列出 {len(rows)} 条笔记", "\n".join(lines)
 
 
+def tool_list_comments(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
+    """读某资源下的评论区讨论"""
+    from database.models import Resource, ResourceComment
+
+    rid = int(args.get("resource_id") or 0)
+    r = db.get(Resource, rid)
+    if not r:
+        return False, f"资源 #{rid} 不存在", f"错误：资源 #{rid} 不存在"
+    rows = (db.query(ResourceComment)
+            .filter(ResourceComment.resource_id == rid)
+            .order_by(ResourceComment.id.desc())
+            .limit(max(1, min(int(args.get("limit") or 10), 20)))
+            .all())
+    if not rows:
+        return True, f"资源「{r.name}」暂无评论", f"资源「{r.name}」下还没有评论。"
+    lines = [f"- {c.created_by}（{c.created_at.strftime('%m-%d %H:%M')}）：{c.content[:120]}" for c in rows]
+    return True, f"读取「{r.name}」的 {len(rows)} 条评论", chr(10).join(lines)
+
+
 def tool_search_notes_links(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
     from database.models import NoteLink
 
@@ -256,6 +275,14 @@ _register("read_memo",
               "memo_id": {"type": "integer"}},
            "required": ["memo_id"]},
           tool_read_memo, write=False, summary_args=["memo_id"])
+
+_register("list_comments",
+          "读取某资源下的评论区讨论（了解大家的使用反馈）",
+          {"type": "object", "properties": {
+              "resource_id": {"type": "integer"},
+              "limit": {"type": "integer"}},
+           "required": ["resource_id"]},
+          tool_list_comments, write=False, summary_args=["resource_id"])
 
 _register("search_notes_links",
           "检索平台收藏的 HCL Notes 链接库（标题/数据库/文档）",

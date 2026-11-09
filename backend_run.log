@@ -179,3 +179,37 @@ INFO:     127.0.0.1:62928 - "POST /api/auth/login HTTP/1.1" 429 Too Many Request
 INFO:     127.0.0.1:62929 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
 INFO:     127.0.0.1:62930 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
 INFO:     127.0.0.1:62931 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57373 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55840 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62884 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63692 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63693 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63695 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63691 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63697 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63694 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59165 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59166 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59168 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59164 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54234 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54236 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49571 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63365 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54459 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54458 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54463 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54461 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54457 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54460 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60293 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54811 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54810 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54813 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54812 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54814 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64136 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64602 - "GET /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64603 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57863 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60066 - "GET /api/chat/sessions HTTP/1.1" 200 OK

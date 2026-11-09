@@ -7,6 +7,10 @@ echo   AIWEB 一键启动
 echo   前端 http://localhost:5173   后端 http://localhost:8000
 echo ================================================
 
+if exist "%~dp0backend\.env" findstr /C:"9377" "%~dp0backend\.env" >nul && (
+  start "AIWEB mock-llm" cmd /k "cd /d %~dp0 && python scripts\mock_llm.py"
+)
+
 start "AIWEB backend" cmd /k "cd /d %~dp0backend && python run.py"
 start "AIWEB frontend" cmd /k "cd /d %~dp0 && npm run dev"
 
