@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Newspaper, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
+import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Newspaper, Search, Settings as SettingsIcon, Sun } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
+import { FloatingAssistant } from './Assistant/FloatingAssistant'
 import { BackToTop } from './BackToTop'
 import { CommandPalette } from './CommandPalette'
 import { MegaMenu } from './MegaMenu'
@@ -12,7 +13,6 @@ import type { NotificationItem } from '../types'
 const NAV = [
   { to: '/', label: '首页', icon: LayoutGrid },
   { to: '/resources', label: '资源库', icon: BookOpen },
-  { to: '/chat', label: 'AI 对话', icon: Sparkles },
   { to: '/briefings', label: '简报', icon: Newspaper },
   { to: '/memos', label: '笔记', icon: Notebook },
   { to: '/settings', label: '设置', icon: SettingsIcon },
@@ -218,6 +218,7 @@ export function Layout() {
 
       <footer className="py-8 text-center text-xs text-gray-300">AI Hub · 内网 AI 分享平台</footer>
       <BackToTop />
+      <FloatingAssistant />
     </div>
   )
 }

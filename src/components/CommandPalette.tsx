@@ -9,7 +9,7 @@ const PAGES = [
   { label: '首页', to: '/' },
   { label: '资源库', to: '/resources' },
   { label: '笔记', to: '/memos' },
-  { label: 'AI 对话', to: '/chat' },
+  { label: 'AI 助手', to: 'assistant' },
   { label: '简报', to: '/briefings' },
   { label: '设置', to: '/settings' },
 ]
@@ -74,7 +74,11 @@ export function CommandPalette() {
     return () => { cancelled = true; clearTimeout(t) }
   }, [q])
 
-  const go = (hit: Hit) => { setOpen(false); nav(hit.to) }
+  const go = (hit: Hit) => {
+    setOpen(false)
+    if (hit.to === 'assistant') { import('../stores/assistant').then(({ useAssistant }) => useAssistant.getState().setOpen(true)); return }
+    nav(hit.to)
+  }
 
   const iconFor = (kind: Hit['kind']) =>
     kind === 'resource' ? <BookOpen size={15} className="text-brand-500" />
@@ -126,7 +130,7 @@ export function CommandPalette() {
                   <div className="flex flex-wrap gap-1.5">
                     {PAGES.map((p) => (
                       <button key={p.to} className="chip bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700"
-                        onClick={() => { setOpen(false); nav(p.to) }}>{p.label}</button>
+                        onClick={() => go({ kind: 'page', label: p.label, sub: '页面', to: p.to })}>{p.label}</button>
                     ))}
                   </div>
                 </div>

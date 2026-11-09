@@ -22,7 +22,7 @@ const RES_ITEMS = [
   { to: '/memos#links', title: 'Notes 链接库', desc: 'notes:// 解析归档，一键唤起本机客户端', img: '/hero/p-notes-library.jpg' },
 ]
 const AI_CARDS = [
-  { to: '/chat', title: 'AI 对话', desc: 'SSE 流式问答，可引用资源上下文', img: '/hero/c-ai-network.jpg' },
+  { to: 'assistant', title: 'AI 助手', desc: '悬浮窗随时唤起：问答 / 查资源 / 干活', img: '/hero/c-ai-network.jpg' },
   // 每日简报不是一个页面：订阅源在设置页管理，生成按钮在首页。这里带锚点直达设置页的订阅区块
   { to: '/settings#rss', title: '资讯订阅', desc: 'RSS 源管理与简报设置', img: '/hero/c-briefing-fans.jpg' },
 ]
@@ -31,7 +31,7 @@ type MenuId = typeof MENUS[number]
 
 const MENU_PATH: Record<MenuId, string[]> = {
   resources: ['/resources'],
-  ai: ['/chat'],
+  ai: [], // AI 助手是全局悬浮窗没有独立路由，资讯订阅属于设置页——触发词不做当前页高亮
 }
 
 export function MegaMenu() {
@@ -146,6 +146,14 @@ export function MegaMenu() {
     })
 
     on(navEl, 'click', (e: MouseEvent) => {
+      // AI 助手卡：不走路由，直接唤起全局悬浮助手
+      const assistantCard = (e.target as Element).closest?.('[data-assistant]')
+      if (assistantCard) {
+        e.preventDefault()
+        close()
+        import('../stores/assistant').then(({ useAssistant }) => useAssistant.getState().setOpen(true))
+        return
+      }
       const a = (e.target as Element).closest?.('a[data-spa]') as HTMLAnchorElement | null
       if (!a) return
       e.preventDefault()
@@ -218,7 +226,10 @@ export function MegaMenu() {
 
         <div className="mega-panel panel-ai" id="p-ai">
           {AI_CARDS.map((c) => (
-            <a key={c.title} href={c.to} data-spa className="mega-card">
+            <a key={c.title} href={c.to === 'assistant' ? '#' : c.to}
+              data-spa={c.to === 'assistant' ? undefined : true}
+              data-assistant={c.to === 'assistant' ? true : undefined}
+              className="mega-card">
               <img src={c.img} alt="" loading="lazy" />
               <strong>{c.title}</strong>
               <span>{c.desc}</span>

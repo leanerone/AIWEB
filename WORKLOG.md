@@ -200,3 +200,12 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - ChatMessage 加 meta JSON 列 + ensure_schema_upgrade 幂等 ALTER 迁移（为 Agent 轨迹预留）
 - Settings 页：「AI 配置」全局大卡退役 → 「个人 AI 设置」折叠卡（生效链展示/auto_exec 开关/测试连接）
 - 测试：51 → 57（UserAiConfig 往返/加密落库/生效链/打码/短Key拒绝/权限 403）
+
+### 2026-11-10 00:56-01:00 · v0.9 阶段二：悬浮 AI 助手（形态改造）
+- 新组件 FloatingAssistant：右下角 FAB（52px 玻璃球，badge 预留）+ 420px 玻璃面板（.glass-pop 同语言）
+- 逻辑全部内聚 stores/assistant.ts（zustand）：SSE 消费在 store 层，页面切换对话不断线
+- 会话/消息复用 ChatSession + /api/chat/*，零迁移；历史抽屉支持切换/重命名/删除
+- 页面上下文：usePageContext 按路由自动生成（资源详情页自动取资源名，sessionStorage 缓存），可点击关闭
+- ChatRequest 加 page_context 注入系统提示词（「用户当前停留在…」）
+- /chat 退役：路由 → AssistantRedirect（自动展开助手回首页）；导航/MegaMenu/⌘K/首页 CTA 全部改唤起助手；src/pages/Chat.tsx 删除
+- 构建通过；pytest 57 不受影响

@@ -3,6 +3,7 @@ import { ArrowUpRight, Bot, FileText, Loader2, Newspaper, Package, Puzzle, Spark
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
+import { useAssistant } from '../stores/assistant'
 import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
 import { MarkdownView } from '../components/MarkdownView'
@@ -96,7 +97,7 @@ export function Dashboard() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link to="/resources" className="btn-primary"><Package size={15} /> 上传资源</Link>
-            <Link to="/chat" className="btn-ghost !border-white/25 !bg-white/10 !text-white hover:!bg-white/20"><Bot size={15} /> AI 对话</Link>
+            <button onClick={() => useAssistant.getState().setOpen(true)} className="btn-ghost !border-white/25 !bg-white/10 !text-white hover:!bg-white/20"><Bot size={15} /> AI 助手</button>
             <Link to="/memos" className="btn-ghost !border-white/25 !bg-white/10 !text-white hover:!bg-white/20"><StickyNote size={15} /> 写笔记</Link>
           </div>
         </div>
@@ -210,7 +211,7 @@ export function Dashboard() {
 
         {/* 右列：AI + RSS */}
         <div className="space-y-4">
-          <BentoCard delay={0.16} onClick={() => (location.href = '/chat')} className="cursor-pointer">
+          <BentoCard delay={0.16} onClick={() => useAssistant.getState().setOpen(true)} className="cursor-pointer">
             <div className="p-5">
               <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl text-white" style={{ backgroundImage: 'var(--brand-grad)' }}>
                 <Bot size={20} />
