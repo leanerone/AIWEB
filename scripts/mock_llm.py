@@ -31,8 +31,7 @@ def scripted_reply(body: dict) -> dict:
     messages = body.get("messages", [])
     tools = body.get("tools")
     last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-    tool_results = [m for m in messages if m.get("role") == "tool" or
-                    (m.get("role") == "user" and str(m.get("content", "")).startswith("工具 "))]
+    tool_results = [m for m in messages if m.get("role") == "tool" or m.get("tool_call_id")]
     react_mode = not tools
 
     if tool_results:

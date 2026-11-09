@@ -229,3 +229,17 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - FloatingAssistant 打开时拉取 + 每 2 分钟刷新；FAB badge = 建议数
 - 原则：只建议不自动执行（写操作仍走 agent confirm/auto_exec 通道）
 - 测试：65 → 67
+
+### 2026-11-10 01:25-01:35 · 全流程 E2E 验证（API + 真实浏览器）全绿
+- Mock LLM(9377) + FastAPI(8000) + Vite(5173) 三件套联调
+- API 层：只读链路(search→回答)/写链路(confirm→approve→笔记落库)/拒绝不落库/建议卡/生效链 ✓
+- **修复真 bug**：function 主路径 state["mode"] 从未落值 → resume 以 user 角色追加工具结果
+  （真 OpenAI API 会 400）；现探测成功即锁定 mode="function"，resume 用 role=tool ✓
+- 浏览器 E2E（IAB，SSO 直登）：
+  1. FAB 打开面板：建议卡×2/快捷 chips/上下文 chip/输入区 ✓
+  2. Agent 对话：用户气泡 → 工具步骤行「搜索…命中 4 条」→ Markdown 回答 → 复制/重新生成/沉淀按钮 ✓
+  3. 写操作：确认卡出现 → 点「确认执行」→ 步骤行「已创建笔记…」→ 笔记落库（API 查证）✓
+  4. /chat 旧链接 → 重定向首页并自动展开助手 ✓；MegaMenu AI 能力面板「AI 助手」卡唤起 ✓
+  5. 设置页：「个人 AI 设置」折叠卡展开 → 保存个人 Key → 生效链切 user + reveal 尾 4 位 ✓
+  6. 加密落库：SQLite 中 api_key_encrypted=enc:v1:gAAAA…（Fernet 密文），无明文 ✓
+- 测试环境复原：个人 Key 已清除，生效链回落 env(Mock)

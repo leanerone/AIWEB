@@ -266,6 +266,9 @@ def _loop(db, user, run: AgentRun, state: dict) -> Generator[str, None, None]:
             return
 
         # ── function-calling 模式 ──
+        if mode is None:
+            mode = state["mode"] = "function"  # 探测成功，锁定协议（resume 也按此续跑）
+
         try:
             choice = data["choices"][0]["message"]
         except (KeyError, IndexError):
