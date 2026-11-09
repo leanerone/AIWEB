@@ -1043,3 +1043,45 @@ class TestAgentApi:
         kinds = [e for e, _ in self._events(resp.text)]
         assert "confirm" not in kinds and "step" in kinds
         client.put("/api/me/ai-config", json={"auto_exec": False}, headers=auth(token))
+
+
+class TestAssistantSuggestions:
+    """Proactive 建议卡：observe 模式，只建议不自动执行。"""
+
+    def test_suggestions_briefing_and_rss(self, token):
+        from datetime import datetime
+
+        from database.models import FeedCard, RssItem, RssSource
+        from database.session import SessionLocal
+
+        db = SessionLocal()
+        src = RssSource(name="mocksrc2", url="https://example.com/s2.xml")
+        db.add(src)
+        db.flush()
+        db.add(RssItem(source_id=src.id, title="新资讯", link="https://e.com/9", summary="s",
+                       created_at=datetime.now()))
+        db.add(FeedCard(kind="ai", title="今日简报", content="c", summary="要点",
+                        ref_type="briefing", created_at=datetime.now()))
+        db.commit()
+        d = client.get("/api/assistant/suggestions", headers=auth(token)).json()["data"]
+        ids = [i["id"] for i in d["items"]]
+        assert "briefing" in ids and "rss" in ids
+        rss = next(i for i in d["items"] if i["id"] == "rss")
+        assert "新增 1 条" in rss["title"] or "新增 2 条" in rss["title"]
+        db.query(RssItem).delete()
+        db.query(RssSource).filter(RssSource.id == src.id).delete()
+        db.query(FeedCard).filter(FeedCard.ref_type == "briefing").delete()
+        db.commit()
+        db.close()
+
+    def test_suggestions_empty_when_nothing_new(self, token):
+        from database.models import FeedCard, RssItem
+        from database.session import SessionLocal
+
+        db = SessionLocal()
+        db.query(RssItem).delete()
+        db.query(FeedCard).filter(FeedCard.ref_type == "briefing").delete()
+        db.commit()
+        db.close()
+        d = client.get("/api/assistant/suggestions", headers=auth(token)).json()["data"]
+        assert d["items"] == []

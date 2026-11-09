@@ -223,3 +223,9 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 测试：57 → 65（function 主链/确认-批准/拒绝不落库/ask_user/ReAct 降级/无Key/越权404/auto_exec 直通）
 - scripts/mock_llm.py：本地 Mock LLM（9377），无真实 Key 也能全链路联调
 - 修复：messages 接口补 meta 字段；AgentRun.session relationship
+
+### 2026-11-10 01:15-01:20 · v0.9 阶段四：Proactive 建议卡（observe 模式）
+- GET /api/assistant/suggestions：今日简报就绪 → 引导 /briefings；24h 新资讯 → 生成总结 prompt
+- FloatingAssistant 打开时拉取 + 每 2 分钟刷新；FAB badge = 建议数
+- 原则：只建议不自动执行（写操作仍走 agent confirm/auto_exec 通道）
+- 测试：65 → 67

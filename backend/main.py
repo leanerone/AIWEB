@@ -55,7 +55,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routes import (agent, ai, admin, auth, bookmarks, chat, comments, feed, me,
+from routes import (agent, ai, admin, assistant, auth, bookmarks, chat, comments, feed, me,
                     memos, notes, notifications, resources, rss, search,
                     settings as settings_routes)  # noqa: E402
 
@@ -64,6 +64,7 @@ app.include_router(auth.router, prefix=API)
 app.include_router(me.router, prefix=API)
 app.include_router(ai.router, prefix=API)
 app.include_router(agent.router, prefix=API)
+app.include_router(assistant.router, prefix=API)
 app.include_router(admin.router, prefix=API)
 app.include_router(resources.router, prefix=API)
 app.include_router(comments.router, prefix=API)

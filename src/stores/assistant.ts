@@ -44,6 +44,7 @@ interface AssistantState {
   pendingAsk: PendingAsk | null
   badge: number
   suggestions: { id: string; title: string; desc: string; action: string; ref?: string }[]
+  loadSuggestions: () => void
 
   setOpen: (v: boolean) => void
   toggle: () => void
@@ -192,6 +193,11 @@ export const useAssistant = create<AssistantState>((set, get) => {
     pendingAsk: null,
     badge: 0,
     suggestions: [],
+
+    loadSuggestions: () =>
+      api.get<never, { items: AssistantState['suggestions'] }>('/assistant/suggestions')
+        .then((d) => set({ suggestions: d.items, badge: d.items.length }))
+        .catch(() => {}),
 
     setOpen: (v) => set({ open: v, historyOpen: v ? get().historyOpen : false }),
     toggle: () => set((s) => ({ open: !s.open })),

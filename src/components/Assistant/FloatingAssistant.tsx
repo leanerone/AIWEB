@@ -121,6 +121,7 @@ export function FloatingAssistant() {
   const answerAsk = useAssistant((s) => s.answerAsk)
   const badge = useAssistant((s) => s.badge)
   const suggestions = useAssistant((s) => s.suggestions)
+  const loadSuggestions = useAssistant((s) => s.loadSuggestions)
   const pageContext = useAssistant((s) => s.pageContext)
   const usePageCtx = useAssistant((s) => s.usePageContext)
   const togglePageCtx = useAssistant((s) => s.togglePageContext)
@@ -132,6 +133,14 @@ export function FloatingAssistant() {
   useEffect(() => {
     if (open && sessions.length === 0) loadSessions()
   }, [open, sessions.length, loadSessions])
+
+  useEffect(() => {
+    // 建议卡：打开面板时拉一次，之后每 2 分钟刷新（observe 模式：只建议不自动执行）
+    if (!open) return
+    loadSuggestions()
+    const t = window.setInterval(loadSuggestions, 120_000)
+    return () => window.clearInterval(t)
+  }, [open, loadSuggestions])
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
