@@ -462,3 +462,14 @@ pytest 82 ✓ · e2e_check 10/10 ✓
 - DEPLOY.md 补迁移工作流；live 库已自动标记 660bc28003b2
 - mock_llm 流式逐块输出 + 30ms 微延迟（本地也能看到逐字打印效果）
 - 最终基线：pytest **85 用例全过** · build ✓ · e2e_check 10/10 ✓ · 流式时序渐增验证 ✓
+
+### 2026-11-10 08:10 · v0.9.24 【用户报告】AI 回复乱码修复
+- **根因**：`requests.iter_lines(decode_unicode=True)` 未设编码——SSE 响应头无 charset 时
+  requests 按 RFC 默认 ISO-8859-1 解码，UTF-8 中文全部变乱码（真流式改造引入，
+  console 里当时看到的"乱码"其实真的是数据坏了，不是终端显示问题）
+- **修复**：agent_service._chat_completion_stream 与 ai_service.stream_chat（普通对话/简报/知识卡
+  同路径）消费前强制 `resp.encoding = "utf-8"`；mock SSE 响应头补 charset=utf-8
+- **回归测试**：起本地真 HTTP SSE 服务（故意不带 charset），走真实 requests 解码路径断言中文完整
+  （无修复时必红）；测试 84 → 86
+- **数据修复**：清理 6 条乱码助手消息 + 乱码 runs + 冗余测试会话（保留 2 个代表性会话）；
+  新对话中文 ✓ 浏览器实测气泡无乱码 ✓ e2e_check 10/10 ✓

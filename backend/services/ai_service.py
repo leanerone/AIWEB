@@ -73,6 +73,9 @@ def stream_chat(db, messages: list[dict], username: str | None = None) -> Genera
             detail = e.response.text[:300]
         raise RuntimeError(f"AI 请求失败：{e} {detail}") from e
 
+    # SSE 无 charset 时 requests 默认按 ISO-8859-1 解码 → 中文变乱码，强制 UTF-8
+    resp.encoding = "utf-8"
+
     for line in resp.iter_lines(decode_unicode=True):
         if not line or not line.startswith("data:"):
             continue

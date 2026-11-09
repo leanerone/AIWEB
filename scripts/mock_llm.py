@@ -128,7 +128,7 @@ class Handler(BaseHTTPRequestHandler):
             import time as _time
 
             self.send_response(200)
-            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
             self.end_headers()
             for piece in sse_stream(body).split(b"\n\n"):
                 self.wfile.write(piece + b"\n\n")

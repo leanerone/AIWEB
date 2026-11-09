@@ -1511,3 +1511,51 @@ class TestAlembicIntegration:
         cfg.set_main_option("script_location", str(base))
         head = ScriptDirectory.from_config(cfg).get_current_head()
         assert rows[0][0] == head
+
+
+class TestSseEncoding:
+    """回归：SSE 消费必须按 UTF-8 解码（text/event-stream 无 charset 时
+    requests 默认 ISO-8859-1，中文会变乱码——v0.9.24 修复）。"""
+
+    def test_agent_stream_decodes_utf8(self, token, monkeypatch):
+        """起一个本地真 HTTP SSE 服务（UTF-8 中文分片），走真实 requests 解码路径"""
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        payload = (
+            'data: {"choices":[{"delta":{"role":"assistant"}}]}\n\n'
+            'data: {"choices":[{"delta":{"content":"中文回答："}}]}\n\n'
+            'data: {"choices":[{"delta":{"content":"机台通信超时排查 ✓"}}]}\n\n'
+            "data: [DONE]\n\n"
+        ).encode("utf-8")
+
+        class H(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")  # 故意不带 charset
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+        srv = HTTPServer(("127.0.0.1", 0), H)
+        port = srv.server_address[1]
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            from services import agent_service
+
+            monkeypatch.setattr(agent_service, "get_ai_config",
+                                lambda db, username=None: {
+                                    "api_base": f"http://127.0.0.1:{port}/v1",
+                                    "api_key": "sk-encoding-test", "model": "test",
+                                    "system_prompt": "", "auto_exec": False, "source": "env"})
+
+            pieces = [ev["text"] for ev in agent_service._chat_completion_stream(
+                None, "tester", [{"role": "user", "content": "q"}], tools=None)
+                if ev["type"] == "content"]
+            assert "".join(pieces) == "中文回答：机台通信超时排查 ✓"
+        finally:
+            srv.shutdown()
