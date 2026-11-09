@@ -218,7 +218,7 @@ export function Dashboard() {
               </span>
               <h3 className="text-sm font-bold">AI 助手</h3>
               <p className="mt-1 text-xs leading-5 text-subtle">
-                在线对话、生成周报素材与知识卡片，好内容可一键沉淀到首页动态
+                悬浮助手能查资源、读笔记、写笔记、生成简报；写操作先经你确认，好内容一键沉淀
               </p>
               <div className="mt-3 flex items-center gap-2">
                 <span className="flex items-center gap-1 text-xs font-medium text-brand-600">

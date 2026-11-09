@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Bot, Check, ChevronLeft, Copy, History, Loader2, MessageCircle, Pencil, Plus,
+  Bot, Check, ChevronLeft, Copy, FileDown, History, Loader2, MessageCircle, Pencil, Plus,
   Send, Sparkles, Square, Trash2, X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
 import { useAssistant, type AssistantMsg } from '../../stores/assistant'
+import { downloadText } from '../../utils/time'
 import { MarkdownView } from '../MarkdownView'
 import { useToast } from '../ui/Toast'
 import type { Resource } from '../../types'
@@ -233,7 +234,15 @@ export function FloatingAssistant() {
               <div className="absolute inset-y-0 left-0 z-10 flex w-56 flex-col border-r border-black/10 bg-white/95 backdrop-blur-xl dark:bg-[#141a20]/95">
                 <div className="flex items-center justify-between border-b border-black/5 px-3 py-2.5 dark:border-white/10">
                   <span className="text-xs font-bold">历史会话</span>
-                  <button onClick={() => setHistoryOpen(false)}><X size={14} className="text-subtle" /></button>
+                  <span className="flex items-center gap-1">
+                    <button title="导出当前对话为 Markdown" disabled={!sessionId || messages.length === 0}
+                      className="rounded p-1 text-subtle hover:text-brand-600 disabled:opacity-30"
+                      onClick={() => downloadText(
+                        `aihub-助手会话-${sessionId}.md`,
+                        messages.map((m) => `## ${m.role === 'user' ? '🙋 我' : '🤖 AI 助手'}\n\n${m.content}`).join('\n\n---\n\n'),
+                      )}><FileDown size={14} /></button>
+                    <button onClick={() => setHistoryOpen(false)}><X size={14} className="text-subtle" /></button>
+                  </span>
                 </div>
                 <div className="flex-1 space-y-1 overflow-y-auto p-2">
                   {sessions.map((s) => (

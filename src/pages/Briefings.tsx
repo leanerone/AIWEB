@@ -1,4 +1,4 @@
-import { ChevronDown, Loader2, Newspaper, Sparkles } from 'lucide-react'
+import { ChevronDown, Loader2, MessageCircleQuestion, Newspaper, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../services/api'
 import { useList } from '../hooks/useList'
@@ -6,6 +6,7 @@ import { BentoCard } from '../components/BentoCard'
 import { MarkdownView } from '../components/MarkdownView'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
+import { useAssistant } from '../stores/assistant'
 import type { BriefingItem } from '../types'
 
 /** AI 简报归档：历次「每日简报」沉淀内容卡（ref_type=briefing），倒序分页 */
@@ -86,6 +87,14 @@ export function Briefings() {
                 {open && (
                   <div className="border-t border-gray-100 px-5 py-4 dark:border-gray-800">
                     <MarkdownView text={b.content} />
+                    <button className="btn-ghost mt-3 !py-1.5 text-xs"
+                      onClick={() => {
+                        const st = useAssistant.getState()
+                        st.setOpen(true)
+                        window.setTimeout(() => st.send(`请解读这份简报，挑出和我们半导体制造团队最相关的 1-2 条并说明为什么：「${b.title}」`), 60)
+                      }}>
+                      <MessageCircleQuestion size={13} /> 让 AI 助手解读这份简报
+                    </button>
                   </div>
                 )}
               </BentoCard>
