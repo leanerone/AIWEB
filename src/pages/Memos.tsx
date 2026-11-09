@@ -176,6 +176,7 @@ export function Memos() {
               { label: 'H2', title: '标题', act: () => linePrefix('## '), cls: 'font-semibold text-[11px]' },
               { label: '•', title: '列表', act: () => linePrefix('- '), cls: '' },
               { label: '🔗', title: '链接', act: () => wrapSel('[', '](https://)', '链接文字'), cls: '' },
+              { label: '[[', title: '双链到另一条笔记（点击标题跳转检索）', act: () => wrapSel('[[', ']]', '笔记标题'), cls: 'font-mono text-[11px]' },
             ].map((b) => (
               <button key={b.title} title={b.title} type="button"
                 className={`h-7 min-w-7 rounded-lg border border-gray-200 px-1.5 text-xs text-subtle transition hover:border-brand-300 hover:text-brand-600 ${b.cls}`}

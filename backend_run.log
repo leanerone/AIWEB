@@ -106,3 +106,5 @@ INFO:     127.0.0.1:51840 - "GET /api/hub/stats HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51837 - "GET /api/hub/contributors HTTP/1.1" 200 OK
 INFO:     127.0.0.1:52292 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
 INFO:     127.0.0.1:52290 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57525 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64518 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
