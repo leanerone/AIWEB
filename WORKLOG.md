@@ -438,3 +438,12 @@ pytest 82 ✓ · e2e_check 10/10 ✓
 本夜自 00:27 起：四阶段主体 → 轮次 A~Q 加餐 → 巡检拍 1~29，共 70+ 次提交，全部本地提交（未 push）。
 最终基线：**pytest 82 用例全过 · npm build ✓ · e2e_check 10/10 ✓ · soak 5×无抖动 · 浏览器全旅程复验 ✓**
 三个服务仍在运行：前端 :5173 / 后端 :8000 / Mock LLM :9377（backend/.env 当前指向 Mock，换真实 Key 见下）。
+
+### 2026-11-10 06:45 · v0.9.20 轮次 R：Agent 最终回答真流式
+- _chat_completion_stream：OpenAI 流式 SSE 消费，content 逐 token 透传前端；
+  tool_calls 增量（按 index 聚合分片）流末成型 —— function 模式全程真流式
+- 前导文本（模型在工具调用前的过渡语）实时展示；state["streamed"] 跨 resume 累积，落库取全文
+- react 模式保持非流式（动作 JSON 不能直出）；会话命名走非流式不变
+- mock_llm 支持 stream=true（content 6 字分片 + tool_calls 两段式增量参数）
+- 测试焊点迁移：_chat_completion_stream + mock_agent 模块级助手；82 用例全过
+- e2e_check 10/10；delta 分片与 done.reply 一致性断言通过

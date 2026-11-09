@@ -72,6 +72,36 @@ def scripted_reply(body: dict) -> dict:
                                       "function": {"name": "search_platform", "arguments": json.dumps({"query": query}, ensure_ascii=False)}}])
 
 
+def sse_stream(body: dict) -> bytes:
+    """把 scripted_reply 的结果转成 OpenAI 流式 SSE：content 分片、tool_calls 一次成型"""
+    reply = scripted_reply(body)
+    msg = reply["choices"][0]["message"]
+    out = []
+
+    def send(delta: dict):
+        out.append("data: " + json.dumps(
+            {"id": "mock", "object": "chat.completion.chunk", "model": "mock-mini",
+             "choices": [{"index": 0, "delta": delta, "finish_reason": None}]},
+            ensure_ascii=False) + "\n\n")
+
+    send({"role": "assistant"})
+    if msg.get("tool_calls"):
+        for tc in msg["tool_calls"]:
+            fn = tc["function"]
+            # 分两片模拟增量参数流
+            half = max(1, len(fn["arguments"]) // 2)
+            send({"tool_calls": [{"index": 0, "id": tc["id"], "type": "function",
+                                  "function": {"name": fn["name"], "arguments": fn["arguments"][:half]}}]})
+            send({"tool_calls": [{"index": 0, "function": {"arguments": fn["arguments"][half:]}}]})
+    else:
+        content = msg.get("content") or ""
+        for i in range(0, len(content), 6):
+            send({"content": content[i:i + 6]})
+    send({})  # 收尾空 delta
+    out.append("data: [DONE]\n\n")
+    return "".join(out).encode("utf-8")
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):  # 安静模式
         pass
@@ -93,6 +123,14 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length) or b"{}")
         except json.JSONDecodeError:
             body = {}
+        if body.get("stream"):
+            data = sse_stream(body)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         data = json.dumps(scripted_reply(body), ensure_ascii=False).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")

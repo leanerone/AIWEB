@@ -86,6 +86,77 @@ def _looks_like_tools_unsupported(e: RuntimeError) -> bool:
             and re.search(r"tools|function|tool_choice", text, re.IGNORECASE) is not None)
 
 
+def _chat_completion_stream(db, username: str | None, messages: list[dict],
+                            tools: list[dict] | None) -> Generator[dict, None, None]:
+    """流式补全（function 模式专用）：逐段 yield
+    {"type": "content", "text": ...} 或 {"type": "tool_calls", "tool_calls": [...]}。
+
+    工具调用增量（OpenAI 流式把 tool_calls 拆成多个 delta）按 index 聚合后再一次性吐出；
+    content 则随到随吐，供上层实时透传给前端。
+    """
+    cfg = get_ai_config(db, username)
+    if not cfg["api_key"]:
+        raise AiNotConfigured("AI 未配置：请到「设置 → 个人 AI 设置」填写你的 API Key")
+    body: dict = {"model": cfg["model"], "messages": messages,
+                  "stream": True, "temperature": 0.3}
+    if tools:
+        body["tools"] = tools
+        body["tool_choice"] = "auto"
+    try:
+        resp = requests.post(
+            f"{cfg['api_base']}/chat/completions",
+            headers={"Authorization": f"Bearer {cfg['api_key']}"},
+            json=body, stream=True, timeout=(10, 120))
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        detail = ""
+        if e.response is not None:
+            detail = e.response.text[:300]
+        raise RuntimeError(f"AI 请求失败：{e} {detail}") from e
+
+    content_started = False
+    tool_acc: dict[int, dict] = {}
+    try:
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data)
+            except json.JSONDecodeError:
+                continue
+            choices = chunk.get("choices") or []
+            if not choices:
+                continue
+            delta = choices[0].get("delta") or {}
+            piece = delta.get("content")
+            if piece:
+                content_started = True
+                yield {"type": "content", "text": piece}
+            for tc in delta.get("tool_calls") or []:
+                idx = int(tc.get("index") or 0)
+                acc = tool_acc.setdefault(idx, {
+                    "id": tc.get("id") or f"call_{idx}", "type": "function",
+                    "function": {"name": "", "arguments": ""}})
+                if tc.get("id"):
+                    acc["id"] = tc["id"]
+                fn = tc.get("function") or {}
+                if fn.get("name"):
+                    acc["function"]["name"] += fn["name"]
+                if fn.get("arguments"):
+                    acc["function"]["arguments"] += fn["arguments"]
+    finally:
+        resp.close()
+    # 工具调用在流结束后聚合吐出（正常情况下 content 与 tool_calls 互斥）
+    if tool_acc:
+        for idx in sorted(tool_acc):
+            yield {"type": "tool_calls", "tool_calls": [tool_acc[idx]]}
+    if not content_started and not tool_acc:
+        yield {"type": "content", "text": ""}  # 空响应也给出终止信号
+
+
 def _build_system(db, username: str | None, page_context: str) -> str:
     cfg = get_ai_config(db, username)
     parts = SYSTEM_TEMPLATE
@@ -159,17 +230,19 @@ def _maybe_name_session(db, session, question: str, answer: str, username: str |
 
 
 def _finish(db, run: AgentRun, session, user, state: dict, answer: str) -> str:
-    """落库最终回答（带任务卡轨迹），返回答案文本"""
+    """落库最终回答（带任务卡轨迹），返回答案文本。
+    流式模式下前端已逐 token 收到全部内容，落库取累积全文（前导 + 最终轮）。"""
     from database.models import ChatMessage
 
+    full = "".join(state.get("streamed") or []).strip() or answer
     meta = {"run_id": run.id, "steps": state["steps"]} if state["steps"] else {"run_id": run.id}
-    msg = ChatMessage(session_id=session.id, role="assistant", content=answer, meta=meta)
+    msg = ChatMessage(session_id=session.id, role="assistant", content=full, meta=meta)
     db.add(msg)
     _persist(db, run, state, "done")
-    run.result = answer
+    run.result = full
     db.commit()
     _maybe_name_session(db, session, state["messages"][1]["content"], answer, user.username)
-    return answer
+    return full
 
 
 def stream_run(db, user, session, question: str, page_context: str) -> Generator[str, None, None]:
@@ -270,19 +343,47 @@ def stream_resume(db, user, run_id: int, approved: bool | None = None,
 
 
 def _loop(db, user, run: AgentRun, state: dict) -> Generator[str, None, None]:
-    """Agent 主循环：决策 → 工具 → 再决策，直到最终回答或挂起"""
+    """Agent 主循环：决策 → 工具 → 再决策，直到最终回答或挂起。
+
+    function 模式使用流式补全：content 逐 token 实时透传（真流式），
+    工具调用增量聚合后在流末吐出；react 模式保持非流式（JSON 动作不能直出给用户）。
+    """
     mode = state.get("mode")
+    state.setdefault("streamed", [])  # 历史所有轮 content 累积（跨 resume 持久）
 
     while state["rounds"] < MAX_ROUNDS:
         state["rounds"] += 1
 
-        # ── 调用 LLM ──
-        try:
-            if mode == "react":
+        if mode == "react":
+            # ── react：非流式（动作 JSON 不能直出） ──
+            try:
                 data = _chat_completion(db, user.username, state["messages"], tools=None)
-            else:
-                data = _chat_completion(db, user.username, state["messages"],
-                                        tools=openai_schema())
+            except AiNotConfigured as e:
+                yield _sse("error", {"message": str(e)})
+                _persist(db, run, state, "failed")
+                return
+            except RuntimeError as e:
+                yield _sse("error", {"message": str(e)})
+                _persist(db, run, state, "failed")
+                return
+            _persist(db, run, state)
+            yield from _loop_react(db, user, run, state, data)
+            return
+
+        # ── function 模式：流式 ──
+        content_acc: list[str] = []
+        tool_calls: list[dict] = []
+        try:
+            for ev in _chat_completion_stream(db, user.username, state["messages"],
+                                              tools=openai_schema()):
+                if ev["type"] == "content":
+                    text = ev["text"]
+                    if text:
+                        content_acc.append(text)
+                        state["streamed"].append(text)
+                        yield _sse("delta", {"text": text})  # 真流式：逐 token 到前端
+                else:
+                    tool_calls = ev["tool_calls"]
         except AiNotConfigured as e:
             yield _sse("error", {"message": str(e)})
             _persist(db, run, state, "failed")
@@ -291,48 +392,38 @@ def _loop(db, user, run: AgentRun, state: dict) -> Generator[str, None, None]:
             if mode is None and _looks_like_tools_unsupported(e):
                 mode = state["mode"] = "react"   # 降级 ReAct 文本协议
                 state["messages"][0]["content"] += _REACT_ADDON
+                # 已流出的内容（空探测轮一般没有）保留；react 重新决策
                 continue
             yield _sse("error", {"message": str(e)})
             _persist(db, run, state, "failed")
             return
 
-        _persist(db, run, state)
-
-        if mode == "react":
-            yield from _loop_react(db, user, run, state, data)
-            return
-
-        # ── function-calling 模式 ──
         if mode is None:
             mode = state["mode"] = "function"  # 探测成功，锁定协议（resume 也按此续跑）
 
-        try:
-            choice = data["choices"][0]["message"]
-        except (KeyError, IndexError):
-            yield _sse("error", {"message": "AI 返回格式异常，请重试"})
-            _persist(db, run, state, "failed")
-            return
-
-        tool_calls = choice.get("tool_calls") or []
-        content = choice.get("content") or ""
+        # 组装 assistant 消息（含 tool_calls 时供 OpenAI 协议回放）
+        assistant_msg: dict = {"role": "assistant",
+                               "content": "".join(content_acc) or None}
+        if tool_calls:
+            assistant_msg["tool_calls"] = tool_calls
 
         if not tool_calls:
-            answer = content.strip() or "（AI 未返回内容）"
-            # 假如模型没走 tool 协议直接把 JSON 动作写在 content 里，兼容解析一次
-            parsed = _try_parse_react(answer)
+            answer = ("".join(content_acc).strip()
+                      or "".join(state["streamed"]).strip()
+                      or "（AI 未返回内容）")
+            # 兼容：模型把 JSON 动作直接写在 content 里的情况
+            parsed = _try_parse_react(answer) if answer else None
             if parsed and parsed.get("action") not in (None, "final"):
                 yield from _dispatch_react(db, user, run, state, parsed)
                 return
+            _persist(db, run, state)
             _finish(db, run, run.session, user, state, answer)
-            chunks = [answer[i:i + 48] for i in range(0, len(answer), 48)] or [""]
-            for c in chunks:
-                yield _sse("delta", {"text": c})
             yield _sse("done", {"session_id": run.session_id, "reply": answer,
                                 "steps": state["steps"]})
             return
 
-        # 记录 assistant 的 tool_calls 消息
-        state["messages"].append(choice)
+        state["messages"].append(assistant_msg)
+        _persist(db, run, state)
         for tc in tool_calls:
             fn = tc.get("function") or {}
             name = fn.get("name", "")

@@ -38,6 +38,34 @@ def auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def mock_agent(monkeypatch, responses, api_key="sk-mock"):
+    """Agent 流式焊点（模块级）：每个响应项转为一次调用的事件流；
+    非流式调用（react / 会话命名）共享同一序列。"""
+    from services import agent_service
+
+    it = iter(responses)
+
+    def stream_fake(db, u, m, tools):
+        item = next(it)
+        msg = item["choices"][0]["message"]
+        if msg.get("tool_calls"):
+            yield {"type": "tool_calls", "tool_calls": msg["tool_calls"]}
+            return
+        text = msg.get("content") or ""
+        for i in range(0, len(text), 8):
+            yield {"type": "content", "text": text[i:i + 8]}
+        if not text:
+            yield {"type": "content", "text": ""}
+
+    monkeypatch.setattr(agent_service, "_chat_completion_stream", stream_fake)
+    monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
+    real_cfg = agent_service.get_ai_config
+    monkeypatch.setattr(agent_service, "get_ai_config",
+                        lambda db, username=None, _real=real_cfg, _k=api_key:
+                        {**_real(db, username), "api_key": _k})
+    return agent_service
+
+
 _plain_token: str | None = None
 
 
@@ -899,19 +927,10 @@ class TestAgentApi:
         return out
 
     def _mock(self, monkeypatch, responses, api_key="sk-mock"):
-        from services import agent_service
-
-        it = iter(responses)
-        monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
-        real_cfg = agent_service.get_ai_config
-        # 覆盖 api_key 保证预检通过，其余字段（auto_exec 等）保持真实值
-        monkeypatch.setattr(agent_service, "get_ai_config",
-                            lambda db, username=None, _real=real_cfg, _k=api_key:
-                            {**_real(db, username), "api_key": _k})
-        return agent_service
+        return mock_agent(monkeypatch, responses, api_key)
 
     def test_function_loop_happy_path(self, token, monkeypatch):
-        self._mock(monkeypatch, [
+        mock_agent(monkeypatch, [
             {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
                 {"id": "c1", "type": "function",
                  "function": {"name": "list_resources", "arguments": "{\"keyword\": \"excel\"}"}}]}}]},
@@ -938,7 +957,7 @@ class TestAgentApi:
         db.close()
 
     def test_write_tool_confirm_and_approve(self, token, monkeypatch):
-        ag = self._mock(monkeypatch, [
+        ag = mock_agent(monkeypatch, [
             {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
                 {"id": "c1", "type": "function",
                  "function": {"name": "create_memo",
@@ -971,7 +990,7 @@ class TestAgentApi:
         assert any(m["title"] == "会议纪要" for m in memos)
 
     def test_write_tool_declined(self, token, monkeypatch):
-        self._mock(monkeypatch, [
+        mock_agent(monkeypatch, [
             {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
                 {"id": "c1", "type": "function",
                  "function": {"name": "create_memo",
@@ -990,7 +1009,7 @@ class TestAgentApi:
         assert before == after  # 拒绝后绝不落库
 
     def test_ask_user_flow(self, token, monkeypatch):
-        self._mock(monkeypatch, [
+        mock_agent(monkeypatch, [
             {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
                 {"id": "c1", "type": "function",
                  "function": {"name": "ask_user",
@@ -1009,15 +1028,22 @@ class TestAgentApi:
     def test_react_fallback(self, token, monkeypatch):
         from services import agent_service
 
-        self._mock(monkeypatch, [])  # 先统一补 key；下面再覆盖调用序列
+        real_cfg = agent_service.get_ai_config
+        monkeypatch.setattr(agent_service, "get_ai_config",
+                            lambda db, username=None, _real=real_cfg: {**_real(db, username), "api_key": "sk-mock"})
+
+        def fake_stream(db, u, m, tools):
+            if tools:  # 流式探测：代理不支持 tools
+                raise RuntimeError("AI 请求失败：400 {\"error\": {\"message\": \"Invalid parameter: tools\"}}")
+            raise AssertionError("react 模式不应走流式")
+
+        monkeypatch.setattr(agent_service, "_chat_completion_stream", fake_stream)
+
         calls = {"n": 0}
 
         def fake_llm(db, username, messages, tools):
             calls["n"] += 1
-            if calls["n"] == 1 and tools:
-                raise RuntimeError("AI 请求失败：400 {\"error\": {\"message\": \"Invalid parameter: tools\"}}")
-            last = messages[-1]["content"]
-            if calls["n"] == 2:
+            if calls["n"] == 1:
                 return {"choices": [{"message": {"content": "{\"action\": \"search_platform\", \"args\": {\"query\": \"EAP\"}}"}}]}
             return {"choices": [{"message": {"content": "{\"action\": \"final\", \"answer\": \"EAP 协议资料如下\"}"}}]}
 
@@ -1038,7 +1064,7 @@ class TestAgentApi:
     def test_run_requires_key(self, token, monkeypatch):
         from services import agent_service
 
-        self._mock(monkeypatch, [], api_key="")   # 预检即失败
+        mock_agent(monkeypatch, [], api_key="")   # 预检即失败
         resp = client.post("/api/agent/run", json={"message": "hi"}, headers=auth(token))
         evs = self._events(resp.text)
         assert evs and evs[-1][0] == "error" and "未配置" in evs[-1][1]["message"]
@@ -1050,7 +1076,7 @@ class TestAgentApi:
 
     def test_auto_exec_bypasses_confirm(self, token, monkeypatch):
         client.put("/api/me/ai-config", json={"auto_exec": True}, headers=auth(token))
-        self._mock(monkeypatch, [
+        mock_agent(monkeypatch, [
             {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
                 {"id": "c1", "type": "function",
                  "function": {"name": "create_memo",
@@ -1181,16 +1207,12 @@ class TestAgentRegenerate:
     def test_regenerate_flow(self, token, monkeypatch):
         from services import agent_service
 
-        it = iter([
+        mock_agent(monkeypatch, [
             {"choices": [{"message": {"role": "assistant", "content": "第一版回答"}}]},
             {"choices": [{"message": {"role": "assistant", "content": "标题一"}}]},
             {"choices": [{"message": {"role": "assistant", "content": "第二版回答（更完整）"}}]},
             {"choices": [{"message": {"role": "assistant", "content": "标题二"}}]},
         ])
-        monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
-        real_cfg = agent_service.get_ai_config
-        monkeypatch.setattr(agent_service, "get_ai_config",
-                            lambda db, username=None, _real=real_cfg: {**_real(db, username), "api_key": "sk-mock"})
 
         r1 = client.post("/api/agent/run", json={"message": "问题A"}, headers=auth(token))
         sid = json.loads(r1.text.split("data:")[1].split(chr(10))[0])["session_id"]
@@ -1377,16 +1399,12 @@ class TestSessionNaming:
     def test_auto_title(self, token, monkeypatch):
         from services import agent_service
 
-        it = iter([
+        mock_agent(monkeypatch, [
             {"choices": [{"message": {"role": "assistant", "content": "回答正文"}}]},
             {"choices": [{"message": {"role": "assistant", "content": "帮我处理Excel周报"}}]},
             {"choices": [{"message": {"role": "assistant", "content": "回答正文2"}}]},
             {"choices": [{"message": {"role": "assistant", "content": "帮我处理Excel周报"}}]},
         ])
-        monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
-        real_cfg = agent_service.get_ai_config
-        monkeypatch.setattr(agent_service, "get_ai_config",
-                            lambda db, username=None, _real=real_cfg: {**_real(db, username), "api_key": "sk-mock"})
 
         resp = client.post("/api/agent/run", json={"message": "帮我处理excel周报的问题"},
                            headers=auth(token))
