@@ -86,7 +86,7 @@ export function Dashboard() {
       <BentoCard className="hero-band overflow-hidden !border-transparent !p-0">
         <div className="hero-img" style={{ backgroundImage: "url('/hero/hero-server-room.jpg')" }} aria-hidden="true" />
         <div className="relative p-8 sm:p-10 lg:p-14">
-          <p className="hero-sub text-xs font-medium uppercase tracking-[0.18em]">内网 AI 分享平台</p>
+          <p className="hero-sub text-xs font-medium uppercase tracking-[0.18em]">首页 · 内网 AI 分享平台</p>
           <h1 className="hero-title mt-3 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
             {greeting}，{user?.display_name || user?.username} ——<br className="sm:hidden" />
             这里是你的 <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'var(--brand-grad)' }}>AI 能力中枢</span>

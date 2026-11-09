@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Search, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BackToTop } from './BackToTop'
@@ -77,14 +77,14 @@ export function Layout() {
     <div className="min-h-full">
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-bento" style={{ backgroundImage: 'var(--brand-grad)' }}>
+          <Link to="/" className="group flex items-center gap-2.5" aria-label="返回首页">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-bento transition-transform group-hover:-translate-y-0.5" style={{ backgroundImage: 'var(--brand-grad)' }}>
               <Bot size={19} />
             </span>
             <span className="text-lg font-bold tracking-tight">
               AI <span className="gradient-text">Hub</span>
             </span>
-          </div>
+          </Link>
 
           <MegaMenu />
           {/* 窄屏：保留横向滚动导航 */}

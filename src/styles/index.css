@@ -133,18 +133,40 @@ body {
 .dark .md-body td { border-color: #232733; }
 .dark .md-body blockquote { color: #9aa3b2; border-color: #3f3f8a; }
 
-/* ══════════ 变形下拉导航 MegaMenu（Halden 适配）══════════ */
-:root { --nav-soft: #6b7280; --nav-strong: #111827; }
-.dark { --nav-soft: rgba(255, 255, 255, 0.74); --nav-strong: #fff; }
+/* ══════════ 变形下拉导航 MegaMenu（Halden 交互 + 跟随主题的配色）══════════ */
+:root {
+  --nav-soft: #6b7280; --nav-strong: #111827;
+  --dd-bg: rgba(255, 255, 255, 0.92);
+  --dd-line: rgba(17, 24, 39, 0.08);
+  --dd-text: #111827;
+  --dd-muted: #6b7280;
+  --dd-hover: rgba(17, 24, 39, 0.05);
+  --dd-shadow: 0 24px 60px -24px rgba(16, 24, 40, 0.18), 0 2px 10px rgba(16, 24, 40, 0.06);
+  --dd-fade: rgba(255, 255, 255, 0.92);
+}
+.dark {
+  --nav-soft: rgba(255, 255, 255, 0.74); --nav-strong: #fff;
+  --dd-bg: rgba(14, 19, 23, 0.88);
+  --dd-line: rgba(255, 255, 255, 0.08);
+  --dd-text: #ffffff;
+  --dd-muted: rgba(255, 255, 255, 0.6);
+  --dd-hover: rgba(255, 255, 255, 0.065);
+  --dd-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.65), 0 2px 10px rgba(0, 0, 0, 0.2);
+  --dd-fade: rgba(14, 19, 23, 0.55);
+}
 
-.mega-nav { position: relative; display: none; align-items: center; gap: 24px; flex: 1; min-width: 0 }
+.mega-nav { position: relative; display: none; align-items: center; gap: 8px; flex: 1; min-width: 0 }
 @media (min-width: 1024px) { .mega-nav { display: flex } }
 
 .mega-trigger {
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 0;
-  font-size: 14.5px; color: var(--nav-soft); transition: color .25s ease;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px;
+  font-size: 14px; font-weight: 500; color: var(--nav-soft);
+  transition: color .25s ease, background .2s ease;
 }
-.mega-trigger:hover, .mega-trigger[aria-expanded="true"] { color: var(--nav-strong) }
+.mega-trigger:hover, .mega-trigger[aria-expanded="true"] { color: var(--nav-strong); background: var(--dd-hover) }
+/* 当前页所在分组的触发词：与路由项同款高亮，回答"我现在在哪" */
+.mega-trigger.is-current { color: #4f46e5; background: #eef2ff }
+.dark .mega-trigger.is-current { color: #a5b4fc; background: rgba(255, 255, 255, 0.1) }
 .mega-chev { transition: transform .35s var(--h-ease) }
 .mega-trigger[aria-expanded="true"] .mega-chev { transform: rotate(180deg) }
 
@@ -153,8 +175,8 @@ body {
   position: absolute; top: 52px; left: 0; width: var(--w); height: var(--h);
   transform: translateX(var(--x)) scale(var(--s)); transform-origin: 50% 0;
   opacity: 0; pointer-events: none; border-radius: 16px;
-  background: var(--h-panel); border: 1px solid var(--h-line);
-  box-shadow: 0 30px 70px -25px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.2);
+  background: var(--dd-bg); border: 1px solid var(--dd-line);
+  box-shadow: var(--dd-shadow);
   backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
   overflow: hidden; z-index: 60;
   transition: transform var(--h-morph) var(--h-ease), width var(--h-morph) var(--h-ease),
@@ -166,7 +188,7 @@ body {
 
 .mega-panel {
   position: absolute; top: 0; left: 0; opacity: 0; visibility: hidden;
-  filter: blur(8px); transform: translateX(0); color: #fff;
+  filter: blur(8px); transform: translateX(0); color: var(--dd-text);
   transition: opacity .26s ease, transform var(--h-morph) var(--h-ease),
               filter .4s ease, visibility 0s linear var(--h-morph);
 }
@@ -180,20 +202,19 @@ body {
 .mega-panel.is-noanim { transition: none !important }
 .panel-resources { width: 664px; height: 358px; display: grid; grid-template-columns: 236px 1fr }
 .panel-ai { width: 446px; height: 308px; padding: 7px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px }
-.panel-platform { width: 232px; height: 218px; padding: 8px; display: flex; flex-direction: column; gap: 2px }
 
 .mega-row {
   flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left;
   padding: 0 12px; border-radius: 10px; transition: background .3s;
 }
-.mega-row.is-active { background: var(--h-hover) }
+.mega-row.is-active { background: var(--dd-hover) }
 .mega-row strong { font-size: 15px; font-weight: 500; margin-bottom: 4px }
-.mega-row span { font-size: 13px; line-height: 1.42; color: var(--h-muted) }
+.mega-row span { font-size: 13px; line-height: 1.42; color: var(--dd-muted) }
 
 .mega-media { position: relative; overflow: hidden; border-radius: 0 15px 15px 0 }
 .mega-media::before {
   content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 70px; z-index: 2;
-  background: linear-gradient(to right, rgba(14,19,23,.55), rgba(14,19,23,0));
+  background: linear-gradient(to right, var(--dd-fade), transparent);
 }
 .mega-media img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
@@ -213,12 +234,9 @@ body {
   content: ""; position: absolute; inset: 0; z-index: -1;
   background: linear-gradient(to top, rgba(8,11,13,.88) 0%, rgba(8,11,13,.35) 38%, rgba(8,11,13,0) 60%);
 }
-.mega-card strong { font-size: 15.5px; font-weight: 500; margin-bottom: 5px }
-.mega-card span { font-size: 13px; line-height: 1.42; color: var(--h-muted) }
-
-.mega-rlink { flex: 1; display: flex; align-items: center; padding: 0 12px; border-radius: 9px;
-  font-size: 15px; text-align: left; transition: background .25s }
-.mega-rlink:hover { background: var(--h-hover) }
+/* 图卡文字始终压暗底图上，保持白色 */
+.mega-card strong { font-size: 15.5px; font-weight: 500; margin-bottom: 5px; color: #fff }
+.mega-card span { font-size: 13px; line-height: 1.42; color: rgba(255, 255, 255, 0.75) }
 
 /* ══════════ 首页英雄带 + 登录页暗玻璃 ══════════ */
 .hero-band { position: relative; overflow: hidden; isolation: isolate; border-radius: var(--tw-rounded, 20px) }

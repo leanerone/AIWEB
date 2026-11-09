@@ -1,15 +1,18 @@
-import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 
 /**
- * 变形下拉导航。移植自 docs/design/halden-hero-morphing-nav-spec.txt，
- * 逻辑与 aihub-preview/index.html（浏览器实测 1:1 通过）保持同一实现方式：
- * 在 useEffect 里用 refs 直接操作 DOM（classList / CSS 自定义属性），
- * 不用 React state 驱动动画时序——首开 .instant 需要「先无过渡定位、下一帧再解除」，
- * 命令式更可靠。
+ * 顶栏导航 = 普通路由项（首页/笔记/设置，与页面同风格、当前页高亮）
+ *          + 两个变形下拉面板（资源库 / AI 能力）。
  *
- * 面板尺寸沿用规格值：资源库 664×358 / AI 能力 446×308 / 平台 232×218
+ * 变形逻辑移植自 docs/design/halden-hero-morphing-nav-spec.txt（vanilla 版在 aihub-preview 实测 1:1）：
+ * 首次打开先无过渡定位再解除（is-instant），切换时容器 x/宽/高 0.5s 形变，
+ * 面板按行进方向 ±56px 滑入 + blur 交叉淡入；140ms 关闭宽限；Esc 回焦；resize 重定位。
+ * 命令式操作 DOM（refs + classList + CSS 变量），React state 驱动动画时序会卡帧。
+ *
+ * 面板配色跟随明暗主题（浅色模式=白玻璃，深色模式=暗玻璃），避免与页面割裂。
  */
 
 const RES_ITEMS = [
@@ -22,16 +25,22 @@ const AI_CARDS = [
   { to: '/chat', title: 'AI 对话', desc: 'SSE 流式问答，可引用资源上下文', img: '/hero/c-ai-network.jpg' },
   { to: '/', title: '每日简报', desc: '资讯聚合自动生成，沉淀到首页动态', img: '/hero/c-briefing-fans.jpg' },
 ]
-const PLAT_ITEMS = [
-  { to: '/', title: '首页动态' },
-  { to: '/resources', title: '我的收藏' },
-  { to: '/resources', title: '贡献者榜' },
-  { to: '/', title: '通知中心' },
-]
+const MENUS = ['resources', 'ai'] as const
+type MenuId = typeof MENUS[number]
+
+const MENU_PATH: Record<MenuId, string[]> = {
+  resources: ['/resources'],
+  ai: ['/chat'],
+}
 
 export function MegaMenu() {
   const nav = useNavigate()
+  const { pathname } = useLocation()
   const rootRef = useRef<HTMLElement>(null)
+  const closeRef = useRef<() => void>(() => {})
+  const [current, setCurrent] = useState<MenuId | null>(null)
+
+  const menuActive = (id: MenuId) => MENU_PATH[id].some((p) => pathname.startsWith(p))
 
   useEffect(() => {
     const navEl = rootRef.current
@@ -39,14 +48,13 @@ export function MegaMenu() {
     const header = navEl.closest('header') || navEl
     const dd = navEl.querySelector<HTMLElement>('.mega-dd')!
     const triggers = Array.from(navEl.querySelectorAll<HTMLButtonElement>('[data-menu]'))
-    const panels: Record<string, HTMLElement> = {}
-    triggers.forEach((t) => { panels[t.dataset.menu!] = navEl.querySelector<HTMLElement>(`#p-${t.dataset.menu}`)! })
-    const menus = ['resources', 'ai', 'platform']
+    const panels = {} as Record<MenuId, HTMLElement>
+    MENUS.forEach((m) => { panels[m] = navEl.querySelector<HTMLElement>(`#p-${m}`)! })
     const PAD = 20
-    let current: string | null = null
+    let cur: MenuId | null = null
     let closeTimer = 0
 
-    const place = (id: string) => {
+    const place = (id: MenuId) => {
       const panel = panels[id]
       const w = panel.offsetWidth
       const trig = triggers.find((t) => t.dataset.menu === id)!.getBoundingClientRect()
@@ -59,23 +67,22 @@ export function MegaMenu() {
       dd.style.setProperty('--h', `${panel.offsetHeight}px`)
     }
 
-    const open = (id: string) => {
+    const open = (id: MenuId) => {
       window.clearTimeout(closeTimer)
-      if (current === id) return
-      if (current === null) {
+      if (cur === id) return
+      if (cur === null) {
         dd.classList.add('is-instant', 'is-noanim')
-        Object.values(panels).forEach((p) => { p.classList.add('is-noanim'); p.removeAttribute('data-state') })
+        MENUS.forEach((m) => { panels[m].classList.add('is-noanim'); panels[m].removeAttribute('data-state') })
         place(id)
         void dd.offsetWidth
         dd.classList.remove('is-noanim')
-        Object.values(panels).forEach((p) => p.classList.remove('is-noanim'))
+        MENUS.forEach((m) => panels[m].classList.remove('is-noanim'))
         dd.classList.add('is-open')
-        // 下一帧解除 is-instant；后台面板会冻结 rAF，故双保险 setTimeout
         requestAnimationFrame(() => dd.classList.remove('is-instant'))
         window.setTimeout(() => dd.classList.remove('is-instant'), 60)
       } else {
-        const dir = menus.indexOf(id) > menus.indexOf(current) ? 1 : -1
-        panels[current].setAttribute('data-state', dir > 0 ? 'exit-left' : 'exit-right')
+        const dir = MENUS.indexOf(id) > MENUS.indexOf(cur) ? 1 : -1
+        panels[cur].setAttribute('data-state', dir > 0 ? 'exit-left' : 'exit-right')
         const p = panels[id]
         p.classList.add('is-noanim')
         p.setAttribute('data-state', dir > 0 ? 'exit-right' : 'exit-left')
@@ -85,47 +92,46 @@ export function MegaMenu() {
       }
       panels[id].setAttribute('data-state', 'active')
       triggers.forEach((t) => t.setAttribute('aria-expanded', String(t.dataset.menu === id)))
-      current = id
+      cur = id
+      setCurrent(id)
     }
 
     const close = () => {
       dd.classList.remove('is-open')
-      if (current) panels[current].removeAttribute('data-state')
+      if (cur) panels[cur].removeAttribute('data-state')
       triggers.forEach((t) => t.setAttribute('aria-expanded', 'false'))
-      current = null
+      cur = null
+      setCurrent(null)
     }
+    closeRef.current = close
     const scheduleClose = (ms = 140) => {
       window.clearTimeout(closeTimer)
       closeTimer = window.setTimeout(close, ms)
     }
 
     const cleanups: Array<() => void> = []
-    const on = <T extends EventTarget>(el: T, type: string, fn: (e: any) => void, opts?: any) => {
-      el.addEventListener(type, fn, opts)
-      cleanups.push(() => el.removeEventListener(type, fn, opts))
+    const on = (el: EventTarget, type: string, fn: (e: any) => void) => {
+      el.addEventListener(type, fn)
+      cleanups.push(() => el.removeEventListener(type, fn))
     }
 
     triggers.forEach((t) => {
-      const menu = t.dataset.menu!
+      const menu = t.dataset.menu as MenuId
       on(t, 'pointerenter', (e: PointerEvent) => { if (e.pointerType === 'mouse') open(menu) })
-      on(t, 'click', () => (current === menu ? close() : open(menu)))
+      on(t, 'click', () => (cur === menu ? close() : open(menu)))
     })
     on(navEl, 'pointerenter', () => window.clearTimeout(closeTimer))
     on(navEl, 'pointerleave', (e: PointerEvent) => { if (e.pointerType === 'mouse') scheduleClose() })
     on(navEl, 'focusout', (e: FocusEvent) => { if (!navEl.contains(e.relatedTarget as Node)) scheduleClose(0) })
     on(document, 'keydown', (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      const trig = current ? triggers.find((t) => t.dataset.menu === current) : null
+      if (e.key !== 'Escape' || !cur) return
+      const trig = triggers.find((t) => t.dataset.menu === cur)
       close()
       trig?.focus()
     })
-    on(document, 'pointerdown', (e: PointerEvent) => {
-      const el = dd.closest('nav')
-      if (el && !el.contains(e.target as Node)) close()
-    })
-    on(window, 'resize', () => { if (current) place(current) })
+    on(document, 'pointerdown', (e: PointerEvent) => { if (!navEl.contains(e.target as Node)) close() })
+    on(window, 'resize', () => { if (cur) place(cur) })
 
-    // 资源库行 ↔ 预览图交叉淡入
     const rows = Array.from(navEl.querySelectorAll<HTMLElement>('.mega-row'))
     const imgs = Array.from(navEl.querySelectorAll<HTMLElement>('.mega-media img'))
     const activate = (n: number) => {
@@ -138,34 +144,55 @@ export function MegaMenu() {
       on(el, 'focus', () => activate(n))
     })
 
-    // SPA 导航（拦截面板内所有链接点击）
-    const onClickNav = (e: MouseEvent) => {
-      const a = (e.target as Element).closest<HTMLAnchorElement>('a[data-spa]')
+    on(navEl, 'click', (e: MouseEvent) => {
+      const a = (e.target as Element).closest?.('a[data-spa]') as HTMLAnchorElement | null
       if (!a) return
       e.preventDefault()
       close()
       nav(a.getAttribute('href')!)
-    }
-    on(navEl, 'click', onClickNav)
-
+    })
     cleanups.push(() => window.clearTimeout(closeTimer))
     return () => cleanups.forEach((fn) => fn())
   }, [nav])
 
+  const plain = (to: string, label: string, end = false) => (
+    <NavLink to={to} end={end} onClick={() => closeRef.current()}
+      className={({ isActive }) =>
+        `relative flex items-center rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+          isActive ? 'mega-link is-current text-brand-600' : 'mega-link text-subtle hover:bg-gray-50 hover:text-ink dark:hover:bg-white/5'}`
+      }>
+      {({ isActive }) => (
+        <>
+          {label}
+          {isActive && (
+            <motion.span layoutId="nav-pill" className="absolute inset-0 -z-10 rounded-xl bg-brand-50 dark:bg-white/10"
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
+          )}
+        </>
+      )}
+    </NavLink>
+  )
+
+  const trigger = (id: MenuId, label: string) => (
+    <button data-menu={id}
+      className={`mega-trigger ${current === id ? 'is-open' : ''} ${menuActive(id) ? 'is-current' : ''}`}
+      aria-expanded={current === id}>
+      {label}
+      <ChevronDown size={12} className="mega-chev" />
+    </button>
+  )
+
   return (
     <nav ref={rootRef} className="mega-nav" aria-label="主导航">
-      <div className="flex items-center gap-6">
-        {([['resources', '资源库'], ['ai', 'AI 能力'], ['platform', '平台']] as const).map(([id, label]) => (
-          <button key={id} data-menu={id} className="mega-trigger" aria-expanded="false">
-            {label}
-            <ChevronDown size={12} className="mega-chev" />
-          </button>
-        ))}
-        <a href="/settings" data-spa className="mega-trigger">设置</a>
+      <div className="flex items-center gap-1.5">
+        {plain('/', '首页', true)}
+        {trigger('resources', '资源库')}
+        {trigger('ai', 'AI 能力')}
+        {plain('/memos', '笔记')}
+        {plain('/settings', '设置')}
       </div>
 
-      <div className="mega-dd" id="mega-dd">
-        {/* 资源库 664×358 */}
+      <div className="mega-dd">
         <div className="mega-panel panel-resources" id="p-resources">
           <div className="flex flex-col gap-0.5 p-2">
             {RES_ITEMS.map((it, i) => (
@@ -182,7 +209,6 @@ export function MegaMenu() {
           </div>
         </div>
 
-        {/* AI 能力 446×308 */}
         <div className="mega-panel panel-ai" id="p-ai">
           {AI_CARDS.map((c) => (
             <a key={c.title} href={c.to} data-spa className="mega-card">
@@ -190,13 +216,6 @@ export function MegaMenu() {
               <strong>{c.title}</strong>
               <span>{c.desc}</span>
             </a>
-          ))}
-        </div>
-
-        {/* 平台 232×218 */}
-        <div className="mega-panel panel-platform" id="p-platform">
-          {PLAT_ITEMS.map((p) => (
-            <a key={p.title} href={p.to} data-spa className="mega-rlink">{p.title}</a>
           ))}
         </div>
       </div>
