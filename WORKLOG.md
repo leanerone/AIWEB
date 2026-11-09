@@ -103,6 +103,12 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
 - pytest 27 → 40 全过；npm run build 通过；已推送
 
+### 2026-11-09 10:00-10:10 · v0.5.1 浏览器 E2E 回归 + SPA 根路径修复
+- 真实浏览器 E2E：SSO 直登 / 收藏 toggle / 收藏卡直达 / 通知面板 / ⌘K 中文检索（批量→excel-batch-merge 命中）✓ 全绿
+- 统计卡显示 0 属 count-up 动画，等待后数值正确（Skills=1），非 bug
+- **Bug 修复**：生产模式访问 `/` 返回 404——v0.3 修 API 前缀兜底时 `not full_path` 误伤根路径；现 `/` 与深链均回落 index.html
+- CI 首跑即绿（42s，pytest+build 双 job）；pytest 49 → 50 用例；已推送
+
 ### 2026-11-09 09:10-09:40 · v0.5 P2 AI 深化 + P3 工程化
 - 资源问答 RAG：对话未引用资源时自动 FTS 检索 Top3 资源注入系统提示词（📎 优先，检索失败不阻断）
 - 定时自动简报：调度器每天 AI_BRIEFING_HOUR（默认 8）生成简报卡，当天去重；

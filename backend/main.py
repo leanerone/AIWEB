@@ -87,9 +87,10 @@ if _DIST.exists():
     def spa(full_path: str):
         from fastapi import HTTPException
 
-        if not full_path or full_path.startswith("api"):
+        # /api/* 兜底 404（避免吞掉未注册接口）；其余全部交给 SPA，根路径同样返回 index.html
+        if full_path.startswith("api"):
             raise HTTPException(status_code=404, detail="Not Found")
         file = _DIST / full_path
-        if file.is_file():
+        if full_path and file.is_file():
             return FileResponse(file)
         return FileResponse(_DIST / "index.html")

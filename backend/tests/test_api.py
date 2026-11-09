@@ -700,6 +700,19 @@ class TestFeedApi:
         client.delete(f"/api/resources/{rid}", headers=auth(token))
 
 
+class TestSpaHosting:
+    """生产托管：根路径与 SPA 深链返回 index.html，/api 前缀仍兜底 404（需已 npm run build）"""
+
+    def test_root_and_deeplink(self):
+        dist_index = Path(__file__).resolve().parents[2] / "dist" / "index.html"
+        if not dist_index.exists():
+            pytest.skip("未构建前端产物，跳过 SPA 托管测试")
+        r = client.get("/")
+        assert r.status_code == 200 and 'id="root"' in r.text
+        assert client.get("/resources/3").status_code == 200
+        assert client.get("/api/nope").status_code == 404
+
+
 class TestSettingsApi:
     def test_put_and_masked(self, token):
         assert client.put("/api/settings", json={"ai_api_key": "sk-secret", "ai_model": "m1"},
