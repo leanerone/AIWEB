@@ -103,6 +103,14 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
 - pytest 27 → 40 全过；npm run build 通过；已推送
 
+### 2026-11-09 15:30-15:50 · v0.8.1 浅色模式玻璃感缺失（用户："明亮模式没改成液态玻璃"）
+- 根因判定：浅色 body 是纯 `#f5f6fa`，backdrop-filter 无内容可混合 → 玻璃看着就是白卡（不是没生效）
+- 加 3 团品牌色径向柔光底衬(fixed)；浅色卡 rgba .68→.42 + blur18/sat1.8 + inset 高光 + 白描边；
+  浅色 ghost 按钮玻璃化；--lg-edge 浅色档加深；浮层 --dd-bg .92→.82
+- 顺带把对比度算成真实数字并修到 AA：浅 subtle/gray-400 4.1→5.07，深 gray-400 3.67→5.73(旧账)，ink 14~15
+- 教训：做玻璃必须先保证"背后有内容"；改透明度会连带影响文字对比度，要顺手算比值而不是靠眼睛
+- 已推送
+
 ### 2026-11-09 14:50-15:20 · v0.8 液态玻璃质感（B 高光边 + A 折射）
 - 配方来自 zip：Max Reed `.liquid-glass`（mask-composite 边光）+ Coffee Rewards `feDisplacementMap`（折射）
 - BentoCard 全站升 `.card-lg + .lg-edge`（浅/深两套 --lg-edge 渐变，浅底用暗描边才可见）

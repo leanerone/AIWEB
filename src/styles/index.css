@@ -43,6 +43,13 @@ html, body, #root {
 
 body {
   @apply bg-base text-ink font-sans antialiased;
+  /* 浅色主题底衬：三团低饱和品牌色柔光。没有可透的背景，玻璃就退化成白卡 */
+  background:
+    radial-gradient(52% 40% at 84% 2%, rgba(129, 140, 248, .34), transparent 68%),
+    radial-gradient(44% 38% at 4% 22%, rgba(167, 139, 250, .26), transparent 70%),
+    radial-gradient(58% 44% at 62% 100%, rgba(56, 189, 248, .20), transparent 72%),
+    #f5f6fa;
+  background-attachment: fixed;
 }
 
 /* 细滚动条 */
@@ -107,7 +114,7 @@ body {
 .dark .text-ink { color: #e5e7eb; }
 .dark .text-subtle { color: #9aa3b2; }
 .dark .text-gray-700, .dark .text-gray-600, .dark .text-gray-500 { color: #b6bcc9; }
-.dark .text-gray-400, .dark .text-gray-300 { color: #6b7280; }
+.dark .text-gray-400, .dark .text-gray-300 { color: #8b93a2; }  /* 玻璃底偏暗，原 #6b7280 仅 3.67:1 */
 .dark .border-gray-100 { border-color: #232733; }
 .dark .border-gray-200 { border-color: #2a2f3d; }
 .dark .border-gray-50 { border-color: #1c202c; }
@@ -152,7 +159,7 @@ body {
 /* ══════════ 变形下拉导航 MegaMenu（Halden 交互 + 跟随主题的配色）══════════ */
 :root {
   --nav-soft: #6b7280; --nav-strong: #111827;
-  --dd-bg: rgba(255, 255, 255, 0.92);
+  --dd-bg: rgba(255, 255, 255, 0.82);
   --dd-line: rgba(17, 24, 39, 0.08);
   --dd-text: #111827;
   --dd-muted: #6b7280;
@@ -321,8 +328,8 @@ body {
 /* ══════════ 液态玻璃质感（源自 motionsites: Max Reed 高光边 + Coffee Rewards 折射）══════════ */
 :root {
   /* 玻璃边缘高光：浅色主题用暗描边，深色主题用亮描边 */
-  --lg-edge: linear-gradient(180deg, rgba(17,24,39,.14) 0%, rgba(17,24,39,.04) 22%,
-             rgba(17,24,39,0) 45%, rgba(17,24,39,0) 62%, rgba(17,24,39,.05) 82%, rgba(17,24,39,.13) 100%);
+  --lg-edge: linear-gradient(180deg, rgba(17,24,39,.20) 0%, rgba(17,24,39,.06) 22%,
+             rgba(17,24,39,0) 45%, rgba(17,24,39,0) 62%, rgba(17,24,39,.07) 82%, rgba(17,24,39,.18) 100%);
 }
 .dark {
   --lg-edge: linear-gradient(180deg, rgba(255,255,255,.45) 0%, rgba(255,255,255,.14) 20%,
@@ -339,17 +346,33 @@ body {
   pointer-events: none;
 }
 
-/* 卡片玻璃：浅色=白透磨砂，深色=暗透磨砂（覆盖 .bg-white / .dark .bg-white 的实色底） */
+/* 卡片玻璃：靠"透出底衬光斑 + 边缘高光"成立，故浅色需足够透 */
 .card-lg {
-  background: rgba(255, 255, 255, .68) !important;
-  backdrop-filter: blur(14px) saturate(1.35);
-  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  background: rgba(255, 255, 255, .42) !important;
+  backdrop-filter: blur(18px) saturate(1.8);
+  -webkit-backdrop-filter: blur(18px) saturate(1.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -1px 0 rgba(17, 24, 39, .04),
+              0 2px 20px rgba(16, 24, 40, .06);
+  border-color: rgba(255, 255, 255, .55) !important;
 }
 .dark .card-lg {
   background: rgba(18, 23, 30, .62) !important;
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 20px rgba(0, 0, 0, .35);
 }
+
+/* 浅色幽灵按钮也玻璃化（文字为深色 ink，半透白底对比度仍达标） */
+.btn-ghost {
+  background: rgba(255, 255, 255, .55) !important;
+  backdrop-filter: blur(10px) saturate(1.5);
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+/* 玻璃底衬偏亮，把灰色次要文字整体加深一档以满足 WCAG AA（仅浅色主题；深色不受影响） */
+html:not(.dark) .text-gray-500 { color: #5b6472; }
+html:not(.dark) .text-gray-400 { color: #5b6472; }
 
 /* 输入与幽灵按钮：深色下改为半透明玻璃（浅色保持原实色，避免对比度下降） */
 .dark .input {

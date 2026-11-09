@@ -7,7 +7,7 @@ export default {
       colors: {
         base: '#f5f6fa',
         ink: '#111827',
-        subtle: '#6b7280',
+        subtle: '#5b6472',
         brand: {
           50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
           400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
