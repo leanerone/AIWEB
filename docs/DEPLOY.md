@@ -67,3 +67,11 @@ cd backend && python -m pytest tests/ -q  # 49 用例
 ```
 
 CI：推送到 GitHub 后 `.github/workflows/ci.yml` 自动跑 pytest + 前端构建。
+
+## 数据库迁移（Alembic）
+
+- v0.9.22 起 Schema 变更走 Alembic（`backend/migrations/`）；启动时自动给存量库打 baseline 标记（幂等）
+- 全新部署：`python -m alembic upgrade head`（或照旧让启动时 create_all 建表，二者等价）
+- 存量部署：无需操作，启动时自动 `stamp`；也可手动 `python -m alembic stamp head`
+- 后续改模型：`python -m alembic revision --autogenerate -m "说明"` → 检查脚本 → `python -m alembic upgrade head`
+

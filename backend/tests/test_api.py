@@ -1471,3 +1471,43 @@ class TestUploadWhitelist:
             r = self._upload(token, name)
             assert r.status_code == 400, (name, r.text)
             assert "白名单" in r.json()["detail"]
+
+
+class TestAlembicIntegration:
+    """Alembic 接入：baseline 迁移与 create_all 等价；存量库自动 stamp。"""
+
+    def test_autostamp_marks_baseline(self, monkeypatch):
+        """ensure_schema_upgrade 在 create_all 后的空库上自动打上 alembic head 标记"""
+        import tempfile
+        from pathlib import Path
+
+        scratch = Path(tempfile.mkdtemp()) / "stamp.sqlite"
+        monkeypatch.setenv("DATABASE_URL", f"sqlite:///{scratch.as_posix()}")
+        # 重新绑定 session.py 的 engine 到临时库
+        from sqlalchemy import create_engine
+
+        from database import session as db_session
+
+        test_engine = create_engine(f"sqlite:///{scratch.as_posix()}", connect_args={"check_same_thread": False})
+        monkeypatch.setattr(db_session, "engine", test_engine)
+
+        from database.models import Base
+
+        Base.metadata.create_all(test_engine)
+        db_session.ensure_schema_upgrade()
+
+        import sqlite3
+
+        con = sqlite3.connect(scratch)
+        rows = con.execute("SELECT version_num FROM alembic_version").fetchall()
+        con.close()
+        assert rows, "alembic_version 未标记"
+        # 标记的版本必须是当前 head
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+
+        base = Path(__file__).resolve().parents[1] / "migrations"
+        cfg = Config()
+        cfg.set_main_option("script_location", str(base))
+        head = ScriptDirectory.from_config(cfg).get_current_head()
+        assert rows[0][0] == head

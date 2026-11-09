@@ -124,12 +124,16 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             body = {}
         if body.get("stream"):
-            data = sse_stream(body)
+            # 逐块写出 + 微延迟，让前端真流式可见（真实 LLM 天然逐 token）
+            import time as _time
+
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
-            self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            self.wfile.write(data)
+            for piece in sse_stream(body).split(b"\n\n"):
+                self.wfile.write(piece + b"\n\n")
+                self.wfile.flush()
+                _time.sleep(0.03)
             return
         data = json.dumps(scripted_reply(body), ensure_ascii=False).encode("utf-8")
         self.send_response(200)

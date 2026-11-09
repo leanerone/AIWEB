@@ -455,3 +455,10 @@ pytest 82 ✓ · e2e_check 10/10 ✓
 ### 2026-11-10 07:20 · v0.9.22 轮次 S：上传白名单制
 - BLOCKED_EXTS 黑名单 → ALLOWED_EXTS 白名单（文档/图片无svg/脚本/归档 34 类），未列出一律 400 + 提示
 - 测试：新增白名单放行/拦截两组用例，旧黑名单用例兼容；82 → 84；用户指南同步
+
+### 2026-11-10 07:50 · v0.9.23 轮次 T：Alembic 接入 + 流式可见化（遗留项清零）
+- Alembic 基线迁移 autogenerate 生成（与 create_all 逐表逐列比对一致）；启动时存量库自动 stamp head（幂等）
+- env.py：显式 URL 优先，占位符回落 settings.DATABASE_URL；stamp 跟随当前 engine（测试隔离）
+- DEPLOY.md 补迁移工作流；live 库已自动标记 660bc28003b2
+- mock_llm 流式逐块输出 + 30ms 微延迟（本地也能看到逐字打印效果）
+- 最终基线：pytest **85 用例全过** · build ✓ · e2e_check 10/10 ✓ · 流式时序渐增验证 ✓

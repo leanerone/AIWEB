@@ -48,3 +48,39 @@ def ensure_schema_upgrade() -> None:
                 if col not in existing:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
                     print(f"[migrate] {table}.{col} 已补充")
+    _alembic_autostamp()
+
+
+def _alembic_autostamp() -> None:
+    """已有库但没有 alembic_version 时自动打 baseline 标记，
+    让存量部署无缝接入 Alembic（新库 create_all 后同样标记）。
+    此后模型变更应走 alembic revision --autogenerate + upgrade head。"""
+    from pathlib import Path
+
+    with engine.begin() as conn:
+        has_users = conn.execute(text(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='users'")).fetchone()
+        if not has_users:
+            return
+        has_version = conn.execute(text(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'")).fetchone()
+        if has_version:
+            return
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        base = Path(__file__).resolve().parent.parent  # backend/
+        cfg = Config(str(base / "alembic.ini"))
+        cfg.set_main_option("script_location", str(base / "migrations"))
+        db_path = getattr(engine.url, "database", None)
+        url = (f"sqlite:///{Path(db_path).as_posix()}" if db_path
+               else str(engine.url.render_as_string(hide_password=False)))
+        cfg.set_main_option("sqlalchemy.url", url)  # 跟随当前 engine（测试隔离）
+        command.stamp(cfg, "head")
+        print("[migrate] 已自动标记 alembic baseline（存量库接入迁移体系）")
+    except Exception:
+        import logging
+
+        logging.getLogger("aiweb").warning("alembic 自动标记失败（可手动 alembic stamp head）",
+                                           exc_info=True)
