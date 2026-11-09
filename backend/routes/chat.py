@@ -55,7 +55,7 @@ def get_messages(session_id: int, db: Session = Depends(get_db),
     return {
         "success": True,
         "data": [
-            {"id": m.id, "role": m.role, "content": m.content,
+            {"id": m.id, "role": m.role, "content": m.content, "meta": m.meta,
              "created_at": m.created_at.strftime("%Y-%m-%d %H:%M")}
             for m in s.messages
         ],

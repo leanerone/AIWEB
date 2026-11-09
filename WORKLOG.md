@@ -209,3 +209,17 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - ChatRequest 加 page_context 注入系统提示词（「用户当前停留在…」）
 - /chat 退役：路由 → AssistantRedirect（自动展开助手回首页）；导航/MegaMenu/⌘K/首页 CTA 全部改唤起助手；src/pages/Chat.tsx 删除
 - 构建通过；pytest 57 不受影响
+
+### 2026-11-10 01:00-01:14 · v0.9 阶段三：Agent 化（superagent 精髓移植）
+- services/agent_tools.py：11 个工具注册表（6 只读 + 4 写 + ask_user），全部以当前用户身份执行
+- services/agent_service.py：agent loop（MAX_ROUNDS=6）→ SSE 事件 meta/step/delta/confirm/ask/error/done
+  - function-calling 优先；_looks_like_tools_unsupported 探测 400 → 自动降级 ReAct JSON 动作协议
+  - 写工具默认 confirm 挂起（AgentRun.status=waiting_confirm），auto_exec=true 直接执行（observe→auto）
+  - ask_user 结构化提问挂起（waiting_input），一次一个具体问题
+  - AgentRun 状态机 + AgentToolCall 审计表；最终回答落 ChatMessage.meta（任务卡轨迹随历史保存）
+  - 轮数耗尽诚实收尾；工具异常转失败结果让模型自愈，不终止循环
+- routes/agent.py：POST /run、POST /resume（确认/回答续跑）、GET /runs/{id}（审计查看）
+- 前端 assistant.ts 切到 /api/agent/run；FloatingAssistant 已支持 step 行/确认卡/提问卡渲染
+- 测试：57 → 65（function 主链/确认-批准/拒绝不落库/ask_user/ReAct 降级/无Key/越权404/auto_exec 直通）
+- scripts/mock_llm.py：本地 Mock LLM（9377），无真实 Key 也能全链路联调
+- 修复：messages 接口补 meta 字段；AgentRun.session relationship

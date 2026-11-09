@@ -218,7 +218,8 @@ export const useAssistant = create<AssistantState>((set, get) => {
         messages: [...s.messages, { role: 'user', content: text.trim() }, { role: 'assistant', content: '' }],
         historyOpen: false,
       }))
-      run('/api/chat/completions', {
+      // 助手统一走 Agent 通道（工具循环 + 确认卡）；/api/chat/completions 仅保留给重新生成
+      run('/api/agent/run', {
         session_id: state.sessionId,
         message: text.trim(),
         page_context: pageCtx || null,

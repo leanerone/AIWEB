@@ -54,6 +54,7 @@ class AgentRun(Base):
     state: Mapped[str] = mapped_column(Text, default="{}")  # JSON：messages / pending 工具调用等
     steps: Mapped[list] = mapped_column(JSON, default=list)  # 任务卡轨迹 [{tool, args_digest, ok, summary}]
     result: Mapped[str] = mapped_column(Text, default="")
+    session: Mapped["ChatSession"] = relationship()  # 用于恢复时取会话标题
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
 

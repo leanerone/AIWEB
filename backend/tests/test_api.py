@@ -862,3 +862,184 @@ class TestUserAiConfig:
         self._put(token, auto_exec=True)
         assert self._get(token)["auto_exec"] is True
         self._reset(token)
+
+
+class TestAgentApi:
+    """Agent 循环：function-calling → 确认挂起/恢复 → ask_user → ReAct 降级。"""
+
+    @staticmethod
+    def _events(text: str) -> list[tuple[str, dict]]:
+        out = []
+        for block in text.split("\n\n"):
+            ev = next((l[6:].strip() for l in block.split("\n") if l.startswith("event:")), None)
+            dat = next((l[5:] for l in block.split("\n") if l.startswith("data:")), None)
+            if ev and dat:
+                try:
+                    out.append((ev, json.loads(dat)))
+                except json.JSONDecodeError:
+                    pass
+        return out
+
+    def _mock(self, monkeypatch, responses, api_key="sk-mock"):
+        from services import agent_service
+
+        it = iter(responses)
+        monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
+        real_cfg = agent_service.get_ai_config
+        # 覆盖 api_key 保证预检通过，其余字段（auto_exec 等）保持真实值
+        monkeypatch.setattr(agent_service, "get_ai_config",
+                            lambda db, username=None, _real=real_cfg, _k=api_key:
+                            {**_real(db, username), "api_key": _k})
+        return agent_service
+
+    def test_function_loop_happy_path(self, token, monkeypatch):
+        self._mock(monkeypatch, [
+            {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function",
+                 "function": {"name": "list_resources", "arguments": "{\"keyword\": \"excel\"}"}}]}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "平台里没有 excel 相关工具。"}}]},
+        ])
+        resp = client.post("/api/agent/run", json={"message": "帮我找 excel 工具"},
+                           headers=auth(token))
+        assert resp.status_code == 200
+        evs = self._events(resp.text)
+        kinds = [e for e, _ in evs]
+        assert "meta" in kinds and "step" in kinds and "delta" in kinds and "done" in kinds
+        done = dict(evs)["done"]
+        assert done["reply"].startswith("平台里")
+
+        from database.models import AgentRun, AgentToolCall
+        from database.session import SessionLocal
+        db = SessionLocal()
+        run = db.query(AgentRun).order_by(AgentRun.id.desc()).first()
+        assert run.status == "done" and run.steps[0]["tool"] == "list_resources"
+        assert db.query(AgentToolCall).filter(AgentToolCall.run_id == run.id).count() == 1
+        msgs = client.get(f"/api/chat/sessions/{run.session_id}/messages", headers=auth(token)).json()["data"]
+        assert msgs[-1]["role"] == "assistant"
+        assert msgs[-1]["meta"]["steps"][0]["tool"] == "list_resources"  # 任务卡轨迹随历史保存
+        db.close()
+
+    def test_write_tool_confirm_and_approve(self, token, monkeypatch):
+        ag = self._mock(monkeypatch, [
+            {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function",
+                 "function": {"name": "create_memo",
+                              "arguments": "{\"title\": \"会议纪要\", \"content\": \"# 纪要\"}"}}]}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "笔记已建好。"}}]},
+        ])
+        resp = client.post("/api/agent/run", json={"message": "帮我记一条笔记"},
+                           headers=auth(token))
+        evs = dict(self._events(resp.text))
+        assert "confirm" in evs
+        confirm = evs["confirm"]
+        assert confirm["tool"] == "create_memo" and "会议纪要" in confirm["question"]
+
+        from database.models import AgentRun
+        from database.session import SessionLocal
+        db = SessionLocal()
+        run = db.query(AgentRun).order_by(AgentRun.id.desc()).first()
+        assert run.status == "waiting_confirm"
+        rid, run_id = confirm["run_id"], run.id
+        assert rid == run_id
+        db.close()
+
+        # 用户确认 → 执行 → 最终回答
+        resp2 = client.post("/api/agent/resume", json={"run_id": run_id, "approved": True},
+                            headers=auth(token))
+        evs2 = dict(self._events(resp2.text))
+        assert "step" in evs2 and "done" in evs2
+        assert evs2["step"]["summary"].startswith("已创建笔记")
+        memos = client.get("/api/memos?keyword=会议纪要", headers=auth(token)).json()["data"]["items"]
+        assert any(m["title"] == "会议纪要" for m in memos)
+
+    def test_write_tool_declined(self, token, monkeypatch):
+        self._mock(monkeypatch, [
+            {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function",
+                 "function": {"name": "create_memo",
+                              "arguments": "{\"title\": \"不该被创建\", \"content\": \"x\"}"}}]}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "好的，不建了。"}}]},
+        ])
+        resp = client.post("/api/agent/run", json={"message": "记笔记"}, headers=auth(token))
+        run_id = dict(self._events(resp.text))["confirm"]["run_id"]
+        before = client.get("/api/memos?keyword=不该被创建", headers=auth(token)).json()["data"]["total"]
+
+        resp2 = client.post("/api/agent/resume", json={"run_id": run_id, "approved": False},
+                            headers=auth(token))
+        evs2 = self._events(resp2.text)
+        assert any(e == "done" for e, _ in evs2)
+        after = client.get("/api/memos?keyword=不该被创建", headers=auth(token)).json()["data"]["total"]
+        assert before == after  # 拒绝后绝不落库
+
+    def test_ask_user_flow(self, token, monkeypatch):
+        self._mock(monkeypatch, [
+            {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function",
+                 "function": {"name": "ask_user",
+                              "arguments": "{\"question\": \"要哪个模型？\", \"options\": [\"gpt-4o\", \"deepseek\"]}"}}]}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "收到，选 deepseek。"}}]},
+        ])
+        resp = client.post("/api/agent/run", json={"message": "推荐模型"}, headers=auth(token))
+        evs = dict(self._events(resp.text))
+        assert evs["ask"]["question"] == "要哪个模型？"
+        run_id = evs["ask"]["run_id"]
+
+        resp2 = client.post("/api/agent/resume", json={"run_id": run_id, "answer": "deepseek"},
+                            headers=auth(token))
+        assert any(e == "done" for e, _ in self._events(resp2.text))
+
+    def test_react_fallback(self, token, monkeypatch):
+        from services import agent_service
+
+        self._mock(monkeypatch, [])  # 先统一补 key；下面再覆盖调用序列
+        calls = {"n": 0}
+
+        def fake_llm(db, username, messages, tools):
+            calls["n"] += 1
+            if calls["n"] == 1 and tools:
+                raise RuntimeError("AI 请求失败：400 {\"error\": {\"message\": \"Invalid parameter: tools\"}}")
+            last = messages[-1]["content"]
+            if calls["n"] == 2:
+                return {"choices": [{"message": {"content": "{\"action\": \"search_platform\", \"args\": {\"query\": \"EAP\"}}"}}]}
+            return {"choices": [{"message": {"content": "{\"action\": \"final\", \"answer\": \"EAP 协议资料如下\"}"}}]}
+
+        monkeypatch.setattr(agent_service, "_chat_completion", fake_llm)
+        from database.models import Resource
+
+        rid = client.post("/api/resources",
+                          data={"type": "skill", "name": "EAP 协议速查", "summary": "帧格式"},
+                          headers=auth(token)).json()["data"]["id"]
+        resp = client.post("/api/agent/run", json={"message": "什么是 EAP"}, headers=auth(token))
+        evs = self._events(resp.text)
+        kinds = [e for e, _ in evs]
+        assert "step" in kinds and "done" in kinds
+        done = dict(evs)["done"]
+        assert done["reply"].startswith("EAP 协议资料")
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+    def test_run_requires_key(self, token, monkeypatch):
+        from services import agent_service
+
+        self._mock(monkeypatch, [], api_key="")   # 预检即失败
+        resp = client.post("/api/agent/run", json={"message": "hi"}, headers=auth(token))
+        evs = self._events(resp.text)
+        assert evs and evs[-1][0] == "error" and "未配置" in evs[-1][1]["message"]
+
+    def test_foreign_run_rejected(self, token):
+        resp = client.post("/api/agent/resume", json={"run_id": 999999, "approved": True},
+                           headers=auth(token))
+        assert "任务不存在" in resp.text
+
+    def test_auto_exec_bypasses_confirm(self, token, monkeypatch):
+        client.put("/api/me/ai-config", json={"auto_exec": True}, headers=auth(token))
+        self._mock(monkeypatch, [
+            {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function",
+                 "function": {"name": "create_memo",
+                              "arguments": "{\"title\": \"自动执行笔记\", \"content\": \"x\"}"}}]}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "已自动创建。"}}]},
+        ])
+        resp = client.post("/api/agent/run", json={"message": "记笔记"}, headers=auth(token))
+        kinds = [e for e, _ in self._events(resp.text)]
+        assert "confirm" not in kinds and "step" in kinds
+        client.put("/api/me/ai-config", json={"auto_exec": False}, headers=auth(token))

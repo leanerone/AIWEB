@@ -1,0 +1,82 @@
+"""Agent 路由：悬浮助手的智能体运行入口（SSE）。
+
+POST /api/agent/run     发起新任务（创建会话或续写已有会话）
+POST /api/agent/resume  恢复挂起任务（确认写操作 / 回答提问）
+"""
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from database.models import ChatSession
+from database.session import get_db
+from routes.deps import get_current_user
+from services.agent_service import stream_resume, stream_run
+
+router = APIRouter(prefix="/agent", tags=["agent"])
+
+SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+
+class AgentRequest(BaseModel):
+    session_id: int | None = None
+    message: str = ""
+    page_context: str | None = None
+
+
+class ResumeRequest(BaseModel):
+    run_id: int
+    approved: bool | None = None
+    answer: str | None = None
+
+
+@router.post("/run")
+def run(body: AgentRequest, db: Session = Depends(get_db),
+        user: object = Depends(get_current_user)):
+    if not body.message.strip():
+        raise HTTPException(status_code=400, detail="消息不能为空")
+    session = None
+    if body.session_id:
+        session = db.get(ChatSession, body.session_id)
+        if not session or session.created_by != user.username:
+            raise HTTPException(status_code=404, detail="会话不存在")
+    else:
+        session = ChatSession(title=body.message.strip()[:40], created_by=user.username)
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+    from database.models import ChatMessage
+
+    db.add(ChatMessage(session_id=session.id, role="user", content=body.message))
+    db.commit()
+    gen = stream_run(db, user, session, body.message.strip(), body.page_context or "")
+    return StreamingResponse(gen, media_type="text/event-stream", headers=SSE_HEADERS)
+
+
+@router.post("/resume")
+def resume(body: ResumeRequest, db: Session = Depends(get_db),
+           user: object = Depends(get_current_user)):
+    if body.approved is None and (body.answer is None or not body.answer.strip()):
+        raise HTTPException(status_code=400, detail="请提供确认结果或回答内容")
+    gen = stream_resume(db, user, body.run_id, approved=body.approved,
+                        answer=(body.answer or "").strip() or None)
+    return StreamingResponse(gen, media_type="text/event-stream", headers=SSE_HEADERS)
+
+
+@router.get("/runs/{run_id}")
+def get_run(run_id: int, db: Session = Depends(get_db), user: object = Depends(get_current_user)):
+    from database.models import AgentRun, AgentToolCall
+
+    run = db.get(AgentRun, run_id)
+    if not run or run.username != user.username:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    calls = (db.query(AgentToolCall)
+             .filter(AgentToolCall.run_id == run.id)
+             .order_by(AgentToolCall.id).all())
+    return {"success": True, "data": {
+        "id": run.id, "status": run.status, "steps": run.steps or [],
+        "result": run.result,
+        "created_at": run.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "tool_calls": [{"tool": c.tool, "args": c.args, "ok": c.ok,
+                        "digest": c.result_digest} for c in calls],
+    }}
