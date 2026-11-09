@@ -27,7 +27,7 @@ python run.py                          # http://0.0.0.0:8000
 | `JWT_SECRET` | 自动生成并存 `data/secret.key` | 建议显式配置固定随机长串 |
 | `JWT_EXPIRE_HOURS` | 168 | token 有效期（小时） |
 | `DEFAULT_USER_PASSWORD` | cim123456 | 内置演示账号初始密码 |
-| `AI_API_BASE` / `AI_API_KEY` / `AI_MODEL` | OpenAI 兜底 | 也可在「设置」页配置（设置页优先） |
+| `AI_API_BASE` / `AI_API_KEY` / `AI_MODEL` | OpenAI 全局兜底 | 成员可在「设置 → 个人 AI 设置」配自己的 Key（个人优先，加密存储）；此界面不再保存全局键 |
 | `AI_BRIEFING_HOUR` | 8 | 每日自动简报整点，`-1` 关闭 |
 | `ENABLE_SCHEDULER` | 1 | 后台线程总开关（调试/测试可设 0） |
 | `CHAT_CONTEXT_ROUNDS` | 12 | 对话携带上下文轮数 |
