@@ -339,3 +339,6 @@ pytest 77 ✓ · build ✓ · e2e_check 10/10 ✓ · notifications/feed/rss_serv
 
 ### 巡检拍 2（02:14）
 pytest 80 ✓ · e2e_check 10/10 ✓
+
+### 2026-11-10 04:00 · v0.9.16 AGENTS.md 开发约定文档
+- 架构地图 + 8 条关键约定 + 8 条历史坑（从 WORKLOG 教训提炼），面向后续 AI/开发者会话
