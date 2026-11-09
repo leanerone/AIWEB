@@ -135,3 +135,4 @@ INFO:     127.0.0.1:53805 - "POST /api/auth/login HTTP/1.1" 429 Too Many Request
 INFO:     127.0.0.1:53806 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
 INFO:     127.0.0.1:53807 - "GET / HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54443 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65237 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
