@@ -180,7 +180,13 @@ def stream_run(db, user, session, question: str, page_context: str) -> Generator
         {"role": "user", "content": question},
     ]
 
-    yield from _loop(db, user, run, state)
+    try:
+        yield from _loop(db, user, run, state)
+    finally:
+        # 客户端中止/连接断开时，未完结的运行落为 stopped（否则永远卡 running）
+        if run.status == "running":
+            run.status = "stopped"
+            db.commit()
 
 
 def stream_resume(db, user, run_id: int, approved: bool | None = None,
@@ -219,7 +225,12 @@ def stream_resume(db, user, run_id: int, approved: bool | None = None,
             })
         state["pending_tool"] = None
         _persist(db, run, state, "running")
-        yield from _loop(db, user, run, state)
+        try:
+            yield from _loop(db, user, run, state)
+        finally:
+            if run.status == "running":
+                run.status = "stopped"
+                db.commit()
         return
 
     # waiting_input：把回答作为 ask_user 的结果
@@ -230,7 +241,12 @@ def stream_resume(db, user, run_id: int, approved: bool | None = None,
     })
     state["pending_tool"] = None
     _persist(db, run, state, "running")
-    yield from _loop(db, user, run, state)
+    try:
+        yield from _loop(db, user, run, state)
+    finally:
+        if run.status == "running":
+            run.status = "stopped"
+            db.commit()
 
 
 def _loop(db, user, run: AgentRun, state: dict) -> Generator[str, None, None]:

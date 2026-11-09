@@ -263,7 +263,7 @@ export const useAssistant = create<AssistantState>((set, get) => {
     resolveConfirm: (approved) => {
       const c = get().pendingConfirm
       if (!c || get().streaming) return
-      set({ pendingConfirm: null })
+      set({ pendingConfirm: null, historyOpen: false })
       set((s) => ({ messages: [...s.messages, { role: 'assistant', content: '' }] }))
       run('/api/agent/resume', { run_id: c.runId, approved }).catch((e) => console.warn(e.message))
     },
@@ -271,7 +271,7 @@ export const useAssistant = create<AssistantState>((set, get) => {
     answerAsk: (answer) => {
       const a = get().pendingAsk
       if (!a || get().streaming || !answer.trim()) return
-      set({ pendingAsk: null })
+      set({ pendingAsk: null, historyOpen: false })
       // 用户回答 + 空 assistant 气泡：resume 的 delta/done 要写到助手气泡，不能并进用户气泡
       set((s) => ({ messages: [...s.messages, { role: 'user', content: answer.trim() }, { role: 'assistant', content: '' }] }))
       run('/api/agent/resume', { run_id: a.runId, answer: answer.trim() }).catch((e) => console.warn(e.message))

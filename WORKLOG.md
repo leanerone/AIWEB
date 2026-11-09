@@ -294,3 +294,8 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 新工具 list_comments（读资源评论区，agent 回答"这资源口碑如何"类问题）；工具总数 14
 - live 库自检：chat_messages.meta 迁移生效；agent_runs 17 条 / 审计 12 条 / 个人配置 2 条
 - 测试 75 全过
+
+### 2026-11-10 02:50-02:55 · v0.9.10 轮次 J：深度复查三修
+- **修复**：客户端中止/断连时未完结 AgentRun 落为 stopped（此前永远卡 running）
+- **修复**：BackToTop 与悬浮球桌面端重叠 → 上移让位（移动 bottom-44 / 桌面 lg:bottom-24）
+- resolveConfirm/answerAsk 自动关历史抽屉
