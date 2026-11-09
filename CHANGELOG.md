@@ -17,6 +17,9 @@
 - `prefers-reduced-motion` 下关闭全部 backdrop-filter（降级为半透明平涂）
 - 修自身引入的回归：新加的 `position: relative` 误覆盖 `.mega-dd` 的 `position: absolute`，
   导致下拉被挤进文档流（宽度 664→306）；改为仅设 `overflow`，⌘K 面板由组件自带 `relative`
+- 修对比度回归：`!bg-transparent` 被 `.card-lg !important` 以更高特异度压过，且浅色模式半透白底
+  会把暗底图"洗白"→ 英雄带改用 `.hero-band.card-lg { background-color: rgba(11,16,19,.5) !important }`
+  固定深色玻璃，两种主题下白字对比度均可读（实测 dark .62 / light .5）
 - 实测：MegaMenu 恢复 664×358、`inFlow=true(absolute)`、边光 `pointer-events:none`、行可点；
   5 个页面（资源库/笔记/对话/设置/简报）均无横向溢出；卡片数 1–12 视页面而定
 

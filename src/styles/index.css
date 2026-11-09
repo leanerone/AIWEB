@@ -271,7 +271,9 @@ body {
 .hero-band .hero-sub { color: rgba(255,255,255,.78) }
 
 /* 矮条形态：横向左深右浅遮罩（文字在左、按钮在右），首屏焦点让给统计卡 */
-.hero-band.compact { min-height: 150px }
+.hero-band { min-height: 150px }
+/* 英雄带固定暗色玻璃底：浅色模式下 card-lg 的半透白会把暗图"洗白"，导致白字不可读 */
+.hero-band.card-lg { background-color: rgba(11, 16, 19, 0.5) !important }
 .hero-band.compact::after {
   background: linear-gradient(100deg, rgba(6,10,12,.9) 0%, rgba(6,10,12,.7) 48%, rgba(6,10,12,.45) 100%);
 }

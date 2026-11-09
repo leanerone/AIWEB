@@ -83,7 +83,7 @@ export function Dashboard() {
   return (
     <div className="space-y-5">
       {/* 英雄矮条：机房图作氛围底纹，把首屏焦点让回统计卡与动态 */}
-      <BentoCard className="hero-band compact !bg-transparent !border-transparent !p-0">
+      <BentoCard className="hero-band compact !border-transparent !p-0">
         <div className="hero-img" style={{ backgroundImage: "url('/hero/hero-server-room.jpg')" }} aria-hidden="true" />
         <div className="relative flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-6 py-5 lg:px-8">
           <div className="min-w-0">
