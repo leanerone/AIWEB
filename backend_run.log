@@ -1,0 +1,76 @@
+INFO:     Started server process [19556]
+INFO:     Waiting for application startup.
+2026-11-10 06:54:33,787 INFO aiweb.fts: FTS5 全文索引已重建
+2026-11-10 06:54:33,787 INFO aiweb: 数据库就绪，默认账号已播种
+2026-11-10 06:54:33,793 INFO aiweb.scheduler: 后台任务线程已启动（RSS 立即刷新后每 3600 秒 / 备份每 86400 秒）
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:56614 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56616 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62165 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63722 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63723 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63724 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63725 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63726 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63727 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63728 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63735 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63736 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63737 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63738 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63739 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63740 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63741 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63742 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+2026-11-10 06:55:32,103 WARNING aiweb.auth: 账号 e2e-ratelimit-probe（127.0.0.1）连续 5 次登录失败，锁定 15 分钟
+INFO:     127.0.0.1:63744 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63745 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:63746 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60238 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50882 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50887 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50890 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50886 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50891 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50892 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58304 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60729 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53226 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58060 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50503 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57171 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51850 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57169 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61975 - "GET /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61976 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53328 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61505 - "GET /api/chat/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62821 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50388 - "GET /api/hub/briefings?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59779 - "GET /api/hub/briefings?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54971 - "GET /api/hub/briefings?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49540 - "GET /api/hub/briefings?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50598 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62628 - "GET /api/memos?keyword=&page=1&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58550 - "GET /api/memos?keyword=&page=1&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55650 - "GET /api/memos?keyword=&page=1&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53636 - "GET /api/memos?keyword=&page=1&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55697 - "GET /api/notes/links?keyword=&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61412 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61410 - "GET /api/rss/sources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61409 - "GET /api/auth/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61408 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61411 - "GET /api/rss/items?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55000 - "GET /api/rss/sources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52065 - "GET /api/auth/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52067 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52068 - "GET /api/rss/items?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64041 - "GET /api/rss/sources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64040 - "GET /api/auth/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64039 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64042 - "GET /api/rss/items?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60832 - "GET /api/auth/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64608 - "GET /api/rss/sources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53199 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53201 - "GET /api/rss/items?limit=30 HTTP/1.1" 200 OK
