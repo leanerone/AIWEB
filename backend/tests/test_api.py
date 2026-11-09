@@ -523,6 +523,172 @@ class TestNotificationApi:
         client.delete(f"/api/resources/{rid}", headers=auth(admin_tok))
 
 
+class TestQueryExpression:
+    def test_ascii_cjk_bigrams_and_punctuation(self):
+        from services.fts import search_query
+
+        q = search_query("EAP 协议帧格式")
+        assert '"eap"' in q and '"协 议"' in q and '"帧 格"' in q
+        assert '"协 议 帧 格 式"' not in q          # 不再用整串长短语
+        assert search_query("？？") == ""            # 纯标点安全，不会生成非法短语
+        assert search_query("") == ""
+
+
+class TestRagChat:
+    """资源问答 RAG：自动检索资源注入系统提示词；显式 📎 引用优先。"""
+
+    def test_auto_resource_context(self, token, monkeypatch):
+        from routes import chat as chat_routes
+
+        captured = {}
+
+        def fake_stream(db, messages):
+            captured["messages"] = messages
+            return iter(["好的"])
+
+        monkeypatch.setattr(chat_routes, "stream_chat", fake_stream)
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db: {"api_base": "x", "api_key": "k", "model": "m"})
+
+        rid = client.post("/api/resources",
+                          data={"type": "skill", "name": "EAP 协议速查",
+                                "content": "帧格式与超时参数说明"},
+                          headers=auth(token)).json()["data"]["id"]
+
+        resp = client.post("/api/chat/completions",
+                           json={"message": "EAP 帧格式是什么"}, headers=auth(token))
+        assert resp.status_code == 200
+        sysm = next((m for m in captured["messages"] if m["role"] == "system"), None)
+        assert sysm and "EAP 协议速查" in sysm["content"] and "优先参考" in sysm["content"]
+
+        # 显式引用资源时走 📎 分支
+        resp2 = client.post("/api/chat/completions",
+                            json={"message": "随便聊聊天气", "context_resource_id": rid},
+                            headers=auth(token))
+        assert resp2.status_code == 200
+        sysm2 = next((m for m in captured["messages"] if m["role"] == "system"), None)
+        assert sysm2 and "用户正在就平台上的资源向你提问" in sysm2["content"]
+
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+
+class TestBriefingService:
+    def test_build_briefing_creates_card(self, token, monkeypatch):
+        from database.models import RssItem, RssSource
+        from database.session import SessionLocal
+        from services.briefing import build_briefing
+
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db: {"api_base": "x", "api_key": "k", "model": "m"})
+        monkeypatch.setattr("services.briefing.stream_chat", lambda db, msgs: iter(["简报正文"]))
+
+        db = SessionLocal()
+        s = RssSource(name="mocksrc", url="https://example.com/bf.xml")
+        db.add(s)
+        db.flush()
+        db.add(RssItem(source_id=s.id, title="头条", link="https://e.com/1", summary="摘要"))
+        db.commit()
+        r = build_briefing(db, created_by="tester")
+        assert r["title"].startswith("AI 每日简报") and r["content"] == "简报正文"
+
+        from database.models import FeedCard
+        db.query(FeedCard).filter(FeedCard.ref_type == "briefing").delete()
+        db.query(RssItem).delete()
+        db.query(RssSource).delete()
+        db.commit()
+        db.close()
+
+    def test_build_briefing_empty_raises(self):
+        from database.models import RssItem, RssSource
+        from database.session import SessionLocal
+        from services.briefing import build_briefing
+
+        db = SessionLocal()
+        db.query(RssItem).delete()
+        db.query(RssSource).delete()
+        db.commit()
+        with pytest.raises(ValueError):
+            build_briefing(db)
+        db.close()
+
+    def test_auto_briefing_gate(self, monkeypatch):
+        import datetime as real_dt
+
+        from config import settings as cfg
+        from database.models import FeedCard
+        from database.session import SessionLocal
+        from services import scheduler
+
+        calls: list[str] = []
+        monkeypatch.setattr(
+            "services.briefing.build_briefing",
+            lambda db, created_by="system": (calls.append(created_by), {"title": "t"})[1])
+
+        class FakeDT:
+            now = staticmethod(lambda: real_dt.datetime(2026, 1, 2, 12, 0, 0))
+
+        monkeypatch.setattr(scheduler, "datetime", FakeDT)
+        db = SessionLocal()
+        try:
+            db.query(FeedCard).filter(FeedCard.ref_type == "briefing").delete()
+            db.commit()
+
+            monkeypatch.setattr(cfg, "AI_BRIEFING_HOUR", -1)   # 关闭 → 不触发
+            scheduler._maybe_auto_briefing(db)
+            assert calls == []
+
+            monkeypatch.setattr(cfg, "AI_BRIEFING_HOUR", 13)   # 未到点 → 不触发
+            scheduler._maybe_auto_briefing(db)
+            assert calls == []
+
+            monkeypatch.setattr(cfg, "AI_BRIEFING_HOUR", 12)   # 到点且当天无卡 → 触发
+            scheduler._maybe_auto_briefing(db)
+            assert calls == ["system"]
+
+            card = FeedCard(kind="ai", title="today", content="c", ref_type="briefing",
+                            created_at=real_dt.datetime(2026, 1, 2, 9, 0))
+            db.add(card)
+            db.commit()
+            scheduler._maybe_auto_briefing(db)                  # 当天已有卡 → 不重复
+            assert calls == ["system"]
+        finally:
+            db.query(FeedCard).filter(FeedCard.ref_type == "briefing").delete()
+            db.commit()
+            db.close()
+
+
+class TestRssRefreshIndex:
+    """RSS 抓取入库同步 FTS（mock 网络）。"""
+
+    def test_refresh_indexes_for_search(self, token, monkeypatch):
+        client.post("/api/rss/sources",
+                    json={"name": "mock源", "url": "http://example.com/mock.xml"},
+                    headers=auth(token))
+        sid = next(s for s in client.get("/api/rss/sources", headers=auth(token)).json()["data"]
+                   if s["url"] == "http://example.com/mock.xml")["id"]
+
+        xml = ('<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>'
+               '<item><title>Python 3.13 发布</title><link>http://e.com/1</link>'
+               '<description>GIL 改进</description></item></channel></rss>').encode("utf-8")
+
+        class FakeResp:
+            content = xml
+
+            def raise_for_status(self):
+                pass
+
+        monkeypatch.setattr("services.rss_service.requests.get", lambda *a, **k: FakeResp())
+        r = client.post(f"/api/rss/sources/{sid}/refresh", headers=auth(token)).json()
+        assert r["data"]["new"] == 1
+
+        hits = client.get("/api/search?q=python", headers=auth(token)).json()["data"]
+        assert any(h["kind"] == "rss" for h in hits)
+
+        client.delete(f"/api/rss/sources/{sid}", headers=auth(token))  # 级联删条目
+        hits = client.get("/api/search?q=python", headers=auth(token)).json()["data"]
+        assert not any(h["kind"] == "rss" for h in hits)
+
+
 class TestFeedApi:
     def test_feed_contains_resource_and_today(self, token):
         rid = client.post("/api/resources", data={"type": "skill", "name": "feed-echo"},

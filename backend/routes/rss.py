@@ -64,6 +64,10 @@ def delete_source(source_id: int, db: Session = Depends(get_db),
     s = db.get(RssSource, source_id)
     if not s:
         raise HTTPException(status_code=404, detail="订阅源不存在")
+    # 级联删除条目前先同步全文索引（DB 级联不会触达 FTS 表）
+    from services import fts
+    for i in db.query(RssItem).filter(RssItem.source_id == source_id).all():
+        fts.deindex_rss_item(db, i.id)
     db.delete(s)
     db.commit()
     return {"success": True}

@@ -54,3 +54,6 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
 
 # 对话上下文最大轮数
 CHAT_CONTEXT_ROUNDS = int(os.getenv("CHAT_CONTEXT_ROUNDS", "12"))
+
+# 自动每日简报：每天该整点由调度器生成（-1 关闭）
+AI_BRIEFING_HOUR = int(os.getenv("AI_BRIEFING_HOUR", "8"))

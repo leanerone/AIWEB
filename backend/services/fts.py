@@ -48,11 +48,48 @@ def normalize(s: str) -> str:
 
 
 def phrase_query(q: str) -> str:
-    """把用户查询转成 FTS5 短语匹配表达式"""
+    """兼容保留：整串短语匹配（严格模式）"""
     norm = normalize(q).strip()
     if not norm:
         return ""
     return '"' + norm.replace('"', " ") + '"'
+
+
+def search_query(q: str) -> str:
+    """构造 FTS5 查询：ASCII 词精确匹配；连续中文拆成相邻二元组，组间 OR。
+
+    长中文短语（如「协议帧格式是什么」）在索引里几乎不可能整体相邻，
+    二元组 OR 兼顾召回与相关度（bm25 对命中多的文档排名靠前）。
+    """
+    norm = normalize(q).strip()
+    if not norm:
+        return ""
+    clauses: list[str] = []
+    run: list[str] = []
+
+    def esc(t: str) -> str:
+        return '"' + t.replace('"', " ").strip() + '"'
+
+    def flush_run():
+        nonlocal run
+        if not run:
+            return
+        if len(run) == 1:
+            clauses.append(esc(run[0]))
+        else:
+            for i in range(len(run) - 1):
+                clauses.append(esc(f"{run[i]} {run[i + 1]}"))
+        run = []
+
+    for token in norm.split():
+        if len(token) == 1 and _CJK.fullmatch(token):
+            run.append(token)
+        elif re.search(r"[\w\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", token):
+            flush_run()
+            clauses.append(esc(token))
+        # 纯标点 token 跳过（否则空短语会让 FTS5 报语法错）
+    flush_run()
+    return " OR ".join(dict.fromkeys(clauses))  # 去重且保序
 
 
 def available(db: Session) -> bool:
@@ -100,6 +137,10 @@ def index_rss_item(db: Session, i) -> None:
     _index_row(db, "fts_rss", i.id, i.title, i.summary or "")
 
 
+def deindex_rss_item(db: Session, iid: int) -> None:
+    db.execute(text("DELETE FROM fts_rss WHERE rowid=:id"), {"id": iid})
+
+
 def rebuild(db: Session) -> None:
     """全量重建（启动时调用，内网数据量毫秒级；顺带自愈遗漏的增量同步）"""
     ensure_schema(db)
@@ -119,8 +160,8 @@ def rebuild(db: Session) -> None:
 
 def search(db: Session, q: str, limit: int = 20) -> list[dict]:
     """统一全文检索，按 bm25 相关度混排返回 resource / memo / rss"""
-    phrase = phrase_query(q)
-    if not phrase:
+    match = search_query(q)
+    if not match:
         return []
     limit = max(1, min(limit, 50))
     items: list[dict] = []
@@ -129,7 +170,7 @@ def search(db: Session, q: str, limit: int = 20) -> list[dict]:
         "SELECT rowid, bm25(fts_resources) AS rank, "
         "snippet(fts_resources, -1, '', '', '…', 14) AS snip "
         "FROM fts_resources WHERE fts_resources MATCH :q ORDER BY rank LIMIT :lim"),
-        {"q": phrase, "lim": limit}).all()
+        {"q": match, "lim": limit}).all()
     for rid, _rank, snip in rows:
         r = db.get(_model_lazy("Resource"), int(rid))
         if r:
@@ -142,7 +183,7 @@ def search(db: Session, q: str, limit: int = 20) -> list[dict]:
         "SELECT rowid, bm25(fts_memos) AS rank, "
         "snippet(fts_memos, -1, '', '', '…', 14) AS snip "
         "FROM fts_memos WHERE fts_memos MATCH :q ORDER BY rank LIMIT :lim"),
-        {"q": phrase, "lim": limit}).all()
+        {"q": match, "lim": limit}).all()
     for mid, _rank, snip in rows:
         m = db.get(_model_lazy("Memo"), int(mid))
         if m:
@@ -155,7 +196,7 @@ def search(db: Session, q: str, limit: int = 20) -> list[dict]:
         "SELECT rowid, bm25(fts_rss) AS rank, "
         "snippet(fts_rss, -1, '', '', '…', 14) AS snip "
         "FROM fts_rss WHERE fts_rss MATCH :q ORDER BY rank LIMIT :lim"),
-        {"q": phrase, "lim": limit}).all()
+        {"q": match, "lim": limit}).all()
     for iid, _rank, snip in rows:
         i = db.get(_model_lazy("RssItem"), int(iid))
         if i:

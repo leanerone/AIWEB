@@ -1,5 +1,8 @@
 """AI 对话路由：SSE 流式对话 + 会话管理 + 内容沉淀。"""
 import json
+import logging
+
+logger = logging.getLogger("aiweb.chat")
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -115,6 +118,7 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
             if m.id > last_user.id and m.role == "assistant":
                 db.delete(m)
         db.commit()
+        question = last_user.content
     else:
         if not body.message.strip():
             raise HTTPException(status_code=400, detail="消息不能为空")
@@ -126,6 +130,7 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
         user_msg = ChatMessage(session_id=session.id, role="user", content=body.message)
         db.add(user_msg)
         db.commit()
+        question = body.message
 
     # 组装上下文（最近 N 轮）
     history = (
@@ -151,6 +156,23 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
                 f"用户正在就平台上的资源向你提问，请结合该资源信息回答。\n"
                 f"资源：[{res.type}] {res.name}\n简介：{res.summary}\n详情：\n{res.content[:3000]}"
             )
+    # 资源问答 RAG：未手动引用资源时，自动检索平台资源注入上下文（失败不影响对话）
+    elif question.strip():
+        try:
+            from services import fts
+
+            hits = [h for h in fts.search(db, question, limit=3) if h["kind"] == "resource"]
+            blocks = []
+            for h in hits:
+                res = db.get(Resource, h["id"])
+                if res:
+                    blocks.append(f"· {res.name}（{res.type}）：{res.summary}\n{res.content[:600]}")
+            if blocks:
+                system_parts.append(
+                    "以下是平台资源库中与用户问题最相关的资料，回答时优先参考并注明来源资源：\n\n"
+                    + "\n\n".join(blocks))
+        except Exception:
+            logger.warning("RAG 资源检索失败，按普通对话继续", exc_info=True)
     if system_parts:
         messages = [{"role": "system", "content": "\n\n".join(system_parts)}] + messages
 

@@ -45,6 +45,29 @@ def run_backup() -> str | None:
     return dest.name
 
 
+def _maybe_auto_briefing(db) -> None:
+    """每天 AI_BRIEFING_HOUR 点后自动生成简报卡（当天已有则跳过）"""
+    if settings.AI_BRIEFING_HOUR < 0:
+        return
+    now = datetime.now()
+    if now.hour < settings.AI_BRIEFING_HOUR:
+        return
+    from database.models import FeedCard
+
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    has_today = (db.query(FeedCard)
+                 .filter(FeedCard.ref_type == "briefing", FeedCard.created_at >= day_start)
+                 .count())
+    if has_today:
+        return
+    try:
+        from services.briefing import build_briefing
+        card = build_briefing(db, created_by="system")
+        logger.info("自动简报已生成：%s", card["title"])
+    except Exception as e:
+        logger.warning("自动简报未生成（AI 未配置 / RSS 为空 / 调用失败）：%s", e)
+
+
 def _loop():
     last_backup = time.time()  # 首次自动备份在启动 24h 后；此前可用管理端手动备份
     while True:
@@ -57,6 +80,7 @@ def _loop():
                 result = refresh_all(db)
                 if result.get("new"):
                     logger.info("RSS 自动刷新：新增 %s 条", result["new"])
+                _maybe_auto_briefing(db)
             finally:
                 db.close()
         except Exception:
