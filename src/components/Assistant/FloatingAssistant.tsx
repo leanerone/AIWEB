@@ -96,6 +96,24 @@ function MessageBubble({ m, streaming, isLast }: { m: AssistantMsg; streaming: b
   )
 }
 
+/** ask_user 无选项时的自由文本回答 */
+function AskFreeText({ onAnswer }: { onAnswer: (text: string) => void }) {
+  const [text, setText] = useState('')
+  return (
+    <div className="flex items-end gap-1.5">
+      <input className="input flex-1 !py-1.5 text-xs" placeholder="输入你的回答，Enter 发送"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && text.trim()) onAnswer(text.trim())
+        }} />
+      <button className="btn-primary !p-2" disabled={!text.trim()} onClick={() => onAnswer(text.trim())}>
+        <Send size={12} />
+      </button>
+    </div>
+  )
+}
+
 export function FloatingAssistant() {
   const nav = useNavigate()
   usePageContext()
@@ -135,10 +153,9 @@ export function FloatingAssistant() {
   }, [open, sessions.length, loadSessions])
 
   useEffect(() => {
-    // 建议卡：打开面板时拉一次，之后每 2 分钟刷新（observe 模式：只建议不自动执行）
-    if (!open) return
+    // 建议轮询常驻（badge 关闭面板也可见）；面板打开时加密到 2 分钟
     loadSuggestions()
-    const t = window.setInterval(loadSuggestions, 120_000)
+    const t = window.setInterval(loadSuggestions, open ? 120_000 : 300_000)
     return () => window.clearInterval(t)
   }, [open, loadSuggestions])
 
@@ -286,12 +303,16 @@ export function FloatingAssistant() {
               {pendingAsk && (
                 <div className="rounded-2xl border border-brand-200 bg-brand-50/90 p-3 text-xs dark:border-brand-500/30 dark:bg-brand-500/10">
                   <p className="mb-1.5 font-bold text-brand-700 dark:text-brand-300">{pendingAsk.question}</p>
-                  <div className="flex flex-col gap-1.5">
-                    {pendingAsk.options.map((o) => (
-                      <button key={o} className="rounded-xl border border-brand-200 bg-white/80 px-3 py-1.5 text-left transition hover:border-brand-400 dark:bg-white/10"
-                        onClick={() => answerAsk(o)}>{o}</button>
-                    ))}
-                  </div>
+                  {pendingAsk.options.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {pendingAsk.options.map((o) => (
+                        <button key={o} className="rounded-xl border border-brand-200 bg-white/80 px-3 py-1.5 text-left transition hover:border-brand-400 dark:bg-white/10"
+                          onClick={() => answerAsk(o)}>{o}</button>
+                      ))}
+                    </div>
+                  ) : (
+                    <AskFreeText onAnswer={answerAsk} />
+                  )}
                 </div>
               )}
               <div ref={bottomRef} />

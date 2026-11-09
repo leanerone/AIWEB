@@ -88,3 +88,44 @@ def verify_token(token: str) -> Optional[dict]:
         return jwt.decode(token, _jwt_secret(), algorithms=[JWT_ALGORITHM])
     except jwt.PyJWTError:
         return None
+
+
+# ── 登录防爆破：按用户名+来源 IP 计失败次数，连续失败锁定一段时间 ──
+LOGIN_MAX_FAILS = 5
+LOGIN_LOCK_SECONDS = 15 * 60
+
+_login_fails: dict[str, tuple[int, float]] = {}  # key → (连续失败次数, 锁定截止时间戳)
+
+
+def _fail_key(username: str, client_ip: str) -> str:
+    return f"{username.lower()}@{client_ip}"
+
+
+def login_locked(username: str, client_ip: str) -> int:
+    """返回剩余锁定秒数；0 表示未锁定"""
+    _gc_login_fails()
+    _n, until = _login_fails.get(_fail_key(username, client_ip), (0, 0.0))
+    remain = int(until - time.time())
+    return max(0, remain)
+
+
+def login_record_failure(username: str, client_ip: str) -> None:
+    key = _fail_key(username, client_ip)
+    n, _until = _login_fails.get(key, (0, 0.0))
+    n += 1
+    until = time.time() + LOGIN_LOCK_SECONDS if n >= LOGIN_MAX_FAILS else 0.0
+    _login_fails[key] = (n, until)
+    if until:
+        logger.warning("账号 %s（%s）连续 %d 次登录失败，锁定 %d 分钟",
+                       username, client_ip, n, LOGIN_LOCK_SECONDS // 60)
+
+
+def login_record_success(username: str, client_ip: str) -> None:
+    _login_fails.pop(_fail_key(username, client_ip), None)
+
+
+def _gc_login_fails() -> None:
+    """过期条目顺手清理（失败次数少于上限且已过锁定窗口的记录没有意义）"""
+    now = time.time()
+    for key in [k for k, (_n, until) in _login_fails.items() if until and until < now]:
+        _login_fails.pop(key, None)

@@ -1,7 +1,7 @@
 """认证路由：Windows SSO 自动登录 + 手动账密登录 + Token 校验 + 成员管理。"""
 import time
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -74,10 +74,19 @@ def windows_sso(db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == request.username.strip()).first()
+def login(request: LoginRequest, http_request: Request, db: Session = Depends(get_db)):
+    """手动登录（防爆破：连续失败 5 次锁定 15 分钟，按 用户名+来源IP 计）"""
+    client_ip = http_request.client.host if http_request.client else "-"
+    username = request.username.strip()
+    locked = auth_service.login_locked(username, client_ip)
+    if locked:
+        raise HTTPException(status_code=429,
+                            detail=f"登录失败次数过多，请 {max(1, locked // 60)} 分钟后再试")
+    user = db.query(User).filter(User.username == username).first()
     if not user or not auth_service.verify_password(request.password, user.password_hash):
+        auth_service.login_record_failure(username, client_ip)
         raise HTTPException(status_code=401, detail="用户名或密码错误")
+    auth_service.login_record_success(username, client_ip)
     return {
         "success": True,
         "data": {

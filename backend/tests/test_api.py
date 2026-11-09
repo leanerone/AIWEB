@@ -1085,3 +1085,41 @@ class TestAssistantSuggestions:
         db.close()
         d = client.get("/api/assistant/suggestions", headers=auth(token)).json()["data"]
         assert d["items"] == []
+
+
+class TestLoginRateLimit:
+    """登录防爆破：连续失败锁定，成功后清零。"""
+
+    def test_lock_after_max_failures(self):
+        from services import auth_service
+
+        # 直接驱动服务层计数器，避免污染 TestClient 的共享状态
+        auth_service._login_fails.clear()
+        key_user, key_ip = "ratelimit-user", "10.9.9.9"
+        for _ in range(auth_service.LOGIN_MAX_FAILS - 1):
+            auth_service.login_record_failure(key_user, key_ip)
+        assert auth_service.login_locked(key_user, key_ip) == 0      # 差一次未锁定
+        auth_service.login_record_failure(key_user, key_ip)
+        locked = auth_service.login_locked(key_user, key_ip)
+        assert locked > 0 and locked <= auth_service.LOGIN_LOCK_SECONDS
+
+        # 成功清零
+        auth_service.login_record_success(key_user, key_ip)
+        assert auth_service.login_locked(key_user, key_ip) == 0
+        auth_service._login_fails.clear()
+
+    def test_http_429_on_locked(self):
+        from services import auth_service
+
+        auth_service._login_fails.clear()
+        # 通过真实接口触发：错误密码 5 次（TestClient 的 client 是 testserver）
+        for _ in range(auth_service.LOGIN_MAX_FAILS):
+            client.post("/api/auth/login",
+                        json={"username": "administrator", "password": "wrong-again"})
+        resp = client.post("/api/auth/login",
+                           json={"username": "administrator", "password": "test123456"})
+        assert resp.status_code == 429
+        auth_service._login_fails.clear()  # 还原，避免影响其他用例
+        resp2 = client.post("/api/auth/login",
+                            json={"username": "administrator", "password": "test123456"})
+        assert resp2.status_code == 200
