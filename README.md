@@ -3,6 +3,8 @@
 公司内网 AI 分享平台：聚合 **Skills（SKILL.md 技能包）/ 小工具 / 插件**，内置 **AI 流式对话 + 内容沉淀**、**RSS 资讯订阅**、**Markdown 笔记**，兼容 **HCL Notes 链接**（解析 + 一键唤起本机 Notes 客户端），支持 **Windows 域自动登录**。
 
 视觉风格：明亮 Bento 网格（大圆角 / 柔和阴影 / 蓝紫渐变 / framer-motion 微动效），支持深色模式。
+卡片为**液态玻璃**质感（`mask-composite` 高光边 + 半透磨砂底），浮层（⌘K / 通知 / 下拉菜单）额外使用
+`feDisplacementMap` SVG 折射滤镜——仅 Chromium 生效，其余浏览器自动回退普通磨砂（`has-refract` 能力探测）。
 首页与登录页采用「机房实拍底图 + 暗玻璃面板」的英雄带，顶栏为**变形下拉导航**（规格存档于
 `docs/design/halden-hero-morphing-nav-spec.txt`，实现见 `src/components/MegaMenu.tsx`）。
 
