@@ -1,0 +1,111 @@
+INFO:     Started server process [30872]
+INFO:     Waiting for application startup.
+2026-11-10 02:05:31,928 INFO aiweb.fts: FTS5 全文索引已重建
+2026-11-10 02:05:31,928 INFO aiweb: 数据库就绪，默认账号已播种
+2026-11-10 02:05:31,935 INFO aiweb.scheduler: 后台任务线程已启动（RSS 立即刷新后每 3600 秒 / 备份每 86400 秒）
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-11-10 02:05:33,312 INFO aiweb.scheduler: RSS 自动刷新：新增 5 条
+INFO:     127.0.0.1:54324 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54326 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54327 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54328 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:54329 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54330 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54331 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54334 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54335 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54336 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54337 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54339 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54340 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54341 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54342 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+2026-11-10 02:05:38,533 WARNING aiweb.auth: 账号 e2e-ratelimit-probe（127.0.0.1）连续 5 次登录失败，锁定 15 分钟
+INFO:     127.0.0.1:54343 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54344 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:54345 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54353 - "GET /api/auth/windows HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54354 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55179 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55186 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55187 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55185 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55189 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55188 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57695 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64491 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64493 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63507 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52929 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65481 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49744 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53177 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52234 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52233 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52230 - "GET /api/resources/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52237 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52238 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52240 - "GET /api/resources/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64317 - "GET /api/resources/4/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64315 - "GET /api/resources/4/comments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54382 - "GET /api/resources/4/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51295 - "GET /api/resources/4/comments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58250 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56098 - "GET /api/resources/4/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58975 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51517 - "GET /api/resources/4 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51520 - "GET /api/resources/4 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51522 - "GET /api/assistant/suggestions HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51523 - "GET /api/notifications/unread-count HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51525 - "GET /api/assistant/suggestions HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51527 - "GET /api/notifications/unread-count HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52693 - "GET /api/auth/windows HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52695 - "GET /api/auth/windows HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55354 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55362 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55358 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55364 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55357 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55360 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64463 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50366 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60059 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62069 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50362 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62071 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50414 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61139 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52704 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62774 - "GET /api/resources/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62778 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62777 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62782 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62781 - "GET /api/resources/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57974 - "GET /api/resources/4/comments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52982 - "GET /api/resources/4/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49429 - "GET /api/resources/4/comments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49431 - "GET /api/resources/4/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61680 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61682 - "GET /api/resources?keyword=%E7%89%88%E6%9C%AC%E6%BC%94%E7%A4%BA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61683 - "DELETE /api/resources/4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55806 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54026 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54027 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54028 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54029 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:54030 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54031 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54032 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54038 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54039 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54040 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54041 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54042 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:54043 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:54044 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:54045 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:54046 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:54047 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:54049 - "GET / HTTP/1.1" 200 OK

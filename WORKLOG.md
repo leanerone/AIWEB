@@ -319,3 +319,9 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 
 ### 巡检拍 1（$(date '+%H:%M')）
 pytest 77 ✓ · build ✓ · e2e_check 10/10 ✓ · notifications/feed/rss_service 复查无新问题
+
+### 2026-11-10 03:20-03:30 · v0.9.13 轮次 M：通知闭环 + CI E2E
+- 收藏资源 → 创建者收到通知（自收藏不通知；agent 工具路径同步，标注"通过 AI 助手"）
+- 资源详情页「问 AI 助手」按钮（自动开助手并带资源名提问）
+- CI 新增 e2e-api job：起 mock LLM + 后端 → 跑 scripts/e2e_check.py（10 项全链路）
+- 测试：77 → 78

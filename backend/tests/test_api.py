@@ -1310,3 +1310,33 @@ class TestResourceVersions:
         st2 = client.post(f"/api/resources/{rid}/restore/{vid}", headers=admin)
         assert st2.status_code == 200  # 管理员可以
         client.delete(f"/api/resources/{rid}", headers=admin)
+
+
+class TestBookmarkNotify:
+    """收藏产生创建者通知；自收藏与取消收藏不通知。"""
+
+    def test_bookmark_notifies_creator(self, token):
+        from database.session import SessionLocal
+        from database.models import Resource
+        from services.auth_service import generate_token
+
+        admin_tok = auth(generate_token("administrator", "admin"))
+        rid = client.post("/api/resources", data={"type": "tool", "name": "bookmark-notify-target"},
+                          headers=auth(plain_user_token())).json()["data"]["id"]
+        # admin 收藏 → plain.user 收到通知
+        client.post("/api/bookmarks/toggle", json={"target_type": "resource", "target_id": rid},
+                    headers=admin_tok)
+        data = client.get("/api/notifications", headers=auth(plain_user_token())).json()["data"]
+        assert any("收藏了你的资源" in n["title"] for n in data["items"])
+        # 取消收藏再收藏 → 第二次通知（toggle 语义，每次收藏动作投递一次）
+        client.post("/api/bookmarks/toggle", json={"target_type": "resource", "target_id": rid},
+                    headers=admin_tok)
+        n_before = client.get("/api/notifications/unread-count", headers=auth(plain_user_token())).json()["data"]["unread"]
+        client.post("/api/bookmarks/toggle", json={"target_type": "resource", "target_id": rid},
+                    headers=admin_tok)
+        n_after = client.get("/api/notifications/unread-count", headers=auth(plain_user_token())).json()["data"]["unread"]
+        assert n_after >= n_before
+        # 自收藏不通知
+        client.post("/api/bookmarks/toggle", json={"target_type": "resource", "target_id": rid},
+                    headers=auth(plain_user_token()))
+        client.delete(f"/api/resources/{rid}", headers=auth(plain_user_token()))

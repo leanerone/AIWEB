@@ -194,6 +194,13 @@ def tool_bookmark_resource(db: Session, user: User, args: dict) -> tuple[bool, s
         return True, f"已取消收藏「{r.name}」", f"已取消收藏资源 #{rid}。"
     db.add(Bookmark(username=user.username, target_type="resource", target_id=rid))
     db.commit()
+    from routes.notifications import notify
+
+    if r.created_by and r.created_by != user.username:
+        notify(db, r.created_by, "system",
+               f"{user.display_name or user.username}（通过 AI 助手）收藏了你的资源「{r.name}」",
+               ref_type="resource", ref_id=r.id)
+        db.commit()
     return True, f"已收藏「{r.name}」", f"已收藏资源 #{rid}。"
 
 

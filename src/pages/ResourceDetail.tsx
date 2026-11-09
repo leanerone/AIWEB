@@ -1,7 +1,8 @@
-import { ArrowLeft, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bot, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
+import { useAssistant } from '../stores/assistant'
 import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
 import { BookmarkButton } from '../components/BookmarkButton'
@@ -179,7 +180,17 @@ export function ResourceDetail() {
 
       {r.content && (
         <BentoCard className="p-6" delay={0.08}>
-          <h2 className="mb-3 text-sm font-bold">详细介绍</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold">详细介绍</h2>
+            <button className="btn-ghost !py-1.5 text-xs"
+              onClick={() => {
+                const st = useAssistant.getState()
+                st.setOpen(true)
+                window.setTimeout(() => st.send(`请介绍资源「${r.name}」能解决什么问题、怎么用？有什么注意事项？`), 60)
+              }}>
+              <Bot size={13} /> 问 AI 助手
+            </button>
+          </div>
           <MarkdownView text={r.content} />
         </BentoCard>
       )}

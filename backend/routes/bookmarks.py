@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database.models import Bookmark, Memo, Resource
 from database.session import get_db
 from routes.deps import get_current_user
+from routes.notifications import notify
 from routes.memos import _serialize as serialize_memo
 from routes.resources import _serialize as serialize_resource
 
@@ -44,6 +45,14 @@ def toggle(body: BookmarkIn, db: Session = Depends(get_db),
     db.add(Bookmark(username=user.username, target_type=body.target_type,
                     target_id=body.target_id))
     db.commit()
+    # 通知目标创建者（自收藏不通知；通知失败不影响收藏本身）
+    if body.target_type == "resource":
+        target = db.get(Resource, body.target_id)
+        if target and target.created_by and target.created_by != user.username:
+            notify(db, target.created_by, "system",
+                   f"{user.display_name or user.username} 收藏了你的资源「{target.name}」",
+                   ref_type="resource", ref_id=target.id)
+            db.commit()
     return {"success": True, "data": {"bookmarked": True}}
 
 
