@@ -77,7 +77,7 @@ export function Layout() {
   return (
     <div className="min-h-full">
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
           <Link to="/" className="group flex items-center gap-2.5" aria-label="返回首页">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-bento transition-transform group-hover:-translate-y-0.5" style={{ backgroundImage: 'var(--brand-grad)' }}>
               <Bot size={19} />

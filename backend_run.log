@@ -77,3 +77,9 @@ INFO:     127.0.0.1:53560 - "GET /api/notifications/unread-count HTTP/1.1" 200 O
 INFO:     127.0.0.1:51657 - "POST /api/auth/login HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51658 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51659 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59178 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56062 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65272 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54811 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60764 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60922 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK

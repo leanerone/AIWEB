@@ -1,5 +1,45 @@
 # 更新日志
 
+## v0.9 · 2026-11-10 悬浮 AI 助手 + Agent 化 + AI Key 个人化（dsh-superagent 精髓移植）
+
+> 本轮依据用户两点反馈重构 AI 形态：①AI 不该占一个独立页面，做成悬浮助手即可；②AI Key 应在个人设置里配置，
+> 而不是一个显眼的全局页签。同时参考 DeepSeek 开源的 dsh-superagent 原型（研究用途）移植其设计精髓：
+> 工具循环 / 授权（Mandate 简化）/ 结构化提问（Attention）/ 任务卡（Report 状态机）/ observe→auto 渐进开放。
+
+### AI Key 个人化（安全重构）
+- 新表 `user_ai_configs`：Key 用 Fernet 加密落库（密钥派生自 data/secret.key；cryptography 缺失时诚实降级并告警）
+- `GET/PUT /api/me/ai-config`：打码读写、"-"显式清除、尾部 4 位 reveal 校验；生效链 **个人 → 全局 KV → .env**
+- **安全修复**：`PUT /api/settings` 全局键改为 require_admin（此前任何登录用户可改全局 Key，影响全员）
+- 设置页「AI 配置」全局大卡退役 → 「个人 AI 设置」折叠卡（生效链展示 + 自动执行开关 + 测试连接）
+
+### 悬浮 AI 助手（形态重构）
+- 右下角 FAB（52px 玻璃球 + badge）+ 420px `.glass-pop` 玻璃面板；SSE 消费内聚 zustand store，页面切换对话不断线
+- 会话/消息完全复用 ChatSession 与 /api/chat/*，历史零迁移；面板内历史抽屉（切换/重命名/删除）
+- 页面上下文自动注入（资源详情页自动取资源名；上下文 chip 可一键关闭）
+- **/chat 页面退役**：路由重定向并自动展开助手；导航/MegaMenu/⌘K/首页 CTA 全部改为唤起助手；src/pages/Chat.tsx 删除
+
+### Agent 化（能干活）
+- `services/agent_tools.py`：11 个工具（6 只读 + 4 写 + ask_user），全部以当前用户身份执行
+- `services/agent_service.py`：agent loop（≤6 轮）→ SSE 事件 meta/step/delta/confirm/ask/error/done
+  - function-calling 优先，探测 400 自动降级 ReAct JSON 协议（兼容不支持 tools 的 OpenAI 兼容代理）
+  - 写工具默认**确认卡**挂起（AgentRun.waiting_confirm），auto_exec 开启后直通（observe→auto）
+  - ask_user **结构化提问**挂起（waiting_input），一次一个具体问题；无选项时前端自由文本回退
+  - AgentToolCall 全量审计 + AgentRun 状态机；任务卡轨迹随 ChatMessage.meta 持久化（历史会话可回放）
+  - 轮数耗尽诚实收尾；工具异常转失败结果让模型自愈
+- `routes/agent.py`：POST /run、POST /resume、GET /runs/{id}
+- `ensure_schema_upgrade()` 轻量列迁移（chat_messages.meta）
+
+### Proactive（observe 模式）
+- `GET /api/assistant/suggestions`：今日简报就绪 / 24h 新资讯 → 建议卡；FAB badge 常驻轮询
+- 只建议不自动执行——写操作仍走确认/自动执行通道
+
+### 工程与安全
+- 登录防爆破：用户名+IP 连续失败 5 次锁 15 分钟（429），成功清零
+- 移动端头部横向溢出修复（413→382）；ask 卡自由文本回退
+- `scripts/mock_llm.py`：本地 Mock LLM（9377），无真实 Key 全链路联调/E2E
+- 测试 57 → **69** 用例；浏览器 E2E 全绿（SSO 直登 / Agent 问答 / 确认卡→笔记落库 / /chat 重定向 /
+  MegaMenu 唤起 / 个人 Key 生效链 / 加密落库验库 / 深色模式 / 移动端视口）
+
 ## v0.8.1 · 2026-11-09 浅色模式液态玻璃"看不出玻璃"
 
 用户反馈：明亮模式没有玻璃感。根因不是没生效，而是**浅色主题卡片背后是一整块死板浅灰 `#f5f6fa`**——
