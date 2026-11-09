@@ -30,6 +30,12 @@ def make_response(content=None, tool_calls=None):
 def scripted_reply(body: dict) -> dict:
     messages = body.get("messages", [])
     tools = body.get("tools")
+    system_text = next((m.get("content", "") for m in messages if m.get("role") == "system"), "")
+    if "起一个不超过12字的中文标题" in system_text:
+        last_user = next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "对话")
+        title = (last_user.replace("问：", "").split("
+")[0] or "新对话")[:12]
+        return make_response(content=title)
     react_mode = not tools
     last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
     tool_results = [m for m in messages if m.get("role") == "tool" or m.get("tool_call_id")]

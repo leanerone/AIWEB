@@ -139,6 +139,26 @@ def _persist(db, run: AgentRun, state: dict, status: str | None = None):
     db.commit()
 
 
+def _maybe_name_session(db, session, question: str, answer: str, username: str | None) -> None:
+    """首轮对话后让模型给会话起个短标题（失败静默保留默认标题，不阻断主流程）"""
+    if session is None:
+        return
+    default_title = question.strip()[:40]
+    if session.title != default_title:
+        return  # 用户已重命名过 / 非首轮
+    try:
+        data = _chat_completion(db, username, [
+            {"role": "system", "content": "给下面的对话起一个不超过12字的中文标题，直接输出标题本身，不要引号和句号。"},
+            {"role": "user", "content": f"问：{question[:200]}\n答：{answer[:200]}"},
+        ], tools=None)
+        title = (data.get("choices") or [{}])[0].get("message", {}).get("content", "").strip().strip('"「」')
+        if 2 <= len(title) <= 30:
+            session.title = title
+            db.commit()
+    except Exception:
+        logger.debug("会话命名失败（保留默认标题）", exc_info=True)
+
+
 def _finish(db, run: AgentRun, session, user, state: dict, answer: str) -> str:
     """落库最终回答（带任务卡轨迹），返回答案文本"""
     from database.models import ChatMessage
@@ -149,6 +169,7 @@ def _finish(db, run: AgentRun, session, user, state: dict, answer: str) -> str:
     _persist(db, run, state, "done")
     run.result = answer
     db.commit()
+    _maybe_name_session(db, session, state["messages"][1]["content"], answer, user.username)
     return answer
 
 

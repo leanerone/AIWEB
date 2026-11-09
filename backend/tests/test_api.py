@@ -1183,7 +1183,9 @@ class TestAgentRegenerate:
 
         it = iter([
             {"choices": [{"message": {"role": "assistant", "content": "第一版回答"}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "标题一"}}]},
             {"choices": [{"message": {"role": "assistant", "content": "第二版回答（更完整）"}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "标题二"}}]},
         ])
         monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
         real_cfg = agent_service.get_ai_config
@@ -1367,3 +1369,36 @@ class TestUpdateNotify:
         data2 = client.get("/api/notifications/unread-count", headers=auth(token)).json()["data"]
         assert data2["unread"] == 0
         client.delete(f"/api/resources/{rid}", headers=auth(plain_user_token()))
+
+
+class TestSessionNaming:
+    """首轮对话后 AI 自动起标题；重命名过的不覆盖。"""
+
+    def test_auto_title(self, token, monkeypatch):
+        from services import agent_service
+
+        it = iter([
+            {"choices": [{"message": {"role": "assistant", "content": "回答正文"}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "帮我处理Excel周报"}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "回答正文2"}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "帮我处理Excel周报"}}]},
+        ])
+        monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
+        real_cfg = agent_service.get_ai_config
+        monkeypatch.setattr(agent_service, "get_ai_config",
+                            lambda db, username=None, _real=real_cfg: {**_real(db, username), "api_key": "sk-mock"})
+
+        resp = client.post("/api/agent/run", json={"message": "帮我处理excel周报的问题"},
+                           headers=auth(token))
+        sid = json.loads(resp.text.split("data:")[1].split(chr(10))[0])["session_id"]
+        sessions = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
+        mine = next(s for s in sessions if s["id"] == sid)
+        assert mine["title"] == "帮我处理Excel周报"      # 自动命名生效
+
+        # 用户重命名后再跑一轮不会被覆盖
+        client.put(f"/api/chat/sessions/{sid}", json={"title": "我的名字"}, headers=auth(token))
+        client.post("/api/agent/run", json={"session_id": sid, "message": "再来一个问题"},
+                    headers=auth(token))
+        sessions2 = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
+        mine2 = next(s for s in sessions2 if s["id"] == sid)
+        assert mine2["title"] == "我的名字"
