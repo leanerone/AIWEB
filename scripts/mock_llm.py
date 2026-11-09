@@ -30,15 +30,27 @@ def make_response(content=None, tool_calls=None):
 def scripted_reply(body: dict) -> dict:
     messages = body.get("messages", [])
     tools = body.get("tools")
+    react_mode = not tools
     last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
     tool_results = [m for m in messages if m.get("role") == "tool" or m.get("tool_call_id")]
-    react_mode = not tools
-
     if tool_results:
+        joined = " ".join(str(m.get("content", "")) for m in tool_results)
+        if "用户回答：" in joined:
+            answer = f"收到你的选择（{joined.split('用户回答：')[-1].strip()}）。这是对应的 Mock 推荐结果。"
+            if react_mode:
+                return make_response(json.dumps({"action": "final", "answer": answer}, ensure_ascii=False))
+            return make_response(content=answer)
         answer = f"我已经查证过了（{len(tool_results)} 次工具调用）。平台内容的要点如下：\n- 这是一条 Mock 演示回答\n- 工具结果已注入上下文\n\n如需更详细的信息可以继续问我。"
         if react_mode:
             return make_response(json.dumps({"action": "final", "answer": answer}, ensure_ascii=False))
         return make_response(content=answer)
+
+    if "推荐" in last_user or "选" in last_user:
+        args = {"question": "你想要哪个方向的推荐？", "options": ["代码助手", "资讯简报"]}
+        if react_mode:
+            return make_response(json.dumps({"action": "ask_user", "args": args}, ensure_ascii=False))
+        return make_response(tool_calls=[{"id": "mock_call_ask", "type": "function",
+                                          "function": {"name": "ask_user", "arguments": json.dumps(args, ensure_ascii=False)}}])
 
     if "记" in last_user or "笔记" in last_user:
         title = last_user[:16] or "Mock 笔记"

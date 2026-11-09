@@ -242,7 +242,8 @@ export function FloatingAssistant() {
                             if (e.key === 'Escape') setRenaming(null)
                           }} />
                       ) : (
-                        <button className="min-w-0 flex-1 truncate text-left" onClick={() => openSession(s.id)}>{s.title}</button>
+                        <button className="min-w-0 flex-1 truncate text-left disabled:opacity-40"
+                          disabled={streaming} onClick={() => openSession(s.id)}>{s.title}</button>
                       )}
                       <button title="重命名" className="hidden rounded p-0.5 hover:text-brand-600 group-hover:block"
                         onClick={() => setRenaming({ id: s.id, title: s.title })}><Pencil size={10} /></button>

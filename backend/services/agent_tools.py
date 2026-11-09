@@ -97,6 +97,17 @@ def tool_list_memos(db: Session, user: User, args: dict) -> tuple[bool, str, str
     return True, f"列出 {len(rows)} 条笔记", "\n".join(lines)
 
 
+def tool_get_briefing(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
+    from database.models import FeedCard
+
+    bid = int(args.get("briefing_id") or 0)
+    q = db.query(FeedCard).filter(FeedCard.ref_type == "briefing")
+    card = db.get(FeedCard, bid) if bid else q.order_by(FeedCard.id.desc()).first()
+    if not card:
+        return True, "还没有简报", "平台上还没有任何 AI 简报。可以让我帮你生成一份（需确认）。"
+    return True, f"读取简报「{card.title[:30]}」", _clip(f"{card.title}\n\n{card.content}")
+
+
 def tool_list_rss_items(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
     limit = max(1, min(int(args.get("limit") or 10), 20))
     rows = (db.query(RssItem)
@@ -228,6 +239,13 @@ _register("read_memo",
               "memo_id": {"type": "integer"}},
            "required": ["memo_id"]},
           tool_read_memo, write=False, summary_args=["memo_id"])
+
+_register("get_briefing",
+          "读取最新（或指定 id 的）AI 每日简报全文",
+          {"type": "object", "properties": {
+              "briefing_id": {"type": "integer", "description": "不传则返回最新一份"}},
+           "required": []},
+          tool_get_briefing, write=False, summary_args=["briefing_id"])
 
 _register("list_rss_items",
           "列出最新抓取的 RSS 资讯条目",

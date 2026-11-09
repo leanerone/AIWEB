@@ -35,6 +35,12 @@ def run(body: AgentRequest, db: Session = Depends(get_db),
         user: object = Depends(get_current_user)):
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="消息不能为空")
+    # AI 配置预检：在任何落库之前拦截（与 /chat/completions 行为一致）
+    from services.ai_service import get_ai_config
+
+    if not get_ai_config(db, user.username)["api_key"]:
+        raise HTTPException(status_code=400,
+                            detail="AI 未配置：请到「设置 → 个人 AI 设置」填写你的 API Key")
     session = None
     if body.session_id:
         session = db.get(ChatSession, body.session_id)

@@ -141,10 +141,21 @@ export const useAssistant = create<AssistantState>((set, get) => {
             addStep({ tool: data.tool, summary: data.summary, ok: data.ok !== false, ts: data.ts || '' })
             break
           case 'confirm':
-            set({ pendingConfirm: { runId: data.run_id, tool: data.tool, question: data.question, digest: data.digest } })
+            // 挂起时清掉空占位气泡（恢复后会有新气泡承接）
+            set((s) => {
+              const copy = [...s.messages]
+              const last = copy[copy.length - 1]
+              if (last && last.role === 'assistant' && !last.content && !(last.meta?.steps ?? []).length) copy.pop()
+              return { messages: copy, pendingConfirm: { runId: data.run_id, tool: data.tool, question: data.question, digest: data.digest } }
+            })
             break
           case 'ask':
-            set({ pendingAsk: { runId: data.run_id, question: data.question, options: data.options || [] } })
+            set((s) => {
+              const copy = [...s.messages]
+              const last = copy[copy.length - 1]
+              if (last && last.role === 'assistant' && !last.content && !(last.meta?.steps ?? []).length) copy.pop()
+              return { messages: copy, pendingAsk: { runId: data.run_id, question: data.question, options: data.options || [] } }
+            })
             break
           case 'error':
             gotMeta = true
@@ -209,6 +220,7 @@ export const useAssistant = create<AssistantState>((set, get) => {
       api.get<never, ChatSessionItem[]>('/chat/sessions').then((sessions) => set({ sessions })).catch(() => {}),
 
     openSession: (id) => {
+      if (get().streaming) return // 流式中切换会把后续 token 写进新会话视图，禁止
       set({ sessionId: id, historyOpen: false, pendingConfirm: null, pendingAsk: null })
       if (!id) { set({ messages: [] }); return }
       api.get<never, AssistantMsg[]>(`/chat/sessions/${id}/messages`)
@@ -219,6 +231,7 @@ export const useAssistant = create<AssistantState>((set, get) => {
     send: (text) => {
       const state = get()
       if (state.streaming || !text.trim()) return
+      if (state.pendingConfirm || state.pendingAsk) return // 挂起任务未决时不开新请求
       const pageCtx = state.usePageContext ? state.pageContext : ''
       set((s) => ({
         messages: [...s.messages, { role: 'user', content: text.trim() }, { role: 'assistant', content: '' }],
@@ -258,7 +271,8 @@ export const useAssistant = create<AssistantState>((set, get) => {
       const a = get().pendingAsk
       if (!a || get().streaming || !answer.trim()) return
       set({ pendingAsk: null })
-      set((s) => ({ messages: [...s.messages, { role: 'user', content: answer.trim() }] }))
+      // 用户回答 + 空 assistant 气泡：resume 的 delta/done 要写到助手气泡，不能并进用户气泡
+      set((s) => ({ messages: [...s.messages, { role: 'user', content: answer.trim() }, { role: 'assistant', content: '' }] }))
       run('/api/agent/resume', { run_id: a.runId, answer: answer.trim() }).catch((e) => console.warn(e.message))
     },
 

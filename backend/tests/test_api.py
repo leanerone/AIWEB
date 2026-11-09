@@ -1123,3 +1123,35 @@ class TestLoginRateLimit:
         resp2 = client.post("/api/auth/login",
                             json={"username": "administrator", "password": "test123456"})
         assert resp2.status_code == 200
+
+
+class TestAgentExtras:
+    """轮次 D 补强:get_briefing 工具 / run 无 Key 预检不落库。"""
+
+    def test_get_briefing_tool(self, token):
+        from database.models import FeedCard
+        from database.session import SessionLocal
+        from services.agent_tools import tool_get_briefing
+
+        db = SessionLocal()
+        card = FeedCard(kind="ai", title="AI 每日简报 · 测试", content="要点1", ref_type="briefing")
+        db.add(card)
+        db.commit()
+        db.refresh(card)
+        ok, summary, result = tool_get_briefing(db, None, {})
+        assert ok and "AI 每日简报" in result
+        ok2, _, result2 = tool_get_briefing(db, None, {"briefing_id": card.id})
+        assert ok2 and result2.startswith("AI 每日简报")
+        db.query(FeedCard).filter(FeedCard.id == card.id).delete()
+        db.commit()
+        db.close()
+
+    def test_run_no_key_never_persists(self, token, monkeypatch):
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db, username=None: {"api_base": "x", "api_key": "", "model": "m",
+                                                       "system_prompt": "", "auto_exec": False, "source": "env"})
+        before = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
+        resp = client.post("/api/agent/run", json={"message": "hi"}, headers=auth(token))
+        assert resp.status_code == 400 and "未配置" in resp.json()["detail"]
+        after = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
+        assert len(after) == len(before)  # 无孤儿会话/消息

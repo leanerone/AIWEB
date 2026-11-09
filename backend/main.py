@@ -45,7 +45,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="AIWEB - AI 分享平台", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="AIWEB - AI 分享平台", version="0.9.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
