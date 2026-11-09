@@ -250,7 +250,7 @@ export function Settings() {
 
       {/* RSS 订阅 */}
       <div className="space-y-4">
-        <BentoCard className="p-6" delay={0.06}>
+        <BentoCard id="rss" className="scroll-mt-24 p-6" delay={0.06}>
           <div className="mb-4 flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600"><Rss size={17} /></span>
             <h2 className="mr-auto text-sm font-bold">AI 资讯订阅</h2>

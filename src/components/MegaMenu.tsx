@@ -19,11 +19,12 @@ const RES_ITEMS = [
   { to: '/resources?type=skill', title: 'Skills 技能包', desc: 'SKILL.md 规范技能，上传自动提取元数据', img: '/hero/p-skills-code.jpg' },
   { to: '/resources?type=tool', title: '小工具', desc: '脚本与小程序，覆盖排障、报表、批处理', img: '/hero/p-tools-desk.jpg' },
   { to: '/resources?type=plugin', title: '插件', desc: 'IDE 与平台扩展，团队内一键分发', img: '/hero/p-plugin-robot.jpg' },
-  { to: '/memos', title: 'Notes 链接库', desc: 'notes:// 解析归档，一键唤起本机客户端', img: '/hero/p-notes-library.jpg' },
+  { to: '/memos#links', title: 'Notes 链接库', desc: 'notes:// 解析归档，一键唤起本机客户端', img: '/hero/p-notes-library.jpg' },
 ]
 const AI_CARDS = [
   { to: '/chat', title: 'AI 对话', desc: 'SSE 流式问答，可引用资源上下文', img: '/hero/c-ai-network.jpg' },
-  { to: '/', title: '每日简报', desc: '资讯聚合自动生成，沉淀到首页动态', img: '/hero/c-briefing-fans.jpg' },
+  // 每日简报不是一个页面：订阅源在设置页管理，生成按钮在首页。这里带锚点直达设置页的订阅区块
+  { to: '/settings#rss', title: '资讯订阅', desc: 'RSS 源管理与简报设置', img: '/hero/c-briefing-fans.jpg' },
 ]
 const MENUS = ['resources', 'ai'] as const
 type MenuId = typeof MENUS[number]
@@ -148,8 +149,13 @@ export function MegaMenu() {
       const a = (e.target as Element).closest?.('a[data-spa]') as HTMLAnchorElement | null
       if (!a) return
       e.preventDefault()
+      const [path, hash] = (a.getAttribute('href') || '').split('#')
       close()
-      nav(a.getAttribute('href')!)
+      nav(path)
+      if (hash) {
+        // 等路由渲染完成后滚到锚点区块（scroll-mt-* 负责避开吸顶头部）
+        window.setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 180)
+      }
     })
     cleanups.push(() => window.clearTimeout(closeTimer))
     return () => cleanups.forEach((fn) => fn())

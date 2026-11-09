@@ -123,7 +123,7 @@ export function Memos() {
       </div>
 
       {/* Notes 链接库 */}
-      <BentoCard className="p-5" delay={0.05}>
+      <BentoCard id="links" className="scroll-mt-24 p-5" delay={0.05}>
         <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold">Notes 链接库</h2>
