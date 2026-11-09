@@ -14,6 +14,10 @@
 |---|---|
 | ![明亮](docs/screenshots/dashboard-light.png) | ![深色](docs/screenshots/dashboard-dark.png) |
 
+| 悬浮 AI 助手（Agent 对话 + 任务卡） |
+|---|
+| ![AI 助手](docs/screenshots/assistant-dark.png) |
+
 
 ## 功能总览
 
