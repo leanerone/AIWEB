@@ -13,3 +13,10 @@ theme-preview/
 library-preview/
 aihub-preview/
 liquid-preview/
+
+# Python 虚拟环境
+.venv/
+backend/.venv/
+
+# 解压目录
+_unpacked/

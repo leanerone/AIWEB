@@ -225,7 +225,7 @@ class TestChatApi:
     def test_completions_requires_ai_key(self, token, monkeypatch):
         # 未配置 Key → 400 预检，且不落库任何会话/消息
         monkeypatch.setattr("services.ai_service.get_ai_config",
-                            lambda db: {"api_base": "x", "api_key": "", "model": "m"})
+                            lambda db, username=None: {"api_base": "x", "api_key": "", "model": "m"})
         before = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
         resp = client.post("/api/chat/completions", json={"message": "你好"}, headers=auth(token))
         assert resp.status_code == 400 and "未配置" in resp.json()["detail"]
@@ -237,9 +237,9 @@ class TestChatApi:
 
         replies = iter(["第一版回答"])
         monkeypatch.setattr("services.ai_service.get_ai_config",
-                            lambda db: {"api_base": "x", "api_key": "sk-test", "model": "m"})
+                            lambda db, username=None: {"api_base": "x", "api_key": "sk-test", "model": "m"})
         monkeypatch.setattr(chat_routes, "stream_chat",
-                            lambda db, messages: iter([next(replies, "第二版回答")]))
+                            lambda db, messages, username=None: iter([next(replies, "第二版回答")]))
 
         # 正常流式对话
         resp = client.post("/api/chat/completions", json={"message": "什么是 EAP"},
@@ -272,13 +272,13 @@ class TestChatApi:
 
     def test_regenerate_requires_session(self, token, monkeypatch):
         monkeypatch.setattr("services.ai_service.get_ai_config",
-                            lambda db: {"api_base": "x", "api_key": "sk-test", "model": "m"})
+                            lambda db, username=None: {"api_base": "x", "api_key": "sk-test", "model": "m"})
         resp = client.post("/api/chat/completions", json={"regenerate": True}, headers=auth(token))
         assert resp.status_code == 400
 
     def test_empty_message_rejected(self, token, monkeypatch):
         monkeypatch.setattr("services.ai_service.get_ai_config",
-                            lambda db: {"api_base": "x", "api_key": "sk-test", "model": "m"})
+                            lambda db, username=None: {"api_base": "x", "api_key": "sk-test", "model": "m"})
         assert client.post("/api/chat/completions", json={"message": "  "},
                            headers=auth(token)).status_code == 400
 
@@ -542,13 +542,13 @@ class TestRagChat:
 
         captured = {}
 
-        def fake_stream(db, messages):
+        def fake_stream(db, messages, username=None):
             captured["messages"] = messages
             return iter(["好的"])
 
         monkeypatch.setattr(chat_routes, "stream_chat", fake_stream)
         monkeypatch.setattr("services.ai_service.get_ai_config",
-                            lambda db: {"api_base": "x", "api_key": "k", "model": "m"})
+                            lambda db, username=None: {"api_base": "x", "api_key": "k", "model": "m"})
 
         rid = client.post("/api/resources",
                           data={"type": "skill", "name": "EAP 协议速查",
@@ -579,8 +579,9 @@ class TestBriefingService:
         from services.briefing import build_briefing
 
         monkeypatch.setattr("services.ai_service.get_ai_config",
-                            lambda db: {"api_base": "x", "api_key": "k", "model": "m"})
-        monkeypatch.setattr("services.briefing.stream_chat", lambda db, msgs: iter(["简报正文"]))
+                            lambda db, username=None: {"api_base": "x", "api_key": "k", "model": "m"})
+        monkeypatch.setattr("services.briefing.stream_chat",
+                            lambda db, msgs, username=None: iter(["简报正文"]))
 
         db = SessionLocal()
         s = RssSource(name="mocksrc", url="https://example.com/bf.xml")
@@ -750,15 +751,114 @@ class TestSpaHosting:
 
 
 class TestSettingsApi:
+    def _admin(self):
+        from services.auth_service import generate_token
+        return auth(generate_token("administrator", "admin"))
+
     def test_put_and_masked(self, token):
+        # 全局 AI 键仅管理员可写（v0.9 安全修复）：普通用户 403
+        assert client.put("/api/settings", json={"ai_api_key": "sk-x"},
+                          headers=auth(token)).status_code == 403
         assert client.put("/api/settings", json={"ai_api_key": "sk-secret", "ai_model": "m1"},
-                          headers=auth(token)).json()["success"]
+                          headers=self._admin()).json()["success"]
         data = client.get("/api/settings", headers=auth(token)).json()["data"]
         assert data["ai_api_key"] == "********"          # 打码
         assert data["effective"]["has_key"] is True
         # 打码值回传不会覆盖真实 key
-        client.put("/api/settings", json={"ai_api_key": "********"}, headers=auth(token))
+        client.put("/api/settings", json={"ai_api_key": "********"}, headers=self._admin())
         assert client.get("/api/settings", headers=auth(token)).json()["data"]["effective"]["has_key"] is True
 
     def test_unknown_key_ignored(self, token):
-        assert client.put("/api/settings", json={"evil_key": "x"}, headers=auth(token)).json()["success"]
+        assert client.put("/api/settings", json={"evil_key": "x"}, headers=self._admin()).json()["success"]
+
+
+class TestUserAiConfig:
+    """个人 AI 配置：加密落库 / 打码读 / 生效链（user → global → env）/ 显式清除。"""
+
+    def _put(self, token, **body):
+        return client.put("/api/me/ai-config", json=body, headers=auth(token))
+
+    def _get(self, token):
+        return client.get("/api/me/ai-config", headers=auth(token)).json()["data"]
+
+    def _sso_username(self, token) -> str:
+        return client.get("/api/auth/verify", headers=auth(token)).json()["data"]["username"]
+
+    def _reset(self, token):
+        self._put(token, api_key="-", api_base="", model="", system_prompt="", auto_exec=False)
+
+    def test_empty_then_roundtrip(self, token):
+        self._reset(token)
+        d = self._get(token)
+        assert d["has_config"] is False
+
+        assert self._put(token, api_key="sk-personal-123456", api_base="https://api.test/v1",
+                         model="test-model", system_prompt="你是测试助手").json()["success"]
+        d = self._get(token)
+        assert d["has_config"] is True
+        assert d["api_key"] == "********"          # 打码
+        assert d["api_base"] == "https://api.test/v1"
+        assert d["model"] == "test-model"
+        assert d["system_prompt"] == "你是测试助手"
+
+    def test_encrypted_at_rest(self, token):
+        from database.session import SessionLocal
+        from database.models import UserAiConfig
+
+        self._reset(token)
+        self._put(token, api_key="sk-personal-123456")
+        db = SessionLocal()
+        uc = db.query(UserAiConfig).filter(
+            UserAiConfig.username == self._sso_username(token)).first()
+        db.close()
+        assert uc is not None and uc.api_key_encrypted
+        try:
+            import services.secret_box as sb  # noqa: F401
+            has_crypto = sb._FERNET is not None
+        except ImportError:
+            has_crypto = False
+        if has_crypto:
+            assert uc.api_key_encrypted.startswith("enc:v1:")  # 明文 Key 绝不落库
+            assert "sk-personal" not in uc.api_key_encrypted
+
+    def test_effective_chain_user_overrides_global(self, token):
+        from services.auth_service import generate_token
+        admin = auth(generate_token("administrator", "admin"))
+        client.put("/api/settings", json={"ai_api_key": "sk-global-9999"}, headers=admin)
+
+        self._reset(token)
+        cfg = self._get(token)
+        assert cfg["effective"]["source"] == "global"       # 个人无配置 → 全局
+
+        self._put(token, api_key="sk-personal-123456")      # 只配 Key
+        cfg = self._get(token)
+        assert cfg["effective"]["source"] == "user"         # 个人键覆盖
+
+        self._put(token, api_key="-")                       # 清除个人键 → 回落全局
+        cfg = self._get(token)
+        assert cfg["api_key"] == "" and cfg["effective"]["source"] == "global"
+
+    def test_masked_value_never_overwrites(self, token):
+        from database.session import SessionLocal
+        from database.models import UserAiConfig
+        from services.secret_box import decrypt
+
+        self._reset(token)
+        self._put(token, api_key="sk-keep-this-one")
+        self._put(token, api_key="********")                # 打码值回传不覆盖
+        db = SessionLocal()
+        uc = db.query(UserAiConfig).filter(
+            UserAiConfig.username == self._sso_username(token)).first()
+        tail = decrypt(uc.api_key_encrypted)
+        db.close()
+        assert tail == "sk-keep-this-one"
+
+    def test_short_key_rejected(self, token):
+        assert self._put(token, api_key="abc").status_code == 400
+
+    def test_auto_exec_flag(self, token):
+        self._reset(token)
+        assert self._get(token)["auto_exec"] is False
+        self._put(token, auto_exec=True)
+        assert self._get(token)["auto_exec"] is True
+        self._reset(token)

@@ -190,3 +190,13 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
   （未读轮询、点击直达、全部已读）
 - 坑：external-content FTS5 表按 rowid DELETE 会报 malformed database —— 改普通 FTS 表解决
 - pytest 40 → 43 全过；build 通过；真实服务器冒烟（中文检索/收藏/通知）通过；已推送
+
+### 2026-11-10 00:31-00:55 · v0.9 阶段一：AI Key 个人化（通宵迭代开始）
+- 新表 user_ai_configs（Key Fernet 加密落库，密钥派生自 data/secret.key；cryptography 缺失时诚实降级明文+警告）
+- 新路由 /api/me/ai-config GET/PUT（打码读、打码值不覆盖、"-" 显式清除、尾部4位 reveal 校验接口）
+- ai_service.get_ai_config(db, username) 生效链：个人 → 全局 Setting KV → .env，带 source 标识
+- 全部调用点（chat/describe/rss-card/briefing）传 username；scheduler 定时简报仍走全局
+- **安全修复**：PUT /api/settings 全局键改 require_admin（原任何登录用户可改全局 Key）
+- ChatMessage 加 meta JSON 列 + ensure_schema_upgrade 幂等 ALTER 迁移（为 Agent 轨迹预留）
+- Settings 页：「AI 配置」全局大卡退役 → 「个人 AI 设置」折叠卡（生效链展示/auto_exec 开关/测试连接）
+- 测试：51 → 57（UserAiConfig 往返/加密落库/生效链/打码/短Key拒绝/权限 403）

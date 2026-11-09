@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
     message: str = ""
     context_resource_id: int | None = None
     regenerate: bool = False  # 重新生成：不新增用户消息，重答上一问
+    page_context: str | None = None  # 悬浮助手：用户当前所在页面（如「资源详情：xxx」）
 
 
 class RenameIn(BaseModel):
@@ -94,7 +95,7 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
     # AI 配置预检：在任何落库操作之前拦截，避免留下没有回复的孤儿用户消息
     from services.ai_service import get_ai_config
 
-    if not get_ai_config(db)["api_key"]:
+    if not get_ai_config(db, user.username)["api_key"]:
         raise HTTPException(status_code=400,
                             detail="AI 未配置：请到「设置 → AI 配置」填写 API Key")
 
@@ -142,13 +143,15 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
     )
     messages = [{"role": m.role, "content": m.content} for m in reversed(history)]
 
-    # 系统提示词：人设（设置页可配）+ 引用资源上下文
-    from database.models import Setting
+    # 系统提示词：人设（个人 AI 设置优先，回落全局）+ 引用资源上下文 + 页面上下文
+    from services.ai_service import get_ai_config
 
     system_parts = []
-    persona = next((s.value for s in db.query(Setting).all() if s.key == "ai_system_prompt"), "")
+    persona = get_ai_config(db, user.username).get("system_prompt", "")
     if persona.strip():
         system_parts.append(persona.strip()[:2000])
+    if body.page_context:
+        system_parts.append(f"用户当前停留在平台的「{body.page_context}」页面，回答可结合该场景。")
     if body.context_resource_id:
         res = db.get(Resource, body.context_resource_id)
         if res:
@@ -178,6 +181,7 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
 
     session_id = session.id
     session_title = session.title
+    username = user.username
 
     def event_stream():
         def sse(event: str, data) -> str:
@@ -186,7 +190,7 @@ def completions(body: ChatRequest, db: Session = Depends(get_db),
         yield sse("meta", {"session_id": session_id, "title": session_title})
         collected = []
         try:
-            for piece in stream_chat(db, messages):
+            for piece in stream_chat(db, messages, username=username):
                 collected.append(piece)
                 yield sse("delta", {"text": piece})
         except AiNotConfigured as e:

@@ -167,3 +167,13 @@ export interface SettingsData {
   ai_system_prompt: string
   effective: { api_base: string; has_key: boolean; model: string }
 }
+
+export interface MyAiConfigData {
+  has_config: boolean
+  api_base: string
+  api_key: string
+  model: string
+  system_prompt: string
+  auto_exec: boolean
+  effective: { api_base: string; model: string; has_key: boolean; source: 'user' | 'global' | 'env'; auto_exec: boolean }
+}

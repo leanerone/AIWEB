@@ -1,10 +1,14 @@
-"""设置路由：全局 KV 配置（AI 配置等），读时敏感值打码。"""
+"""设置路由：全局 KV 配置兜底（个人 AI 配置见 routes/me.py）。
+
+安全：全局 AI 键影响所有人，PUT 仅限管理员（v0.9 修复：此前任何登录用户可改全局 Key）。
+个人 Key 请到「设置 → 个人 AI 设置」，加密落库、互不影响。
+"""
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database.models import Setting
 from database.session import get_db
-from routes.deps import get_current_user
+from routes.deps import get_current_user, require_admin
 from services.ai_service import get_ai_config
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -33,7 +37,7 @@ def get_settings(db: Session = Depends(get_db), _: object = Depends(get_current_
 
 @router.put("")
 def put_settings(body: dict, db: Session = Depends(get_db),
-                 _: object = Depends(get_current_user)):
+                 _: object = Depends(require_admin)):
     for key, value in (body or {}).items():
         if key not in ALLOWED_KEYS:
             continue

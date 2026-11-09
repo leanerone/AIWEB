@@ -1,13 +1,137 @@
-import { BookmarkPlus, DatabaseBackup, ExternalLink, Loader2, Plus, RefreshCw, Rss, Save, Settings as Cog, Sparkles, Trash2, UserPlus, Users } from 'lucide-react'
+import { BookmarkPlus, ChevronDown, ChevronRight, DatabaseBackup, ExternalLink, KeyRound, Loader2, Plus, RefreshCw, Rss, Save, Sparkles, Trash2, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
 import { useToast } from '../components/ui/Toast'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import type { RssItem, RssSourceItem, SettingsData } from '../types'
+import type { MyAiConfigData, RssItem, RssSourceItem } from '../types'
 
 interface UserItem { id: number; username: string; display_name: string; role: string; department: string }
+
+/** 个人 AI 设置：每人自己的 Key（加密存储），折叠轻量入口 */
+function MyAiConfig() {
+  const toast = useToast()
+  const me = useAuth((s) => s.user)
+  const [cfg, setCfg] = useState<MyAiConfigData | null>(null)
+  const [apiKey, setApiKey] = useState('')
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState('')
+
+  const load = () => api.get<never, MyAiConfigData>('/me/ai-config').then(setCfg).catch(() => {})
+  useEffect(() => { load() }, [])
+
+  const save = async () => {
+    if (!cfg) return
+    setBusy(true)
+    try {
+      const body: Record<string, unknown> = {
+        api_base: cfg.api_base, model: cfg.model,
+        system_prompt: cfg.system_prompt, auto_exec: cfg.auto_exec,
+      }
+      if (apiKey && apiKey !== '********') body.api_key = apiKey
+      await api.put('/me/ai-config', body)
+      toast('success', '个人 AI 设置已保存')
+      setApiKey('')
+      load()
+    } catch (e) {
+      toast('error', (e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const sourceLabel = {
+    user: '✓ 使用你的个人 Key',
+    global: '回落管理员配置的全局 Key',
+    env: '回落服务端 .env 配置',
+  }[cfg?.effective.source ?? 'env']
+
+  return (
+    <BentoCard className="h-fit p-6" delay={0.04}>
+      <button className="mb-1 flex w-full items-center gap-2 text-left" onClick={() => setOpen((v) => !v)}>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><KeyRound size={17} /></span>
+        <span className="mr-auto">
+          <span className="block text-sm font-bold">个人 AI 设置</span>
+          <span className="block text-[11px] text-subtle">
+            {cfg?.effective.has_key ? sourceLabel : '未配置 Key —— 悬浮助手 / 简报等功能需要'}
+          </span>
+        </span>
+        {cfg?.effective.has_key && <span className="chip bg-emerald-50 text-emerald-600">Key 就绪</span>}
+        {open ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
+      </button>
+      {open && cfg && (
+        <div className="space-y-3 border-t border-gray-100 pt-3">
+          <div>
+            <label className="mb-1 block text-xs text-subtle">API Key（仅本人可见，加密存储）</label>
+            <input className="input" type="password" placeholder={cfg.api_key || 'sk-...'}
+              value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+            <p className="mt-1 text-[11px] text-gray-400">留空不修改；填写后优先于全局配置生效</p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-subtle">API Base（可选，默认同全局）</label>
+              <input className="input" placeholder="https://api.openai.com/v1" value={cfg.api_base}
+                onChange={(e) => setCfg({ ...cfg, api_base: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-subtle">模型（可选）</label>
+              <input className="input" placeholder={cfg.effective.model || 'gpt-4o-mini'} value={cfg.model}
+                onChange={(e) => setCfg({ ...cfg, model: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-subtle">助手人设（可选，只对你生效）</label>
+            <textarea className="input min-h-[64px]" placeholder="例：回答简洁专业，使用中文。"
+              value={cfg.system_prompt} onChange={(e) => setCfg({ ...cfg, system_prompt: e.target.value })} />
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-subtle">
+            <input type="checkbox" className="h-4 w-4 rounded border-gray-300" checked={cfg.auto_exec}
+              onChange={(e) => setCfg({ ...cfg, auto_exec: e.target.checked })} />
+            助手写操作自动执行（关闭时每次写操作都会先征求你的确认）
+          </label>
+          <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-subtle">
+            当前生效：{cfg.effective.api_base} · {cfg.effective.model || '默认模型'} · {sourceLabel}
+          </p>
+          {testResult && (
+            <p className={`rounded-xl px-3 py-2 text-xs ${testResult.startsWith('✓') ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+              {testResult}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button className="btn-primary flex-1" onClick={save} disabled={busy}>
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} 保存
+            </button>
+            <button className="btn-ghost flex-1" disabled={testing}
+              onClick={async () => {
+                setTesting(true)
+                setTestResult('')
+                try {
+                  const r = await api.get<never, { success: boolean; message?: string; data?: { base: string; model: string; count: number } }>('/ai/test')
+                  setTestResult(r.success && r.data
+                    ? `✓ 连接成功：${r.data.base} · ${r.data.model} · 可用模型 ${r.data.count} 个`
+                    : `✗ ${r.message || '连接失败'}`)
+                } catch (e) {
+                  setTestResult(`✗ ${(e as Error).message}`)
+                } finally {
+                  setTesting(false)
+                }
+              }}>
+              {testing ? <Loader2 size={15} className="animate-spin" /> : null} 测试连接
+            </button>
+          </div>
+          {me?.role === 'admin' && (
+            <p className="text-[11px] text-gray-400">
+              管理员提示：全局兜底 Key 请配置在 backend/.env（AI_API_KEY），此界面不再保存全局键。
+            </p>
+          )}
+        </div>
+      )}
+    </BentoCard>
+  )
+}
 
 /** 成员管理（仅管理员可见） */
 function MemberAdmin() {
@@ -104,45 +228,18 @@ function MemberAdmin() {
 
 export function Settings() {
   const toast = useToast()
-  const [cfg, setCfg] = useState<SettingsData | null>(null)
-  const [apiKey, setApiKey] = useState('')
-  const [busy, setBusy] = useState(false)
-
   const [sources, setSources] = useState<RssSourceItem[]>([])
   const [items, setItems] = useState<RssItem[]>([])
   const [newName, setNewName] = useState('')
   const [newUrl, setNewUrl] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [delId, setDelId] = useState<number | null>(null)
-  const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState('')
 
   const load = () => {
-    api.get<never, SettingsData>('/settings').then(setCfg).catch((e) => toast('error', (e as Error).message))
     api.get<never, RssSourceItem[]>('/rss/sources').then(setSources).catch(() => {})
     api.get<never, { items: RssItem[] }>('/rss/items?limit=30').then((d) => setItems(d.items)).catch(() => {})
   }
   useEffect(() => { load() }, [])
-
-  const saveAi = async () => {
-    if (!cfg) return
-    setBusy(true)
-    try {
-      const body: Record<string, string> = {}
-      if (cfg.ai_api_base) body.ai_api_base = cfg.ai_api_base
-      if (cfg.ai_model) body.ai_model = cfg.ai_model
-      body.ai_system_prompt = cfg.ai_system_prompt
-      if (apiKey && !/^\*+$/.test(apiKey)) body.ai_api_key = apiKey
-      await api.put('/settings', body)
-      toast('success', 'AI 配置已保存')
-      setApiKey('')
-      load()
-    } catch (e) {
-      toast('error', (e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const addSource = async () => {
     if (!newUrl.trim()) { toast('info', '请填写 RSS 地址'); return }
@@ -178,75 +275,11 @@ export function Settings() {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {/* AI 配置 */}
-      <BentoCard className="h-fit p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><Cog size={17} /></span>
-          <h2 className="text-sm font-bold">AI 配置（OpenAI 兼容）</h2>
-        </div>
-        {cfg ? (
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1 block text-xs text-subtle">API Base</label>
-              <input className="input" placeholder="https://api.openai.com/v1" value={cfg.ai_api_base}
-                onChange={(e) => setCfg({ ...cfg, ai_api_base: e.target.value })} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-subtle">
-                API Key {cfg.effective.has_key && <span className="ml-1 text-emerald-600">✓ 已配置</span>}
-              </label>
-              <input className="input" type="password" placeholder={cfg.ai_api_key || 'sk-...'} value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-subtle">模型</label>
-              <input className="input" placeholder="gpt-4o-mini" value={cfg.ai_model}
-                onChange={(e) => setCfg({ ...cfg, ai_model: e.target.value })} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-subtle">AI 人设 / 系统提示词（可选，对所有对话生效）</label>
-              <textarea className="input min-h-[72px]" placeholder="例：你是半导体 CIM 团队的 AI 助手，回答简洁专业，使用中文。"
-                value={cfg.ai_system_prompt}
-                onChange={(e) => setCfg({ ...cfg, ai_system_prompt: e.target.value })} />
-            </div>
-            <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-subtle">
-              当前生效：{cfg.effective.api_base} · {cfg.effective.model} ·
-              Key {cfg.effective.has_key ? '已就绪' : '未配置（对话将诚实报错）'}
-            </p>
-            {testResult && (
-              <p className={`rounded-xl px-3 py-2 text-xs ${testResult.startsWith('✓') ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                {testResult}
-              </p>
-            )}
-            <div className="flex gap-2">
-              <button className="btn-primary flex-1" onClick={saveAi} disabled={busy}>
-                {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} 保存配置
-              </button>
-              <button className="btn-ghost flex-1" disabled={testing}
-                onClick={async () => {
-                  setTesting(true)
-                  setTestResult('')
-                  try {
-                    const r = await api.get<never, { success: boolean; message?: string; data?: { base: string; model: string; count: number; available: string[] } }>('/ai/test')
-                    if (r.success && r.data) {
-                      setTestResult(`✓ 连接成功：${r.data.base} · 可用模型 ${r.data.count} 个${r.data.available.includes(r.data.model) ? `（含当前 ${r.data.model}）` : `（⚠ 未找到 ${r.data.model}）`}`)
-                    } else {
-                      setTestResult(`✗ ${r.message || '连接失败'}`)
-                    }
-                  } catch (e) {
-                    setTestResult(`✗ ${(e as Error).message}`)
-                  } finally {
-                    setTesting(false)
-                  }
-                }}>
-                {testing ? <Loader2 size={15} className="animate-spin" /> : null} 测试连接
-              </button>
-            </div>
-          </div>
-        ) : (
-          <Loader2 className="mx-auto animate-spin text-brand-400" size={24} />
-        )}
-      </BentoCard>
+      {/* 个人 AI 设置（折叠轻量入口）+ 管理员工具 */}
+      <div className="space-y-4">
+        <MyAiConfig />
+        <MemberAdmin />
+      </div>
 
       {/* RSS 订阅 */}
       <div className="space-y-4">
@@ -323,8 +356,6 @@ export function Settings() {
           </div>
         </BentoCard>
       </div>
-
-      <MemberAdmin />
 
       <ConfirmDialog open={!!delId} danger title="删除订阅源" message="删除后该源的资讯条目也会清除。"
         onConfirm={delSource} onCancel={() => setDelId(null)} />

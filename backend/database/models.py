@@ -1,4 +1,5 @@
-"""数据模型：用户 / 资源库 / 笔记 / Notes 链接 / AI 会话 / RSS / 内容卡 / 设置 / 收藏 / 通知。"""
+"""数据模型：用户 / 资源库 / 笔记 / Notes 链接 / AI 会话 / RSS / 内容卡 / 设置 / 收藏 / 通知
+/ 个人 AI 配置 / Agent 运行记录 / Agent 工具审计。"""
 from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
@@ -19,6 +20,55 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
     role: Mapped[str] = mapped_column(String(16), default="user")  # admin / user
     department: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
+class UserAiConfig(Base):
+    """个人 AI 配置：每人自己的 Key/Base/模型/人设，加密落库。
+
+    生效链：个人配置 → 全局 Setting KV（仅管理员可写）→ backend/.env。
+    """
+
+    __tablename__ = "user_ai_configs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    api_base: Mapped[str] = mapped_column(String(256), default="")
+    api_key_encrypted: Mapped[str] = mapped_column(String(1024), default="")
+    model: Mapped[str] = mapped_column(String(128), default="")
+    system_prompt: Mapped[str] = mapped_column(Text, default="")
+    auto_exec: Mapped[bool] = mapped_column(Boolean, default=False)  # 写工具自动执行（observe/auto）
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
+
+
+class AgentRun(Base):
+    """一次 Agent 运行（悬浮助手的多步任务）：状态机 running →
+    waiting_confirm / waiting_input → running → done / failed / stopped。
+    state 存完整对话+工具轨迹，resume 时从这里续跑。"""
+
+    __tablename__ = "agent_runs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id", ondelete="CASCADE"), index=True)
+    username: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(20), default="running", index=True)
+    state: Mapped[str] = mapped_column(Text, default="{}")  # JSON：messages / pending 工具调用等
+    steps: Mapped[list] = mapped_column(JSON, default=list)  # 任务卡轨迹 [{tool, args_digest, ok, summary}]
+    result: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=now, onupdate=now)
+
+
+class AgentToolCall(Base):
+    """Agent 工具调用审计：谁在何时用什么参数调了什么工具（结果只存摘要）。"""
+
+    __tablename__ = "agent_tool_calls"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("agent_runs.id", ondelete="CASCADE"), index=True)
+    username: Mapped[str] = mapped_column(String(64), index=True)
+    tool: Mapped[str] = mapped_column(String(64))
+    args: Mapped[dict] = mapped_column(JSON, default=dict)
+    ok: Mapped[bool] = mapped_column(Boolean, default=True)
+    result_digest: Mapped[str] = mapped_column(String(512), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
@@ -108,6 +158,7 @@ class ChatMessage(Base):
     session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id", ondelete="CASCADE"), index=True)
     role: Mapped[str] = mapped_column(String(16))  # user / assistant
     content: Mapped[str] = mapped_column(Text, default="")
+    meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # Agent 模式：工具轨迹等
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
     session: Mapped[ChatSession] = relationship(back_populates="messages")
 

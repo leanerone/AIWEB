@@ -13,13 +13,13 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 @router.get("/test")
-def test_connection(db: Session = Depends(get_db), _: object = Depends(get_current_user)):
-    """测试 AI 连接：GET {base}/models，诚实返回结果"""
+def test_connection(db: Session = Depends(get_db), user: object = Depends(get_current_user)):
+    """测试 AI 连接：GET {base}/models，诚实返回结果（优先测个人配置）"""
     import requests as rq
 
     from services.ai_service import get_ai_config
 
-    cfg = get_ai_config(db)
+    cfg = get_ai_config(db, user.username)
     if not cfg["api_key"]:
         return {"success": False, "message": "未配置 API Key"}
     try:
@@ -52,7 +52,7 @@ def describe(body: dict, db: Session = Depends(get_db), user: object = Depends(g
         + "请写一句话中文简介（不超过40字），说明它做什么、给谁用，直接输出简介本身。"
     )
     try:
-        text = "".join(stream_chat(db, [{"role": "user", "content": prompt}]))
+        text = "".join(stream_chat(db, [{"role": "user", "content": prompt}], username=user.username))
     except AiNotConfigured as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -76,7 +76,7 @@ def rss_to_card(body: dict, db: Session = Depends(get_db), user: object = Depend
         f"标题：{item.title}\n摘要：{item.summary}"
     )
     try:
-        content = "".join(stream_chat(db, [{"role": "user", "content": prompt}]))
+        content = "".join(stream_chat(db, [{"role": "user", "content": prompt}], username=user.username))
     except AiNotConfigured as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -102,7 +102,7 @@ def daily_briefing(db: Session = Depends(get_db), user: object = Depends(get_cur
     from services.briefing import build_briefing
 
     try:
-        data = build_briefing(db, created_by=user.username)
+        data = build_briefing(db, created_by=user.username, username=user.username)
     except AiNotConfigured as e:
         raise HTTPException(status_code=400, detail=str(e))
     except ValueError as e:

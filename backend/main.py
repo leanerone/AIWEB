@@ -19,6 +19,9 @@ logging.basicConfig(level=logging.INFO,
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from database.session import ensure_schema_upgrade
+
+    ensure_schema_upgrade()  # create_all 不给已有表加列，这里幂等补齐
     db = SessionLocal()
     try:
         from routes.auth import seed_users
@@ -52,12 +55,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routes import (ai, admin, auth, bookmarks, chat, comments, feed, memos,
+from routes import (ai, admin, auth, bookmarks, chat, comments, feed, me, memos,
                     notes, notifications, resources, rss, search,
                     settings as settings_routes)  # noqa: E402
 
 API = "/api"
 app.include_router(auth.router, prefix=API)
+app.include_router(me.router, prefix=API)
 app.include_router(ai.router, prefix=API)
 app.include_router(admin.router, prefix=API)
 app.include_router(resources.router, prefix=API)

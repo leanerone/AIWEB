@@ -12,8 +12,11 @@ from services.ai_service import stream_chat
 logger = logging.getLogger("aiweb.briefing")
 
 
-def build_briefing(db, created_by: str = "system") -> dict:
-    """返回 {id, title, content}；无 RSS 条目抛 ValueError，AI 故障照常向上抛"""
+def build_briefing(db, created_by: str = "system", username: str | None = None) -> dict:
+    """返回 {id, title, content}；无 RSS 条目抛 ValueError，AI 故障照常向上抛。
+
+    username 传入时用该用户的 AI 配置生成（手动点按钮场景）；
+    调度器定时生成不传，走全局配置。"""
     items = (
         db.query(RssItem)
         .join(RssSource, RssItem.source_id == RssSource.id)
@@ -32,7 +35,7 @@ def build_briefing(db, created_by: str = "system") -> dict:
         "2. 最后加一行「# 亮点」点评最有价值的一条；\n"
         "总长度不超过 400 字，直接输出简报内容。\n\n" + lines
     )
-    report = "".join(stream_chat(db, [{"role": "user", "content": prompt}]))
+    report = "".join(stream_chat(db, [{"role": "user", "content": prompt}], username=username))
     if not report.strip():
         raise RuntimeError("AI 未返回内容")
 
