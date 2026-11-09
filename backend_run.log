@@ -192,3 +192,202 @@ INFO:     127.0.0.1:56500 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
 INFO:     127.0.0.1:58224 - "POST /api/agent/run HTTP/1.1" 200 OK
 INFO:     127.0.0.1:63015 - "GET /api/chat/sessions HTTP/1.1" 200 OK
 INFO:     127.0.0.1:59733 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65234 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51628 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64665 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57845 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60946 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60745 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57599 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49271 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52175 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64502 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51306 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56535 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56573 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56574 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56575 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56576 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:56577 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56578 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56583 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56584 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56585 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56586 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56588 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56589 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56590 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+2026-11-10 02:27:15,071 WARNING aiweb.auth: 账号 e2e-ratelimit-probe（127.0.0.1）连续 5 次登录失败，锁定 15 分钟
+INFO:     127.0.0.1:56591 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56592 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:56593 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63819 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62525 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57718 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57631 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51905 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51457 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49685 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65348 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54848 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51506 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61520 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58467 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62239 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54174 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56846 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56847 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56849 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56850 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:56851 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56852 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56853 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56856 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56857 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56858 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56859 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56860 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:56861 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:56862 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:56863 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:56864 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:56865 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:56866 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57659 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49477 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59574 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65504 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54140 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62584 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55426 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49171 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57610 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51691 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56248 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60922 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61652 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61653 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61654 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61655 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:61656 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61657 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61658 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61661 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61662 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61663 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61664 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61665 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61666 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61667 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61668 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+2026-11-10 02:45:55,651 WARNING aiweb.auth: 账号 e2e-ratelimit-probe（127.0.0.1）连续 5 次登录失败，锁定 15 分钟
+INFO:     127.0.0.1:61669 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61670 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:61671 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55213 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50362 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57306 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60697 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60598 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64895 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63851 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59092 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56547 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50894 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50362 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55744 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49473 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59520 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59538 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59539 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59540 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59541 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:59543 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59544 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59545 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59549 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59550 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59551 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59552 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59553 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59554 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59555 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59556 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59557 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59558 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59559 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59560 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59561 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59562 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59563 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:59565 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59566 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59567 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59570 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59571 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59573 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59574 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59575 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59576 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59577 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59578 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59579 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59580 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59581 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59582 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59583 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59584 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59585 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:59586 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59587 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59589 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59592 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59593 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59594 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59595 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59596 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59597 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59598 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59599 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59600 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59601 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59603 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59604 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59605 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59606 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59607 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:59608 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59609 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59611 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59614 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59615 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59616 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59617 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59618 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59619 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59620 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59621 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59622 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59623 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59624 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59625 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59626 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59627 - "GET /api/auth/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59629 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:59630 - "GET /api/resources?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59631 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59632 - "POST /api/agent/run HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59635 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59636 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59637 - "GET /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59638 - "PUT /api/me/ai-config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59639 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59640 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59641 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59642 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59643 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59644 - "POST /api/auth/login HTTP/1.1" 429 Too Many Requests
+INFO:     127.0.0.1:59645 - "GET / HTTP/1.1" 200 OK

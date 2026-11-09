@@ -360,3 +360,6 @@ pytest 82 ✓ · e2e_check 10/10 ✓ · 三服务（vite/mock/backend）存活 �
 
 ### 巡检拍 6（02:36）
 pytest 82 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 9（02:54）· soak
+e2e_check 连跑 5×全过（50/50），无抖动
