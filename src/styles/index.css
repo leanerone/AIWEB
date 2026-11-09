@@ -254,6 +254,13 @@ body {
 .hero-band .hero-title { color: #fff }
 .hero-band .hero-sub { color: rgba(255,255,255,.78) }
 
+/* 矮条形态：横向左深右浅遮罩（文字在左、按钮在右），首屏焦点让给统计卡 */
+.hero-band.compact { min-height: 150px }
+.hero-band.compact::after {
+  background: linear-gradient(100deg, rgba(6,10,12,.9) 0%, rgba(6,10,12,.7) 48%, rgba(6,10,12,.45) 100%);
+}
+.hero-band.compact .hero-img { background-position: center 38% }
+
 .login-stage { position: relative; overflow: hidden; background: var(--h-ink) }
 .login-stage .login-img {
   position: absolute; inset: 0; z-index: 0; background: #1b2a30 url('/hero/hero-server-room.jpg') no-repeat center 45% / cover;

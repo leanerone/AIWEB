@@ -82,19 +82,19 @@ export function Dashboard() {
 
   return (
     <div className="space-y-5">
-      {/* 英雄带：暗色机房底图 + 欢迎（Halden 适配） */}
-      <BentoCard className="hero-band overflow-hidden !border-transparent !p-0">
+      {/* 英雄矮条：机房图作氛围底纹，把首屏焦点让回统计卡与动态 */}
+      <BentoCard className="hero-band compact overflow-hidden !border-transparent !p-0">
         <div className="hero-img" style={{ backgroundImage: "url('/hero/hero-server-room.jpg')" }} aria-hidden="true" />
-        <div className="relative p-8 sm:p-10 lg:p-14">
-          <p className="hero-sub text-xs font-medium uppercase tracking-[0.18em]">首页 · 内网 AI 分享平台</p>
-          <h1 className="hero-title mt-3 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
-            {greeting}，{user?.display_name || user?.username} ——<br className="sm:hidden" />
-            这里是你的 <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'var(--brand-grad)' }}>AI 能力中枢</span>
-          </h1>
-          <p className="hero-sub mt-3 max-w-xl text-sm leading-6">
-            技能包、小工具与插件统一管理；AI 对话可引用平台资源，好回复一键沉淀；Notes 链接解析归档，资讯每日自动简报。
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
+        <div className="relative flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-6 py-5 lg:px-8">
+          <div className="min-w-0">
+            <p className="hero-sub text-[11px] font-medium uppercase tracking-[0.18em]">首页 · 内网 AI 分享平台</p>
+            <h1 className="hero-title mt-1.5 truncate text-lg font-bold tracking-tight sm:text-xl lg:text-2xl">
+              {greeting}，{user?.display_name || user?.username} 👋
+              <span className="hidden md:inline"> —— 这里是你的 </span>
+              <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'var(--brand-grad)' }}>AI 能力中枢</span>
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Link to="/resources" className="btn-primary"><Package size={15} /> 上传资源</Link>
             <Link to="/chat" className="btn-ghost !border-white/25 !bg-white/10 !text-white hover:!bg-white/20"><Bot size={15} /> AI 对话</Link>
             <Link to="/memos" className="btn-ghost !border-white/25 !bg-white/10 !text-white hover:!bg-white/20"><StickyNote size={15} /> 写笔记</Link>
