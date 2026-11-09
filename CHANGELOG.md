@@ -1,5 +1,26 @@
 # 更新日志
 
+## v0.6 · 2026-11-09 视觉改版：Halden 风格适配
+
+来源：用户提供的 "Halden" 变形下拉导航规格（已存档 `docs/design/halden-hero-morphing-nav-spec.txt`）。
+策略：**只取其交互语言与暗玻璃质感，保留原信息架构与蓝紫品牌色**，不做整站照搬。
+
+- **MegaMenu 变形下拉导航**（`src/components/MegaMenu.tsx`）：桌面顶栏「资源库 / AI 能力 / 平台 / 设置」，
+  三段面板严格沿用规格尺寸（664×358 / 446×308 / 232×218）；首次打开瞬现就位（`is-instant`+reflow），
+  切换时容器 x/宽/高 0.5s 形变、面板按行进方向 ±56px 滑入并 blur 8px 交叉淡入；
+  140ms 关闭宽限、Esc 关闭并回焦、resize 重定位、外部点击关闭。
+  - 资源库面板：Skills/小工具/插件/Notes 四行 + 右侧预览图交叉淡入（悬停/聚焦联动）
+  - AI 能力面板：AI 对话 / 每日简报 双图卡
+  - 面板内链接走 SPA 路由（拦截点击，无整页刷新）
+- **首页英雄带**：Dashboard 欢迎卡改为机房实拍底图（`/hero/hero-server-room.jpg`）+ 双层渐变遮罩 +
+  `heroIn` 缩放淡入，文案与三个 CTA 保留原功能；窄屏自动退化为原横向滚动导航
+- **登录页**：全屏机房底图 + 暗玻璃卡片（22px 模糊 + 140% 饱和），SSO 提示/账号密码/按钮同步深色语义
+- **令牌**：`--h-ink/--h-panel/--h-line/--h-hover/--h-soft/--h-muted/--h-ease/--h-morph`；
+  `--nav-soft/--nav-strong` 随明暗主题切换，触发词在两种主题下对比度均达标
+- **素材本地化**：7 张 Unsplash 图片下载至 `public/hero/`（共 688KB），内网可离线访问
+- **无障碍**：`aria-expanded` 同步、键盘可达、`prefers-reduced-motion` 下关闭模糊与入场动画
+- 实测：面板尺寸/切换/交叉淡入/Esc 回焦由浏览器 DOM 断言核验；pytest 50 用例；构建通过
+
 ## v0.5.1 · 2026-11-09 浏览器 E2E 回归
 
 - **Bug 修复**：生产托管模式下访问根路径 `/` 返回 404（v0.3「SPA 兜底对 /api 前缀 404」误伤

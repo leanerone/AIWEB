@@ -82,23 +82,22 @@ export function Dashboard() {
 
   return (
     <div className="space-y-5">
-      {/* 欢迎大卡 */}
-      <BentoCard className="overflow-hidden">
-        <div className="relative p-7">
-          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-brand-100/70 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-24 right-32 h-48 w-48 rounded-full bg-violet-200/40 blur-2xl" />
-          <div className="relative">
-            <p className="text-sm text-subtle">
-              {greeting}，{user?.display_name || user?.username} 👋
-            </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">
-              这是你的 <span className="gradient-text">AI 能力中枢</span>
-            </h1>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/resources" className="btn-primary"><Package size={15} /> 上传资源</Link>
-              <Link to="/chat" className="btn-ghost"><Bot size={15} /> AI 对话</Link>
-              <Link to="/memos" className="btn-ghost"><StickyNote size={15} /> 写笔记</Link>
-            </div>
+      {/* 英雄带：暗色机房底图 + 欢迎（Halden 适配） */}
+      <BentoCard className="hero-band overflow-hidden !border-transparent !p-0">
+        <div className="hero-img" style={{ backgroundImage: "url('/hero/hero-server-room.jpg')" }} aria-hidden="true" />
+        <div className="relative p-8 sm:p-10 lg:p-14">
+          <p className="hero-sub text-xs font-medium uppercase tracking-[0.18em]">内网 AI 分享平台</p>
+          <h1 className="hero-title mt-3 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
+            {greeting}，{user?.display_name || user?.username} ——<br className="sm:hidden" />
+            这里是你的 <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'var(--brand-grad)' }}>AI 能力中枢</span>
+          </h1>
+          <p className="hero-sub mt-3 max-w-xl text-sm leading-6">
+            技能包、小工具与插件统一管理；AI 对话可引用平台资源，好回复一键沉淀；Notes 链接解析归档，资讯每日自动简报。
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link to="/resources" className="btn-primary"><Package size={15} /> 上传资源</Link>
+            <Link to="/chat" className="btn-ghost !border-white/25 !bg-white/10 !text-white hover:!bg-white/20"><Bot size={15} /> AI 对话</Link>
+            <Link to="/memos" className="btn-ghost !border-white/25 !bg-white/10 !text-white hover:!bg-white/20"><StickyNote size={15} /> 写笔记</Link>
           </div>
         </div>
       </BentoCard>

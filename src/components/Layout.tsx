@@ -6,6 +6,7 @@ import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BackToTop } from './BackToTop'
 import { CommandPalette } from './CommandPalette'
+import { MegaMenu } from './MegaMenu'
 import type { NotificationItem } from '../types'
 
 const NAV = [
@@ -85,7 +86,9 @@ export function Layout() {
             </span>
           </div>
 
-          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          <MegaMenu />
+          {/* 窄屏：保留横向滚动导航 */}
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:hidden">
             {NAV.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
@@ -96,19 +99,8 @@ export function Layout() {
                   }`
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    <Icon size={16} />
-                    {label}
-                    {isActive && (
-                      <motion.span
-                        layoutId="nav-pill"
-                        className="absolute inset-0 -z-10 rounded-xl bg-brand-50"
-                        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                      />
-                    )}
-                  </>
-                )}
+                <Icon size={16} />
+                {label}
               </NavLink>
             ))}
           </nav>

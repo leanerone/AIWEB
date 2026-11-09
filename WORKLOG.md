@@ -103,6 +103,17 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
 - pytest 27 → 40 全过；npm run build 通过；已推送
 
+### 2026-11-09 11:30-12:10 · v0.6 视觉改版（Halden 风格适配）
+- 用户嫌原 Bento 风格不好看，给出 Halden 变形下拉导航规格 → 存档 docs/design/halden-hero-morphing-nav-spec.txt
+- 探索期：先做 Talvex 仪表盘风、Reading Library 深暖风格两版独立预览（用户否掉 Talvex，喜欢 Halden 气质）
+- 从 Unsplash 搜图并本地化 7 张到 public/hero（688KB，离线可用）；napi 被 CF 拦截 → 改 DOM 抓 ID + 逐个 HEAD 探活（5 个 ID 已撤图 404）
+- MegaMenu.tsx：面板 664×358 / 446×308 / 232×218，首开瞬现、切换形变 ±56px + blur 交叉淡入、140ms 宽限、Esc 回焦、resize 重定位、面板内 SPA 导航
+- Dashboard 英雄带 + Login 暗玻璃卡片；令牌 --h-*；--nav-soft/--nav-strong 随明暗切换
+- **教训**：初版用 React state 驱动 class/CSS 变量做动画 → is-instant 永不解除、缩放卡 0.97；
+  改为 useEffect 内 refs 命令式操作 DOM（与已验证的 vanilla 预览同一实现）后行为正确
+- E2E 观测坑：后台标签页会冻结 CSS 过渡，getComputedStyle 读到中间值（10px 偏差恰为 w×(1−0.97)/2），非代码 bug
+- 构建通过；pytest 50 用例；已推送
+
 ### 2026-11-09 10:00-10:10 · v0.5.1 浏览器 E2E 回归 + SPA 根路径修复
 - 真实浏览器 E2E：SSO 直登 / 收藏 toggle / 收藏卡直达 / 通知面板 / ⌘K 中文检索（批量→excel-batch-merge 命中）✓ 全绿
 - 统计卡显示 0 属 count-up 动画，等待后数值正确（Skills=1），非 bug

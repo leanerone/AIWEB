@@ -6,3 +6,9 @@ backend/.env
 __pycache__/
 *.pyc
 .DS_Store
+
+# 风格探索用独立预览页（非应用源码）
+template-preview/
+theme-preview/
+library-preview/
+aihub-preview/

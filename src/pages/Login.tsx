@@ -57,37 +57,35 @@ export function Login() {
   }
 
   return (
-    <div className="relative flex min-h-full items-center justify-center overflow-hidden p-6">
-      {/* 背景装饰光斑（缓慢漂浮） */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 animate-[float_14s_ease-in-out_infinite] rounded-full bg-brand-200/40 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 animate-[float_18s_ease-in-out_infinite_reverse] rounded-full bg-violet-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 animate-[float_22s_ease-in-out_infinite] rounded-full bg-sky-200/25 blur-3xl" />
+    <div className="login-stage relative flex min-h-full items-center justify-center p-6">
+      {/* 全屏机房底图 + 双层渐变遮罩（Halden 适配） */}
+      <div className="login-img" aria-hidden="true" />
 
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-        className="w-full max-w-md rounded-bento2 border border-white/60 bg-white/85 p-8 shadow-bentoHover backdrop-blur-xl"
+        className="login-glass relative z-10 w-full max-w-md rounded-bento2 p-8"
       >
         <div className="mb-6 text-center">
           <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-bento" style={{ backgroundImage: 'var(--brand-grad)' }}>
             <Bot size={26} />
           </span>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-white">
             欢迎来到 <span className="gradient-text">AI Hub</span>
           </h1>
-          <p className="mt-1 text-sm text-subtle">内网 AI 分享平台 · Skills / 工具 / 插件 / 笔记</p>
+          <p className="mt-1 text-sm" style={{ color: 'var(--h-muted)' }}>内网 AI 分享平台 · Skills / 工具 / 插件 / 笔记</p>
         </div>
 
         {ssoState === 'trying' && (
-          <div className="flex items-center justify-center gap-2 rounded-2xl bg-brand-50 py-6 text-sm text-brand-700">
+          <div className="flex items-center justify-center gap-2 rounded-2xl bg-white/10 py-6 text-sm text-white/85">
             <Loader2 size={16} className="animate-spin" /> 正在尝试 Windows 域自动登录…
           </div>
         )}
 
         {ssoState === 'failed' && (
           <div className="space-y-3">
-            <div className="mb-4 rounded-xl bg-gray-50 px-3 py-2 text-xs text-subtle">
+            <div className="mb-4 rounded-xl bg-white/5 px-3 py-2 text-xs" style={{ color: 'var(--h-muted)' }}>
               Windows 域自动登录不可用（可能在非域环境或跨机器访问），请使用账号登录
             </div>
             <div className="relative">

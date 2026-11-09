@@ -4,6 +4,15 @@
 
 :root {
   --brand-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  /* Halden 适配版令牌（docs/design/halden-hero-morphing-nav-spec.txt） */
+  --h-ink: #0b1013;
+  --h-panel: rgba(14, 19, 23, 0.84);
+  --h-line: rgba(255, 255, 255, 0.08);
+  --h-hover: rgba(255, 255, 255, 0.065);
+  --h-soft: rgba(255, 255, 255, 0.74);
+  --h-muted: rgba(255, 255, 255, 0.6);
+  --h-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --h-morph: 0.5s;
 }
 
 @keyframes float {
@@ -123,3 +132,139 @@ body {
 .dark .md-body th { background: #1a1e2a; border-color: #2a2f3d; }
 .dark .md-body td { border-color: #232733; }
 .dark .md-body blockquote { color: #9aa3b2; border-color: #3f3f8a; }
+
+/* ══════════ 变形下拉导航 MegaMenu（Halden 适配）══════════ */
+:root { --nav-soft: #6b7280; --nav-strong: #111827; }
+.dark { --nav-soft: rgba(255, 255, 255, 0.74); --nav-strong: #fff; }
+
+.mega-nav { position: relative; display: none; align-items: center; gap: 24px; flex: 1; min-width: 0 }
+@media (min-width: 1024px) { .mega-nav { display: flex } }
+
+.mega-trigger {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 0;
+  font-size: 14.5px; color: var(--nav-soft); transition: color .25s ease;
+}
+.mega-trigger:hover, .mega-trigger[aria-expanded="true"] { color: var(--nav-strong) }
+.mega-chev { transition: transform .35s var(--h-ease) }
+.mega-trigger[aria-expanded="true"] .mega-chev { transform: rotate(180deg) }
+
+.mega-dd {
+  --x: 0px; --w: 400px; --h: 300px; --s: .97;
+  position: absolute; top: 52px; left: 0; width: var(--w); height: var(--h);
+  transform: translateX(var(--x)) scale(var(--s)); transform-origin: 50% 0;
+  opacity: 0; pointer-events: none; border-radius: 16px;
+  background: var(--h-panel); border: 1px solid var(--h-line);
+  box-shadow: 0 30px 70px -25px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.2);
+  backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
+  overflow: hidden; z-index: 60;
+  transition: transform var(--h-morph) var(--h-ease), width var(--h-morph) var(--h-ease),
+              height var(--h-morph) var(--h-ease), opacity .3s ease;
+}
+.mega-dd.is-open { --s: 1; opacity: 1; pointer-events: auto }
+.mega-dd.is-instant { transition: opacity .3s ease, transform var(--h-morph) var(--h-ease) }
+.mega-dd.is-instant.is-noanim { transition: none }
+
+.mega-panel {
+  position: absolute; top: 0; left: 0; opacity: 0; visibility: hidden;
+  filter: blur(8px); transform: translateX(0); color: #fff;
+  transition: opacity .26s ease, transform var(--h-morph) var(--h-ease),
+              filter .4s ease, visibility 0s linear var(--h-morph);
+}
+.mega-panel[data-state="exit-left"] { transform: translateX(-56px) }
+.mega-panel[data-state="exit-right"] { transform: translateX(56px) }
+.mega-panel[data-state="active"] {
+  opacity: 1; visibility: visible; filter: blur(0); transform: translateX(0);
+  transition: opacity .36s ease .06s, transform var(--h-morph) var(--h-ease),
+              filter .45s ease .04s, visibility 0s;
+}
+.mega-panel.is-noanim { transition: none !important }
+.panel-resources { width: 664px; height: 358px; display: grid; grid-template-columns: 236px 1fr }
+.panel-ai { width: 446px; height: 308px; padding: 7px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px }
+.panel-platform { width: 232px; height: 218px; padding: 8px; display: flex; flex-direction: column; gap: 2px }
+
+.mega-row {
+  flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left;
+  padding: 0 12px; border-radius: 10px; transition: background .3s;
+}
+.mega-row.is-active { background: var(--h-hover) }
+.mega-row strong { font-size: 15px; font-weight: 500; margin-bottom: 4px }
+.mega-row span { font-size: 13px; line-height: 1.42; color: var(--h-muted) }
+
+.mega-media { position: relative; overflow: hidden; border-radius: 0 15px 15px 0 }
+.mega-media::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 70px; z-index: 2;
+  background: linear-gradient(to right, rgba(14,19,23,.55), rgba(14,19,23,0));
+}
+.mega-media img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transform: scale(1.06); filter: blur(10px);
+  transition: opacity .6s ease, transform .9s var(--h-ease), filter .6s ease;
+}
+.mega-media img.is-active { opacity: 1; transform: scale(1); filter: blur(0); z-index: 1 }
+
+.mega-card {
+  position: relative; overflow: hidden; border-radius: 10px; display: flex; isolation: isolate;
+  flex-direction: column; justify-content: flex-end; padding: 14px; text-align: left;
+}
+.mega-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2;
+  transition: transform .9s var(--h-ease), filter .5s }
+.mega-card:hover img { transform: scale(1.05); filter: brightness(1.08) }
+.mega-card::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, rgba(8,11,13,.88) 0%, rgba(8,11,13,.35) 38%, rgba(8,11,13,0) 60%);
+}
+.mega-card strong { font-size: 15.5px; font-weight: 500; margin-bottom: 5px }
+.mega-card span { font-size: 13px; line-height: 1.42; color: var(--h-muted) }
+
+.mega-rlink { flex: 1; display: flex; align-items: center; padding: 0 12px; border-radius: 9px;
+  font-size: 15px; text-align: left; transition: background .25s }
+.mega-rlink:hover { background: var(--h-hover) }
+
+/* ══════════ 首页英雄带 + 登录页暗玻璃 ══════════ */
+.hero-band { position: relative; overflow: hidden; isolation: isolate; border-radius: var(--tw-rounded, 20px) }
+.hero-band .hero-img {
+  position: absolute; inset: 0; z-index: -2; background: #1b2a30 no-repeat center 45% / cover;
+  animation: heroIn 2.4s var(--h-ease) both;
+}
+@keyframes heroIn { from { transform: scale(1.08); filter: brightness(.6) } to { transform: scale(1); filter: brightness(1) } }
+.hero-band::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(6,10,12,.35) 0%, rgba(6,10,12,0) 22%),
+    linear-gradient(to top, rgba(6,9,11,.82) 0%, rgba(6,9,11,.3) 40%, rgba(6,9,11,.05) 75%);
+}
+.hero-band .hero-title { color: #fff }
+.hero-band .hero-sub { color: rgba(255,255,255,.78) }
+
+.login-stage { position: relative; overflow: hidden; background: var(--h-ink) }
+.login-stage .login-img {
+  position: absolute; inset: 0; z-index: 0; background: #1b2a30 url('/hero/hero-server-room.jpg') no-repeat center 45% / cover;
+  animation: heroIn 2.4s var(--h-ease) both;
+}
+.login-stage .login-img::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(6,10,12,.5) 0%, rgba(6,10,12,.15) 30%),
+    linear-gradient(to top, rgba(6,9,11,.86) 0%, rgba(6,9,11,.35) 45%, rgba(6,9,11,.1) 80%);
+}
+.glass-panel {
+  background: var(--h-panel); border: 1px solid var(--h-line); color: #fff;
+  backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 30px 70px -25px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.2);
+}
+.login-glass {
+  background: var(--h-panel); border: 1px solid var(--h-line); color: #fff;
+  backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 30px 70px -25px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.2);
+}
+.login-glass .input {
+  background: rgba(255,255,255,.06); border-color: var(--h-line); color: #fff;
+}
+.login-glass .input::placeholder { color: rgba(255,255,255,.45) }
+.login-glass .input:focus { border-color: rgba(255,255,255,.35); box-shadow: 0 0 0 4px rgba(255,255,255,.08) }
+.login-glass .btn-ghost { background: rgba(255,255,255,.08); color: #fff; border-color: var(--h-line) }
+
+@media (prefers-reduced-motion: reduce) {
+  .mega-panel, .mega-media img, .hero-band .hero-img, .login-stage .login-img { filter: none !important }
+  .hero-band .hero-img, .login-stage .login-img { animation-duration: .01s !important }
+}
