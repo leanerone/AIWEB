@@ -220,10 +220,13 @@ class TestCommentApi:
 
 
 class TestAiAndAdminApi:
-    def test_describe_without_key(self, token):
-        # 未配置 AI 时诚实报错（400），绝不伪造
+    def test_describe_without_key(self, token, monkeypatch):
+        # 未配置 AI 时诚实报错（400），绝不伪造（显式置空 Key，不依赖运行环境的 .env/mock 状态）
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db, username=None: {"api_base": "x", "api_key": "", "model": "m",
+                                                       "system_prompt": "", "auto_exec": False, "source": "env"})
         resp = client.post("/api/ai/describe", json={"name": "x", "type": "tool"}, headers=auth(token))
-        assert resp.status_code in (400, 502)
+        assert resp.status_code == 400
 
     def test_admin_backup_requires_admin(self, token):
         resp = client.get("/api/admin/backup", headers=auth(token))

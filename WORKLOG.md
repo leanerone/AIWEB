@@ -447,3 +447,7 @@ pytest 82 ✓ · e2e_check 10/10 ✓
 - mock_llm 支持 stream=true（content 6 字分片 + tool_calls 两段式增量参数）
 - 测试焊点迁移：_chat_completion_stream + mock_agent 模块级助手；82 用例全过
 - e2e_check 10/10；delta 分片与 done.reply 一致性断言通过
+
+### 2026-11-10 07:00 · v0.9.21 测试健壮性
+- test_describe_without_key 改为显式置空 Key（原依赖环境无 .env/mock，环境就绪后会假阳性 200）；
+  连跑 3× 稳定 82 全过
