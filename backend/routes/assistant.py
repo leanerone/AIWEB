@@ -6,12 +6,11 @@
 """
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-
 from database.models import FeedCard, RssItem
 from database.session import get_db
+from fastapi import APIRouter, Depends
 from routes.deps import get_current_user
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 

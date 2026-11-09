@@ -9,13 +9,12 @@ handler 约定：返回 (ok: bool, summary: str, result: str)。
 summary 展示在前端任务卡（一行），result 是回传给模型的完整结果文本。
 """
 import json
-from typing import Callable
+from collections.abc import Callable
 
+from database.models import Bookmark, FeedCard, Memo, RssItem, RssSource, User
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from database.models import (Bookmark, FeedCard, Memo, RssItem, RssSource,
-                             User)
 from services import fts
 
 MAX_RESULT_CHARS = 3000  # 单个工具结果回传给模型的长度上限

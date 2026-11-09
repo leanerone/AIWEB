@@ -3,15 +3,14 @@
 POST /api/agent/run     发起新任务（创建会话或续写已有会话）
 POST /api/agent/resume  恢复挂起任务（确认写操作 / 回答提问）
 """
+from database.models import ChatSession
+from database.session import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
-from database.models import ChatSession
-from database.session import get_db
 from routes.deps import get_current_user
 from services.agent_service import stream_resume, stream_run
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -35,7 +34,6 @@ class ResumeRequest(BaseModel):
 def run(body: AgentRequest, db: Session = Depends(get_db),
         user: object = Depends(get_current_user)):
     from database.models import ChatMessage
-
     from services.ai_service import get_ai_config
 
     # AI 配置预检：在任何落库之前拦截（与 /chat/completions 行为一致）

@@ -1,12 +1,11 @@
 """个人设置路由：每人自己的 AI 配置（Key 加密落库），与全局配置无关。"""
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
 from database.models import UserAiConfig
 from database.session import get_db
+from fastapi import APIRouter, Depends, HTTPException
 from routes.deps import get_current_user
 from services.ai_service import get_ai_config
 from services.secret_box import decrypt, encrypt
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/me", tags=["me"])
 

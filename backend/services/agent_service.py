@@ -12,11 +12,10 @@ SSE 事件：meta / step / delta / confirm / ask / error / done
 import json
 import logging
 import re
+from collections.abc import Generator
 from datetime import datetime
-from typing import Generator
 
 import requests
-
 from database.models import AgentRun
 from services.agent_tools import MAX_RESULT_CHARS, TOOLS, args_digest, openai_schema
 from services.ai_service import AiNotConfigured, get_ai_config
@@ -84,7 +83,7 @@ def _looks_like_tools_unsupported(e: RuntimeError) -> bool:
     """部分 OpenAI 兼容代理不支持 tools 参数：探测 400 且报文里提到 tools/functions"""
     text = str(e)
     return ("400" in text
-            and re.search(r"tools|function|tool_choice", text, re.I) is not None)
+            and re.search(r"tools|function|tool_choice", text, re.IGNORECASE) is not None)
 
 
 def _build_system(db, username: str | None, page_context: str) -> str:
@@ -380,7 +379,7 @@ def _auto_exec(db, username: str) -> bool:
 
 # ── ReAct 降级模式 ────────────────────────────────────────────
 
-_JSON_RE = re.compile(r"\{.*\}", re.S)
+_JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def _try_parse_react(text: str) -> dict | None:
