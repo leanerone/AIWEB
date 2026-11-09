@@ -357,3 +357,6 @@ pytest 82 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 5（02:27）
 pytest 82 ✓ · e2e_check 10/10 ✓ · 三服务（vite/mock/backend）存活 ✓
+
+### 巡检拍 6（02:36）
+pytest 82 ✓ · e2e_check 10/10 ✓
