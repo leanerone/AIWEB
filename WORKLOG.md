@@ -336,3 +336,6 @@ pytest 77 ✓ · build ✓ · e2e_check 10/10 ✓ · notifications/feed/rss_serv
 - 首轮对话 done 后让模型起 ≤12 字标题（失败静默保留默认，不阻断主流程）
 - 用户重命名过的会话不再覆盖（以「首问前 40 字」为默认名判定）
 - mock_llm 支持命名请求；测试 79 → 80
+
+### 巡检拍 2（02:14）
+pytest 80 ✓ · e2e_check 10/10 ✓
