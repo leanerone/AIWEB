@@ -2,6 +2,7 @@
 import time
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from sqlalchemy import func
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -20,7 +21,10 @@ KNOWN_DISPLAY = {
 
 def _ensure_user(db: Session, username: str, display_name: str = "", role: str = "user",
                  department: str = "") -> User:
-    user = db.query(User).filter(User.username == username).first()
+    # Windows 域账号大小写不敏感：SSO 进程账号（如 Administrator）应命中已播种的同名小写账号
+    user = (db.query(User)
+            .filter(func.lower(User.username) == username.strip().lower())
+            .first())
     if not user:
         user = User(
             username=username,

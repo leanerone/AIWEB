@@ -38,6 +38,24 @@ def auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+_plain_token: str | None = None
+
+
+def plain_user_token() -> str:
+    """显式创建并登录一个普通用户（SSO 进程账号在这台机器上映射为管理员，
+    需要"非管理员"前提的测试一律用它，不再依赖进程账号的角色）。"""
+    global _plain_token
+    if _plain_token:
+        return _plain_token
+    from services.auth_service import generate_token
+    admin = auth(generate_token("administrator", "admin"))
+    client.post("/api/auth/users", json={"username": "plain.user", "display_name": "普通用户",
+                                         "password": "plain123456", "role": "user"}, headers=admin)
+    r = client.post("/api/auth/login", json={"username": "plain.user", "password": "plain123456"})
+    _plain_token = r.json()["data"]["token"]
+    return _plain_token
+
+
 # ── Notes 解析 ────────────────────────────────────────────────
 
 class TestNotesParser:
@@ -202,7 +220,7 @@ class TestAiAndAdminApi:
         db.refresh(card)
         db.close()
         # 非创建者删除被拒
-        resp = client.delete(f"/api/hub/cards/{card.id}", headers=auth(token))
+        resp = client.delete(f"/api/hub/cards/{card.id}", headers=auth(plain_user_token()))
         assert resp.status_code == 403
         # 管理员可删
         from services.auth_service import generate_token
@@ -493,10 +511,10 @@ class TestNotificationApi:
         rid = client.post("/api/resources", data={"type": "tool", "name": "notify-target"},
                           headers=auth(admin_tok)).json()["data"]["id"]
 
-        # SSO 用户评论 + 点赞 → admin 收到通知
+        # 普通用户评论 + 点赞 → admin 收到通知（SSO 进程账号在这台机上映射为管理员，不能再用）
         client.post(f"/api/resources/{rid}/comments", json={"content": "不错"},
-                    headers=auth(token))
-        client.post(f"/api/resources/{rid}/like", headers=auth(token))
+                    headers=auth(plain_user_token()))
+        client.post(f"/api/resources/{rid}/like", headers=auth(plain_user_token()))
         data = client.get("/api/notifications", headers=auth(admin_tok)).json()["data"]
         assert data["unread"] >= 2
         assert {"comment", "like"} <= {n["ntype"] for n in data["items"]}
@@ -504,7 +522,7 @@ class TestNotificationApi:
         # 取消点赞不再产生通知
         n_before = client.get("/api/notifications/unread-count",
                               headers=auth(admin_tok)).json()["data"]["unread"]
-        client.post(f"/api/resources/{rid}/like", headers=auth(token))  # toggle off
+        client.post(f"/api/resources/{rid}/like", headers=auth(plain_user_token()))  # toggle off
         n_after = client.get("/api/notifications/unread-count",
                              headers=auth(admin_tok)).json()["data"]["unread"]
         assert n_after == n_before
@@ -758,7 +776,7 @@ class TestSettingsApi:
     def test_put_and_masked(self, token):
         # 全局 AI 键仅管理员可写（v0.9 安全修复）：普通用户 403
         assert client.put("/api/settings", json={"ai_api_key": "sk-x"},
-                          headers=auth(token)).status_code == 403
+                          headers=auth(plain_user_token())).status_code == 403
         assert client.put("/api/settings", json={"ai_api_key": "sk-secret", "ai_model": "m1"},
                           headers=self._admin()).json()["success"]
         data = client.get("/api/settings", headers=auth(token)).json()["data"]
@@ -1284,8 +1302,8 @@ class TestResourceVersions:
         db.commit()
         rid, vid = r.id, v.id
         db.close()
-        # SSO 用户是普通用户（非资源创建者）
-        st = client.post(f"/api/resources/{rid}/restore/{vid}", headers=auth(token))
+        # 普通用户（非创建者非管理员）
+        st = client.post(f"/api/resources/{rid}/restore/{vid}", headers=auth(plain_user_token()))
         assert st.status_code in (403,)  # 普通用户 403
         from services.auth_service import generate_token
         admin = auth(generate_token("administrator", "admin"))
