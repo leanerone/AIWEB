@@ -31,8 +31,8 @@ function usePageContext() {
       api.get<never, Resource>(`/resources/${m[1]}`)
         .then((r) => {
           if (dead || !r) return
-          sessionStorage.setItem(`aiweb:res:${m[1]}`, r.name)
-          setPageContext(`资源详情：${r.name}`)
+          sessionStorage.setItem(`aiweb:res:${m[1]}`, `${r.name}（id=${r.id}）`)
+          setPageContext(`资源详情：${r.name}（id=${r.id}）`)
         })
         .catch(() => {})
     } else {

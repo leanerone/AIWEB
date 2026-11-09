@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { FloatingAssistant } from './Assistant/FloatingAssistant'
+import { useAssistant } from '../stores/assistant'
 import { BackToTop } from './BackToTop'
 import { CommandPalette } from './CommandPalette'
 import { MegaMenu } from './MegaMenu'
@@ -33,6 +34,18 @@ export function Layout() {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('aiweb_theme', dark ? 'dark' : 'light')
   }, [dark])
+
+  useEffect(() => {
+    // Ctrl/⌘+J 全局唤起/收起 AI 助手（与 ⌘K 搜索并列）
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault()
+        useAssistant.getState().toggle()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const loadUnread = () =>
     api.get<never, { unread: number }>('/notifications/unread-count')

@@ -1191,3 +1191,44 @@ class TestAgentRegenerate:
     def test_regenerate_without_session_rejected(self, token):
         resp = client.post("/api/agent/run", json={"regenerate": True}, headers=auth(token))
         assert resp.status_code == 400
+
+
+class TestAgentRoundF:
+    """轮次 F：Notes 链接工具 / AgentRun 清理 / ⌘K 联动的后端能力。"""
+
+    def test_search_notes_links_tool(self, token):
+        from database.models import NoteLink
+        from database.session import SessionLocal
+        from services.agent_tools import tool_search_notes_links
+
+        db = SessionLocal()
+        link = NoteLink(url="notes://Srv/db.nsf/0/ABC", title="EAP 故障纪要",
+                        server="Srv", database="PU/CIM/CIMLOG.nsf", document="EAP 故障纪要")
+        db.add(link)
+        db.commit()
+        db.refresh(link)
+        ok, summary, result = tool_search_notes_links(db, None, {"keyword": "EAP"})
+        assert ok and "Notes 链接" in summary and "EAP 故障纪要" in result
+        db.delete(link)
+        db.commit()
+        db.close()
+
+    def test_cleanup_agent_runs(self, token):
+        from datetime import datetime, timedelta
+
+        from database.models import AgentRun
+        from database.session import SessionLocal
+        from services.scheduler import cleanup_agent_runs
+
+        db = SessionLocal()
+        old = AgentRun(session_id=1, username="tester", status="done",
+                       updated_at=datetime.now() - timedelta(days=40))
+        fresh = AgentRun(session_id=1, username="tester", status="done")
+        db.add_all([old, fresh])
+        db.commit()
+        removed = cleanup_agent_runs(db, days=30)
+        assert removed >= 1
+        assert db.get(AgentRun, fresh.id) is not None      # 新记录保留
+        db.delete(fresh)
+        db.commit()
+        db.close()

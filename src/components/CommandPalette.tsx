@@ -80,6 +80,15 @@ export function CommandPalette() {
     nav(hit.to)
   }
 
+  const askAssistant = (query: string) => {
+    setOpen(false)
+    import('../stores/assistant').then(({ useAssistant }) => {
+      const st = useAssistant.getState()
+      st.setOpen(true)
+      window.setTimeout(() => st.send(query), 60)  // 等面板挂载后自动发出
+    })
+  }
+
   const iconFor = (kind: Hit['kind']) =>
     kind === 'resource' ? <BookOpen size={15} className="text-brand-500" />
     : kind === 'memo' ? <Notebook size={15} className="text-emerald-500" />
@@ -106,7 +115,10 @@ export function CommandPalette() {
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') { e.preventDefault(); setCursor((c) => Math.min(c + 1, hits.length - 1)) }
                   if (e.key === 'ArrowUp') { e.preventDefault(); setCursor((c) => Math.max(c - 1, 0)) }
-                  if (e.key === 'Enter' && hits[cursor]) go(hits[cursor])
+                  if (e.key === 'Enter') {
+                    if (hits[cursor]) go(hits[cursor])
+                    else if (q.trim()) askAssistant(q.trim())  // 无命中时 Enter 直接问 AI 助手
+                  }
                 }} />
               <kbd className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-400">ESC</kbd>
             </div>
@@ -122,7 +134,15 @@ export function CommandPalette() {
                 </button>
               ))}
               {q.trim() && hits.length === 0 && (
-                <p className="py-8 text-center text-sm text-gray-400">没有匹配结果</p>
+                <p className="py-4 text-center text-sm text-gray-400">没有匹配结果</p>
+              )}
+              {q.trim() && (
+                <button className="mt-1 flex w-full items-center gap-3 rounded-xl border border-brand-100 bg-brand-50/60 px-3 py-2.5 text-left text-sm text-brand-700 transition hover:border-brand-300"
+                  onClick={() => askAssistant(q.trim())}>
+                  <Sparkles size={15} />
+                  <span className="flex-1 truncate">问 AI 助手：「{q.trim()}」</span>
+                  <span className="text-xs text-brand-400">Enter</span>
+                </button>
               )}
               {!q.trim() && (
                 <div className="px-3 py-4">

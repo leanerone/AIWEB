@@ -97,6 +97,23 @@ def tool_list_memos(db: Session, user: User, args: dict) -> tuple[bool, str, str
     return True, f"列出 {len(rows)} 条笔记", "\n".join(lines)
 
 
+def tool_search_notes_links(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
+    from database.models import NoteLink
+
+    keyword = str(args.get("keyword") or "").strip()
+    limit = max(1, min(int(args.get("limit") or 8), 15))
+    q = db.query(NoteLink)
+    if keyword:
+        like = f"%{keyword}%"
+        q = q.filter(or_(NoteLink.title.like(like), NoteLink.database.like(like),
+                         NoteLink.document.like(like)))
+    rows = q.order_by(NoteLink.id.desc()).limit(limit).all()
+    if not rows:
+        return True, "没有匹配的 Notes 链接", "Notes 链接库中没有匹配条目。"
+    lines = [f"- #{n.id} {n.title or n.document}（{n.server}/{n.database}）" for n in rows]
+    return True, f"找到 {len(rows)} 条 Notes 链接", chr(10).join(lines)
+
+
 def tool_get_briefing(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
     from database.models import FeedCard
 
@@ -239,6 +256,13 @@ _register("read_memo",
               "memo_id": {"type": "integer"}},
            "required": ["memo_id"]},
           tool_read_memo, write=False, summary_args=["memo_id"])
+
+_register("search_notes_links",
+          "检索平台收藏的 HCL Notes 链接库（标题/数据库/文档）",
+          {"type": "object", "properties": {
+              "keyword": {"type": "string"}, "limit": {"type": "integer"}},
+           "required": []},
+          tool_search_notes_links, write=False, summary_args=["keyword"])
 
 _register("get_briefing",
           "读取最新（或指定 id 的）AI 每日简报全文",

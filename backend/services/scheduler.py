@@ -68,6 +68,25 @@ def _maybe_auto_briefing(db) -> None:
         logger.warning("自动简报未生成（AI 未配置 / RSS 为空 / 调用失败）：%s", e)
 
 
+def cleanup_agent_runs(db, days: int = 30) -> int:
+    """清理 N 天前已结束（done/failed/stopped）的 Agent 运行记录；审计随 FK CASCADE 一起删"""
+    from datetime import timedelta
+
+    from database.models import AgentRun
+
+    cutoff = datetime.now() - timedelta(days=days)
+    old = (db.query(AgentRun)
+           .filter(AgentRun.status.in_(["done", "failed", "stopped"]),
+                   AgentRun.updated_at < cutoff)
+           .all())
+    for run in old:
+        db.delete(run)
+    db.commit()
+    if old:
+        logger.info("已清理 %d 条过期 Agent 运行记录", len(old))
+    return len(old)
+
+
 def _loop():
     last_backup = time.time()  # 首次自动备份在启动 24h 后；此前可用管理端手动备份
     while True:
@@ -81,6 +100,7 @@ def _loop():
                 if result.get("new"):
                     logger.info("RSS 自动刷新：新增 %s 条", result["new"])
                 _maybe_auto_briefing(db)
+                cleanup_agent_runs(db)
             finally:
                 db.close()
         except Exception:
