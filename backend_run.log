@@ -130,3 +130,11 @@ INFO:     127.0.0.1:50364 - "GET /api/notes/links?keyword=%E4%B8%8D%E5%AD%98%E5%
 INFO:     127.0.0.1:50363 - "GET /api/search?q=%E4%B8%8D%E5%AD%98%E5%9C%A8%E7%9A%84%E5%85%B3%E9%94%AE%E8%AF%8Dxyzabc&limit=12 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54083 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
 INFO:     127.0.0.1:49761 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49327 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63999 - "GET /api/bookmarks?type=memo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63998 - "GET /api/bookmarks?type=resource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63997 - "GET /api/hub/contributors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63996 - "GET /api/hub/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64000 - "GET /api/hub/feed?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57902 - "GET /api/notifications/unread-count HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56065 - "GET /api/assistant/suggestions HTTP/1.1" 200 OK
