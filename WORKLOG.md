@@ -316,3 +316,6 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 - 测试改造：需要"普通用户"前提的 4 个用例改用显式创建的 plain.user（不再依赖进程账号角色）
 - 浏览器实测：旧 token 自愈重登 → 版本历史卡出现（2 快照/2 回滚按钮）→ 资源版本功能全链路 ✓
 - 测试 77 全过；e2e_check 10/10
+
+### 巡检拍 1（$(date '+%H:%M')）
+pytest 77 ✓ · build ✓ · e2e_check 10/10 ✓ · notifications/feed/rss_service 复查无新问题
