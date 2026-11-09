@@ -39,6 +39,7 @@ def list_memos(keyword: str = "", tag: str = "", created_by: str = "", page: int
     if created_by:
         query = query.filter(Memo.created_by == created_by)
     total = query.count()
+    page = max(1, page)  # 钳制：page<1 会产生负 OFFSET 导致 500
     limit = max(1, min(limit, 200))
     items = (
         query.order_by(Memo.pinned.desc(), Memo.updated_at.desc())

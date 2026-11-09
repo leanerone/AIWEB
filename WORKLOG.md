@@ -94,3 +94,11 @@ SSO 自动登录 ✓ / Dashboard 渲染 ✓ / 深色模式切换+持久化 ✓ /
 ### 2026-11-09 00:41-00:42 · 心跳轮 3（已推送）
 - Chat 会话重命名：PUT /chat/sessions/{id} + 会话列表行内编辑（Enter 确认 / Esc 取消）
 - pytest 27 用例全过
+
+### 2026-11-09 08:30-08:40 · v0.3.1 稳定性加固轮（基于代码 review 的 P0 修复）
+- JWT_SECRET 持久化到 data/secret.key（修「重启全员掉线」）
+- Chat：AI 配置预检 400（修孤儿消息）+ regenerate 重新生成 + 前端错误回滚乐观气泡
+- 备份改 sqlite3 backup API（修复制写一半文件的风险）
+- RSS 启动即刷新 + ENABLE_SCHEDULER 开关 + lifespan 迁移（修 on_event 弃用）
+- 分页 page<1 负 OFFSET 500 修复（rss/notes/memos）
+- pytest 27 → 40 全过；npm run build 通过；已推送

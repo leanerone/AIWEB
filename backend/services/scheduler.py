@@ -1,6 +1,6 @@
-"""后台任务：RSS 每小时自动刷新 + SQLite 每日备份（保留最近 7 份）。"""
+"""后台任务：RSS 每小时自动刷新（启动即刷一次）+ SQLite 每日备份（保留最近 7 份）。"""
 import logging
-import shutil
+import sqlite3
 import threading
 import time
 from datetime import datetime
@@ -22,7 +22,7 @@ def _backup_dir() -> Path:
 
 
 def run_backup() -> str | None:
-    """复制 SQLite 主库文件为带日期备份，保留最近 BACKUP_KEEP 份"""
+    """用 sqlite3 backup API 在线备份主库（避免复制到写一半的文件导致备份损坏）"""
     url = settings.DATABASE_URL
     if not url.startswith("sqlite"):
         return None
@@ -30,7 +30,14 @@ def run_backup() -> str | None:
     if not src.exists():
         return None
     dest = _backup_dir() / f"aiweb-{datetime.now().strftime('%Y%m%d-%H%M')}.sqlite"
-    shutil.copy2(src, dest)
+    scon = sqlite3.connect(src)
+    dcon = sqlite3.connect(dest)
+    try:
+        with dcon:
+            scon.backup(dcon)
+    finally:
+        scon.close()
+        dcon.close()
     backups = sorted(_backup_dir().glob("aiweb-*.sqlite"))
     for old in backups[:-BACKUP_KEEP]:
         old.unlink(missing_ok=True)
@@ -39,9 +46,8 @@ def run_backup() -> str | None:
 
 
 def _loop():
-    last_backup = 0.0
+    last_backup = time.time()  # 首次自动备份在启动 24h 后；此前可用管理端手动备份
     while True:
-        time.sleep(RSS_INTERVAL_SECONDS)
         try:
             from database.session import SessionLocal
             from services.rss_service import refresh_all
@@ -65,9 +71,15 @@ def _loop():
             except Exception:
                 logger.exception("自动备份失败")
 
+        time.sleep(RSS_INTERVAL_SECONDS)
+
 
 def start_scheduler():
+    if not settings.ENABLE_SCHEDULER:
+        logger.info("后台任务线程已禁用（ENABLE_SCHEDULER=0）")
+        return
+    # 启动即先刷一次 RSS，不必等第一个小时
     t = threading.Thread(target=_loop, name="aiweb-scheduler", daemon=True)
     t.start()
-    logger.info("后台任务线程已启动（RSS 每 %s 秒 / 备份每 %s 秒）",
+    logger.info("后台任务线程已启动（RSS 立即刷新后每 %s 秒 / 备份每 %s 秒）",
                 RSS_INTERVAL_SECONDS, BACKUP_INTERVAL_SECONDS)

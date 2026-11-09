@@ -1,5 +1,6 @@
 """AIWEB 后端入口：FastAPI 应用装配。"""
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -14,7 +15,28 @@ from database.session import engine, SessionLocal
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-app = FastAPI(title="AIWEB - AI 分享平台", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        from routes.auth import seed_users
+        seed_users(db)
+    finally:
+        db.close()
+    logging.getLogger("aiweb").info("数据库就绪，默认账号已播种")
+    import os
+
+    if os.getenv("SEED_DEMO", "").strip() == "1":
+        from seed_demo import seed_demo
+        seed_demo()
+    from services.scheduler import start_scheduler
+    start_scheduler()
+    yield
+
+
+app = FastAPI(title="AIWEB - AI 分享平台", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,25 +66,6 @@ app.include_router(settings_routes.router, prefix=API)
 @app.get("/api/health")
 def health():
     return {"status": "ok", "app": "aiweb"}
-
-
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        from routes.auth import seed_users
-        seed_users(db)
-    finally:
-        db.close()
-    logging.getLogger("aiweb").info("数据库就绪，默认账号已播种")
-    import os
-
-    if os.getenv("SEED_DEMO", "").strip() == "1":
-        from seed_demo import seed_demo
-        seed_demo()
-    from services.scheduler import start_scheduler
-    start_scheduler()
 
 
 # 生产模式：托管前端构建产物（backend/dist）

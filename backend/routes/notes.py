@@ -47,6 +47,7 @@ def list_links(keyword: str = "", page: int = 1, limit: int = 20,
         query = query.filter(or_(NoteLink.title.like(like), NoteLink.database.like(like),
                                  NoteLink.document.like(like), NoteLink.url.like(like)))
     total = query.count()
+    page = max(1, page)  # 钳制：page<1 会产生负 OFFSET 导致 500
     limit = max(1, min(limit, 100))
     items = (query.order_by(NoteLink.created_at.desc())
              .offset((page - 1) * limit).limit(limit).all())

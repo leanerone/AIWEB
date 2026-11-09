@@ -2,6 +2,7 @@
 
 运行：cd backend && python -m pytest tests/ -q
 """
+import json
 import os
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from pathlib import Path
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()) / 'test.sqlite'}"
 os.environ.setdefault("JWT_SECRET", "test-secret-for-pytest-only")
 os.environ.setdefault("DEFAULT_USER_PASSWORD", "test123456")
+os.environ.setdefault("ENABLE_SCHEDULER", "0")  # 测试不跑 RSS 自动刷新/自动备份线程
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -215,6 +217,190 @@ class TestScheduler:
 
         name = run_backup()
         assert name and name.startswith("aiweb-")
+
+
+class TestChatApi:
+    """Chat 路由：预检 / SSE 流 / 重命名 / 重新生成。stream_chat 全部 mock，不碰真实 AI。"""
+
+    def test_completions_requires_ai_key(self, token, monkeypatch):
+        # 未配置 Key → 400 预检，且不落库任何会话/消息
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db: {"api_base": "x", "api_key": "", "model": "m"})
+        before = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
+        resp = client.post("/api/chat/completions", json={"message": "你好"}, headers=auth(token))
+        assert resp.status_code == 400 and "未配置" in resp.json()["detail"]
+        after = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
+        assert len(after) == len(before)
+
+    def test_sse_flow_and_regenerate(self, token, monkeypatch):
+        from routes import chat as chat_routes
+
+        replies = iter(["第一版回答"])
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db: {"api_base": "x", "api_key": "sk-test", "model": "m"})
+        monkeypatch.setattr(chat_routes, "stream_chat",
+                            lambda db, messages: iter([next(replies, "第二版回答")]))
+
+        # 正常流式对话
+        resp = client.post("/api/chat/completions", json={"message": "什么是 EAP"},
+                           headers=auth(token))
+        assert resp.status_code == 200
+        body = resp.text
+        assert "event: meta" in body and "event: delta" in body and "event: done" in body
+        sid = json.loads(body.split("data:")[1].split("\n")[0])["session_id"]
+
+        msgs = client.get(f"/api/chat/sessions/{sid}/messages", headers=auth(token)).json()["data"]
+        assert [m["role"] for m in msgs] == ["user", "assistant"]
+        assert msgs[1]["content"] == "第一版回答"
+
+        # 重命名会话
+        ren = client.put(f"/api/chat/sessions/{sid}", json={"title": "测试会话"}, headers=auth(token))
+        assert ren.status_code == 200 and ren.json()["data"]["title"] == "测试会话"
+
+        # 重新生成：不新增用户消息，旧回答被替换
+        resp2 = client.post("/api/chat/completions",
+                            json={"session_id": sid, "regenerate": True}, headers=auth(token))
+        assert resp2.status_code == 200 and "event: done" in resp2.text
+        msgs2 = client.get(f"/api/chat/sessions/{sid}/messages", headers=auth(token)).json()["data"]
+        assert [m["role"] for m in msgs2] == ["user", "assistant"]
+        assert msgs2[1]["content"] == "第二版回答"
+
+        # 删除会话
+        assert client.delete(f"/api/chat/sessions/{sid}", headers=auth(token)).json()["success"]
+        assert client.get(f"/api/chat/sessions/{sid}/messages",
+                          headers=auth(token)).status_code == 404
+
+    def test_regenerate_requires_session(self, token, monkeypatch):
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db: {"api_base": "x", "api_key": "sk-test", "model": "m"})
+        resp = client.post("/api/chat/completions", json={"regenerate": True}, headers=auth(token))
+        assert resp.status_code == 400
+
+    def test_empty_message_rejected(self, token, monkeypatch):
+        monkeypatch.setattr("services.ai_service.get_ai_config",
+                            lambda db: {"api_base": "x", "api_key": "sk-test", "model": "m"})
+        assert client.post("/api/chat/completions", json={"message": "  "},
+                           headers=auth(token)).status_code == 400
+
+    def test_save_card(self, token):
+        from database.session import SessionLocal
+        from database.models import ChatSession
+
+        db = SessionLocal()
+        s = ChatSession(title="沉淀测试", created_by="administrator")
+        db.add(s)
+        db.commit()
+        db.refresh(s)
+        sid = s.id
+        db.close()
+        resp = client.post(f"/api/chat/sessions/{sid}/save-card",
+                           json={"content": "这是一条好回复"}, headers=auth(token))
+        assert resp.json()["success"]
+        client.delete(f"/api/chat/sessions/{sid}", headers=auth(token))
+
+    def test_foreign_session_hidden(self, token):
+        from database.session import SessionLocal
+        from database.models import ChatSession
+
+        db = SessionLocal()
+        s = ChatSession(title="别人的", created_by="someone-else")
+        db.add(s)
+        db.commit()
+        db.refresh(s)
+        sid = s.id
+        db.close()
+        assert client.get(f"/api/chat/sessions/{sid}/messages",
+                          headers=auth(token)).status_code == 404
+        assert client.put(f"/api/chat/sessions/{sid}", json={"title": "x"},
+                          headers=auth(token)).status_code == 404
+
+
+class TestRssApi:
+    """RSS 订阅源 CRUD（不触网）。"""
+
+    url = "https://example.com/feed.xml"
+
+    def test_source_lifecycle(self, token):
+        assert client.post("/api/rss/sources",
+                           json={"name": "测试源", "url": self.url},
+                           headers=auth(token)).json()["success"]
+        # 重复添加被拒
+        dup = client.post("/api/rss/sources", json={"name": "重复", "url": self.url},
+                          headers=auth(token))
+        assert dup.status_code == 400
+
+        sources = client.get("/api/rss/sources", headers=auth(token)).json()["data"]
+        mine = next(s for s in sources if s["url"] == self.url)
+        assert mine["name"] == "测试源" and mine["enabled"]
+
+        # 空条目列表 + 分页钳制(limit 上限 / page<1 不再 500)
+        items = client.get("/api/rss/items?limit=999&page=0", headers=auth(token)).json()["data"]
+        assert items["total"] == 0
+        assert client.get("/api/rss/items?page=1&limit=1", headers=auth(token)).status_code == 200
+
+        # 停用 + 删除
+        assert client.put(f"/api/rss/sources/{mine['id']}",
+                          json={"name": "测试源", "url": self.url, "enabled": False},
+                          headers=auth(token)).json()["success"]
+        assert client.delete(f"/api/rss/sources/{mine['id']}",
+                             headers=auth(token)).json()["success"]
+        assert client.delete(f"/api/rss/sources/{mine['id']}",
+                             headers=auth(token)).status_code == 404
+
+    def test_empty_url_rejected(self, token):
+        assert client.post("/api/rss/sources", json={"name": "x", "url": "  "},
+                           headers=auth(token)).status_code == 400
+
+
+class TestNotesApi:
+    """Notes 链接：解析 / 保存 / 检索 / 删除。"""
+
+    raw = "notes://CN99/PU/CIM/CIMLOG.nsf/0/9F2C7A1E1234ABCDEF0123456789ABCD?OpenDocument"
+
+    def test_parse_endpoint(self, token):
+        r = client.post("/api/notes/parse", json={"raw_text": self.raw},
+                        headers=auth(token)).json()["data"]
+        assert r["valid"] and r["server"] == "CN99"
+        bad = client.post("/api/notes/parse", json={"raw_text": "https://github.com"},
+                          headers=auth(token)).json()["data"]
+        assert not bad["valid"]
+
+    def test_link_save_search_delete(self, token):
+        saved = client.post("/api/notes/links", json={"raw_text": self.raw},
+                            headers=auth(token)).json()["data"]
+        assert saved["database"] == "PU/CIM/CIMLOG.nsf" and saved["id"]
+        lid = saved["id"]
+
+        found = client.get("/api/notes/links?keyword=CIMLOG", headers=auth(token)).json()["data"]
+        assert found["total"] >= 1 and any(i["id"] == lid for i in found["items"])
+
+        assert client.delete(f"/api/notes/links/{lid}", headers=auth(token)).json()["success"]
+
+    def test_invalid_link_not_saved(self, token):
+        r = client.post("/api/notes/links", json={"raw_text": "随便一段文字"},
+                        headers=auth(token)).json()
+        assert r["success"] is False and "未识别" in r["message"]
+
+
+class TestSecretPersistence:
+    def test_jwt_secret_stable_and_saved(self, tmp_path, monkeypatch):
+        from config import settings as cfg
+
+        monkeypatch.setenv("JWT_SECRET", "")          # 走文件持久化路径
+        (tmp_path / "data").mkdir()
+        monkeypatch.setattr(cfg, "_BASE", tmp_path)
+        s1 = cfg._load_jwt_secret()
+        s2 = cfg._load_jwt_secret()
+        assert s1 == s2                                # 重启(再次加载)拿到同一密钥
+        assert (tmp_path / "data" / "secret.key").read_text(encoding="utf-8") == s1
+
+    def test_env_overrides_file(self, tmp_path, monkeypatch):
+        from config import settings as cfg
+
+        monkeypatch.setenv("JWT_SECRET", "from-env")
+        monkeypatch.setattr(cfg, "_BASE", tmp_path)
+        assert cfg._load_jwt_secret() == "from-env"
+        assert not (tmp_path / "data" / "secret.key").exists()
 
 
 class TestFeedApi:

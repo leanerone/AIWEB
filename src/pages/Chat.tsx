@@ -1,4 +1,4 @@
-import { BookMarked, Copy, FileDown, Loader2, Pencil, Plus, Send, Sparkles, Square, Trash2, X } from 'lucide-react'
+import { BookMarked, Copy, FileDown, Loader2, Pencil, Plus, RotateCcw, Send, Sparkles, Square, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
 import { BentoCard } from '../components/BentoCard'
@@ -40,21 +40,37 @@ export function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const send = async (textOverride?: string) => {
+  const send = async (textOverride?: string, opts?: { regenerate?: boolean }) => {
+    const regenerate = opts?.regenerate === true
     const text = (textOverride ?? input).trim()
-    if (!text || streaming) return
-    setInput('')
+    if ((!text && !regenerate) || streaming) return
+    if (!regenerate) setInput('')
     setStreaming(true)
-    setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
+    if (regenerate) {
+      // 重新生成：去掉末尾旧的助手回答，追加一个空气泡
+      setMessages((m) => {
+        const copy = [...m]
+        while (copy.length && copy[copy.length - 1].role === 'assistant') copy.pop()
+        return copy.length ? [...copy, { role: 'assistant', content: '' }] : copy
+      })
+    } else {
+      setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
+    }
     const controller = new AbortController()
     abortRef.current = controller
+    let gotMeta = false // meta 之前失败 = 服务端未落库，需要回滚本地乐观气泡
 
     try {
       const token = localStorage.getItem('aiweb_token')
       const resp = await fetch('/api/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ session_id: sessionId, message: text, context_resource_id: contextRes?.id ?? null }),
+        body: JSON.stringify({
+          session_id: sessionId,
+          message: text,
+          context_resource_id: contextRes?.id ?? null,
+          regenerate,
+        }),
         signal: controller.signal,
       })
       if (!resp.ok || !resp.body) {
@@ -78,6 +94,7 @@ export function Chat() {
           const event = evLine.slice(6).trim()
           const data = JSON.parse(dataLine.slice(5))
           if (event === 'meta') {
+            gotMeta = true
             setSessionId(data.session_id)
             loadSessions()
           } else if (event === 'delta') {
@@ -87,6 +104,7 @@ export function Chat() {
               return copy
             })
           } else if (event === 'error') {
+            gotMeta = true
             toast('error', data.message)
             setMessages((m) => {
               const copy = [...m]
@@ -103,13 +121,24 @@ export function Chat() {
         }
       }
     } catch (e) {
-      // 主动停止不算错误
-      if ((e as Error).name !== 'AbortError') toast('error', (e as Error).message)
+      if ((e as Error).name === 'AbortError') {
+        // 主动停止：保留已生成部分
+      } else {
+        toast('error', (e as Error).message)
+        // 服务端未落库（meta 之前失败）：回滚本轮乐观气泡
+        if (!gotMeta) {
+          setMessages((m) => (regenerate
+            ? (m[m.length - 1]?.role === 'assistant' && !m[m.length - 1].content ? m.slice(0, -1) : m)
+            : m.slice(0, -2)))
+        }
+      }
     } finally {
       setStreaming(false)
       abortRef.current = null
     }
   }
+
+  const regenerate = () => send(undefined, { regenerate: true })
 
   const stop = () => abortRef.current?.abort()
 
@@ -237,6 +266,13 @@ export function Chat() {
                         onClick={() => copyMsg(m.content)}>
                         <Copy size={11} /> 复制
                       </button>
+                      {isLast && sessionId && (
+                        <button className="flex items-center gap-1 text-[11px] text-subtle hover:text-brand-600"
+                          title="对上一条提问重新生成回答"
+                          onClick={regenerate}>
+                          <RotateCcw size={11} /> 重新生成
+                        </button>
+                      )}
                       <button className="text-[11px] text-brand-600 hover:underline" onClick={() => saveCard(m.content)}>
                         ✦ 沉淀为内容卡
                       </button>

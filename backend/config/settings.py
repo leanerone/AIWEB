@@ -16,8 +16,32 @@ UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", _BASE / "uploads" / "resources"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 (_BASE / "data").mkdir(parents=True, exist_ok=True)
 
-JWT_SECRET = os.getenv("JWT_SECRET") or secrets.token_hex(32)
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "168"))
+
+
+def _load_jwt_secret() -> str:
+    """未显式配置时，首次生成的密钥持久化到 data/secret.key，
+    保证重启后 token 仍然有效（否则每次重启全员掉线）。"""
+    env = os.getenv("JWT_SECRET", "").strip()
+    if env:
+        return env
+    secret_file = _BASE / "data" / "secret.key"
+    try:
+        if secret_file.exists():
+            saved = secret_file.read_text(encoding="utf-8").strip()
+            if saved:
+                return saved
+        secret = secrets.token_hex(32)
+        secret_file.write_text(secret, encoding="utf-8")
+        return secret
+    except OSError:
+        return secrets.token_hex(32)
+
+
+JWT_SECRET = _load_jwt_secret()
+
+# 后台调度线程（RSS 定时刷新 / 每日备份）开关，默认开启；测试环境可关闭
+ENABLE_SCHEDULER = os.getenv("ENABLE_SCHEDULER", "1") == "1"
 
 DEFAULT_USER_PASSWORD = os.getenv("DEFAULT_USER_PASSWORD", "cim123456")
 

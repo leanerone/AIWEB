@@ -47,7 +47,7 @@ python run.py        # http://localhost:8000，SQLite 自动建表 + 播种默�
 
 **演示模式**：想首次打开就有示例内容？在 `backend/.env` 加 `SEED_DEMO=1` 再启动（自动播种示例 Skills/笔记/简报/RSS 源；已有数据时不重复播种）。
 
-**测试**：`cd backend && python -m pytest tests/ -q`（19 个用例，自动使用独立测试库）
+**测试**：`cd backend && python -m pytest tests/ -q`（40 个用例，自动使用独立测试库）
 
 **登录**：打开页面自动尝试 Windows 域 SSO（在公司域内电脑本机启动后端即直登）；
 失败时手动登录，内置账号 `administrator` / `eap.engineer` / `cim.user`，初始密码 `cim123456`

@@ -92,6 +92,7 @@ def list_items(keyword: str = "", source_id: int = 0, page: int = 1, limit: int 
     if keyword:
         query = query.filter(RssItem.title.like(f"%{keyword}%"))
     total = query.count()
+    page = max(1, page)  # 钳制：page<1 会产生负 OFFSET 导致 500
     limit = max(1, min(limit, 100))
     items = (query.order_by(RssItem.published_at.desc().nullslast(), RssItem.id.desc())
              .offset((page - 1) * limit).limit(limit).all())

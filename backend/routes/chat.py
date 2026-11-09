@@ -17,8 +17,9 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 class ChatRequest(BaseModel):
     session_id: int | None = None
-    message: str
+    message: str = ""
     context_resource_id: int | None = None
+    regenerate: bool = False  # 重新生成：不新增用户消息，重答上一问
 
 
 class RenameIn(BaseModel):
@@ -87,23 +88,44 @@ def delete_session(session_id: int, db: Session = Depends(get_db),
 def completions(body: ChatRequest, db: Session = Depends(get_db),
                 user: object = Depends(get_current_user)):
     """SSE 流式对话。事件序列：meta → delta* → done / error"""
-    if not body.message.strip():
-        raise HTTPException(status_code=400, detail="消息不能为空")
+    # AI 配置预检：在任何落库操作之前拦截，避免留下没有回复的孤儿用户消息
+    from services.ai_service import get_ai_config
+
+    if not get_ai_config(db)["api_key"]:
+        raise HTTPException(status_code=400,
+                            detail="AI 未配置：请到「设置 → AI 配置」填写 API Key")
 
     session = None
     if body.session_id:
         session = db.get(ChatSession, body.session_id)
         if not session or session.created_by != user.username:
             raise HTTPException(status_code=404, detail="会话不存在")
-    if not session:
-        session = ChatSession(title=body.message.strip()[:40], created_by=user.username)
-        db.add(session)
-        db.commit()
-        db.refresh(session)
 
-    user_msg = ChatMessage(session_id=session.id, role="user", content=body.message)
-    db.add(user_msg)
-    db.commit()
+    if body.regenerate:
+        if not session:
+            raise HTTPException(status_code=400, detail="请先选择要重新生成的会话")
+        all_msgs = (db.query(ChatMessage)
+                    .filter(ChatMessage.session_id == session.id)
+                    .order_by(ChatMessage.id).all())
+        last_user = next((m for m in reversed(all_msgs) if m.role == "user"), None)
+        if not last_user:
+            raise HTTPException(status_code=400, detail="没有可重新生成的用户消息")
+        # 删除上一轮回答（最后一条用户消息之后的所有助手消息），随后重新生成
+        for m in all_msgs:
+            if m.id > last_user.id and m.role == "assistant":
+                db.delete(m)
+        db.commit()
+    else:
+        if not body.message.strip():
+            raise HTTPException(status_code=400, detail="消息不能为空")
+        if not session:
+            session = ChatSession(title=body.message.strip()[:40], created_by=user.username)
+            db.add(session)
+            db.commit()
+            db.refresh(session)
+        user_msg = ChatMessage(session_id=session.id, role="user", content=body.message)
+        db.add(user_msg)
+        db.commit()
 
     # 组装上下文（最近 N 轮）
     history = (
