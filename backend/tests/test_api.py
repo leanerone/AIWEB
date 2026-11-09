@@ -1449,3 +1449,25 @@ class TestAppendToMemo:
         ok, _, result = tool_append_to_memo(db, None, {"memo_id": 999999, "content": "x"})
         db.close()
         assert not ok and "不存在" in result
+
+
+class TestUploadWhitelist:
+    """上传白名单：允许常见文档/脚本/归档，拦截未列出的可执行格式。"""
+
+    def _upload(self, token, filename, content=b"x"):
+        return client.post("/api/resources", data={"type": "tool", "name": "wl-test"},
+                           files={"file": (filename, content)}, headers=auth(token))
+
+    def test_allowed_docs(self, token):
+        for name, body in [("skill.md", b"# skill"), ("数据.xlsx", b"xx"),
+                           ("script.py", b"print(1)"), ("archive.zip", b"PK")]:
+            r = self._upload(token, name, body)
+            assert r.status_code == 200, (name, r.text)
+            rid = r.json()["data"]["id"]
+            client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+    def test_blocked_executables(self, token):
+        for name in ["evil.exe", "install.msi", "run.scr", "shell.wsh", "x.dylib", "noext"]:
+            r = self._upload(token, name)
+            assert r.status_code == 400, (name, r.text)
+            assert "白名单" in r.json()["detail"]

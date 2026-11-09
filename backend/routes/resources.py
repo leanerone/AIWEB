@@ -21,7 +21,18 @@ router = APIRouter(prefix="/resources", tags=["resources"])
 
 ALLOWED_TYPES = {"skill", "tool", "plugin"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
-BLOCKED_EXTS = {".exe", ".msi", ".scr", ".com", ".pif", ".cpl", ".js", ".vbs"}
+# 上传白名单：只允许文档/数据/文本/脚本/归档类（v0.9.22 由黑名单升级，防未知可执行格式）
+ALLOWED_EXTS = {
+    # 文档
+    ".md", ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".ppt", ".pptx",
+    ".json", ".xml", ".yml", ".yaml", ".ini", ".log",
+    # 图片（不含 svg：内联脚本风险）
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp",
+    # 脚本/代码
+    ".py", ".sh", ".bat", ".ps1", ".sql", ".html", ".css", ".ts", ".tsx", ".jsm", ".lua",
+    # 归档
+    ".zip", ".7z", ".gz", ".tar",
+}
 
 
 class ResourceIn(BaseModel):
@@ -141,8 +152,11 @@ async def create_resource(
     if file is not None:
         # 安全限制：大小 + 可执行扩展名黑名单
         ext = Path(file.filename or "").suffix.lower()
-        if ext in BLOCKED_EXTS:
-            raise HTTPException(status_code=400, detail=f"不允许上传 {ext} 类文件")
+        if ext not in ALLOWED_EXTS:
+            allowed_preview = ", ".join(sorted(ALLOWED_EXTS)[:10])
+            raise HTTPException(
+                status_code=400,
+                detail=f"不允许上传 {ext or '无扩展名'} 类文件（白名单制，常见：{allowed_preview}…）")
         file.file.seek(0, 2)
         size = file.file.tell()
         file.file.seek(0)
