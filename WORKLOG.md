@@ -533,3 +533,6 @@ pytest 90 ✓ · e2e_check 10/10 ✓
 ### 2026-11-11 · v0.11.3 RSS 摘要降噪
 - _clean_summary：入库前剥掉 HN 类源的 Article URL / Comments URL / Points 噪音行，正常摘要原样保留
 - 新抓取的条目生效（存量不动）；测试 90 → 92
+
+### 巡检拍 5（01:15）
+pytest 92 ✓ · e2e_check 10/10 ✓
