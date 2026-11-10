@@ -5,6 +5,7 @@ import { api } from '../services/api'
 import { useAssistant } from '../stores/assistant'
 import { useAuth } from '../stores/auth'
 import { useToast } from '../components/ui/Toast'
+import { downloadText } from '../utils/time'
 import { BentoCard } from '../components/BentoCard'
 import { BookmarkButton } from '../components/BookmarkButton'
 import { MarkdownView } from '../components/MarkdownView'
@@ -184,6 +185,23 @@ export function ResourceDetail() {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold">详细介绍</h2>
             <div className="flex gap-2">
+              <button className="btn-ghost !py-1.5 text-xs" title="生成符合 Agent Skills 标准的 SKILL.md，放进 ~/.agents/skills/ 即可用"
+                onClick={() => {
+                  const fm = [
+                    '---',
+                    `name: ${r.name}`,
+                    `description: ${r.summary || r.name}`,
+                    r.license ? `license: ${r.license}` : 'license: MIT',
+                    r.version ? `version: ${r.version}` : 'version: 1.0.0',
+                    r.tags.length ? `tags: [${r.tags.join(', ')}]` : '',
+                    '---',
+                    '',
+                  ].filter(Boolean).join(String.fromCharCode(10))
+                  downloadText(`SKILL-${r.name}.md`, fm + String.fromCharCode(10) + r.content)
+                  toast('success', 'SKILL.md 已下载')
+                }}>
+                <Download size={13} /> SKILL.md
+              </button>
               <button className="btn-ghost !py-1.5 text-xs"
                 onClick={async () => {
                   try {

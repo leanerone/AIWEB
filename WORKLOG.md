@@ -536,3 +536,7 @@ pytest 90 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 5（01:15）
 pytest 92 ✓ · e2e_check 10/10 ✓
+
+### 2026-11-11 · v0.11.4 SKILL.md 一键下载
+- 资源详情页「SKILL.md」按钮：客户端拼规范 frontmatter（name/description/license/version/tags）+ 正文下载，
+  DeepSeek Harness 用户直接丢进 ~/.agents/skills/ 即用
