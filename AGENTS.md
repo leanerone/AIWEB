@@ -68,6 +68,14 @@ src/
 - 补丁脚本写 f-string 含 `\n` 时注意 CRLF/LF 差异，最好用 `chr(10)`。
 - 改公共 CSS 要复查定位属性是否被后写规则顶掉；改透明度要顺手算文字对比度（AA 线）。
 
+## 内容体系（v0.11）
+
+- `seed_content.py`：官方内容包（19 条原创 MIT 条目，贴 CIM/VSCode/DeepSeek Harness 场景）。
+  导入方式：`SEED_CONTENT=1` 启动自动导 / 管理员设置页按钮（幂等，按 name+created_by 跳过）
+- 新增内容：往 PACK 列表加条目（type/name/summary/tags/content），name 遵循 Agent Skills 规范（小写连字符）
+- Resource 有 `license` / `version` 字段，卡片与详情页展示徽章；上传走白名单（ALLOWED_EXTS）
+- IA（v0.10 起）：资讯独立页 /news；AI 无独立页面（悬浮助手三入口）；设置页仅个人 AI 设置 + 成员管理
+
 ## 快速联调（无真实 Key）
 
 ```bash

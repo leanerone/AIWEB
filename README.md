@@ -23,13 +23,13 @@
 
 | 模块 | 说明 |
 |---|---|
-| 首页 Bento | 欢迎卡 + 统计数字滚动（Skills/工具/插件/笔记）+ 聚合动态 Feed（筛选 + 分页）+ 贡献者榜 + **我的收藏** |
-| 资源库 | skill / tool / plugin 统一管理：Markdown 详情、标签、搜索、zip/脚本附件上传下载、下载计数、**点赞**、**SKILL.md 元数据自动提取** |
+| 首页（发现流） | 居中 Hero（搜索胶囊/快捷指令/统计）+ 发现好资源 + 热门资源榜（复制安装指令）+ 简报带 + 最新动态 |
+| 资源库 | skill / tool / plugin 统一管理：**license/version 体系**、**拖拽上传自动识别 SKILL.md frontmatter**、粘贴创建、模板创建、搜索/标签/点赞/收藏 |
 | 笔记 | Markdown 编辑、置顶、标签、搜索 |
 | Notes 链接库 | 粘贴 notes:// 链接 / NDL / 富文本 → 解析服务器/数据库/文档 → 点「打开」唤起 Notes 客户端 |
 | AI 助手 | 右下角悬浮窗随时唤起（无独立页面）：**Agent 工具循环**（search/list/get 读工具直通；create_memo/bookmark/briefing/save_card 写工具默认**确认卡**，个人设置可开自动执行）、**ask_user 结构化提问**、任务卡轨迹、工具审计；SSE 流式、停止/重新生成、Markdown、多会话、页面上下文自动注入 |
 | AI 每日简报 | 一键抓取 RSS 最新资讯 → AI 生成中文简报 → 沉淀到首页动态；**每天 8 点自动生成**；**`/briefings` 归档页**可回看历史简报 |
-| RSS 资讯 | 设置页管理订阅源，手动刷新抓取（feedparser），条目可**一键存为笔记** |
+| 资讯 /news | 独立页：订阅源管理 + 刷新 + 逐条 AI 解读 + 生成今日简报 + 存为笔记/知识卡 |
 | 认证 | Windows 域 SSO（后端进程账号自动登录）+ 手动账密兜底（**失败 5 次锁 15 分钟**），JWT 鉴权 |
 | 个人 AI 配置 | 每人自己的 API Key（**Fernet 加密落库**）/ Base / 模型 / 人设 / 自动执行开关，生效链：个人 → 全局 → .env |
 | 全局 | **深色模式**（顶栏切换）、⌘K **FTS5 全文搜索**（页面/资源/笔记/资讯，中文分词）、**收藏夹**（资源/笔记 ☆）、**通知中心**（评论/点赞提醒）、Toast/确认弹窗/空状态 |
@@ -103,6 +103,7 @@ aiweb/
 │   ├── stores/  hooks/  services/  utils/
 ├── backend/
 │   ├── routes/             # auth / me / agent / assistant / ai / admin / resources / comments / memos / notes / chat / rss / feed / settings
+├── seed_content.py     # 官方内容包（19 条原创 MIT，SEED_CONTENT=1 或管理员按钮导入）
 │   ├── services/           # auth(含登录防爆破) / agent(工具循环) / agent_tools(工具注册表) / notes解析 / skill_meta / ai / rss / scheduler
 │   ├── database/           # models + session（create_all 自动建表）
 │   ├── tests/              # pytest（19 用例，独立测试库）
