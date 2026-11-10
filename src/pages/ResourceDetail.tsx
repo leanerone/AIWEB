@@ -1,15 +1,15 @@
-import { ArrowLeft, Bot, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bot, Copy, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAssistant } from '../stores/assistant'
 import { useAuth } from '../stores/auth'
+import { useToast } from '../components/ui/Toast'
 import { BentoCard } from '../components/BentoCard'
 import { BookmarkButton } from '../components/BookmarkButton'
 import { MarkdownView } from '../components/MarkdownView'
 import { NotesLinkCard } from '../components/NotesLinkCard'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { useToast } from '../components/ui/Toast'
 import type { Resource } from '../types'
 
 interface CommentItem { id: number; content: string; created_by: string; created_at: string }
@@ -183,14 +183,25 @@ export function ResourceDetail() {
         <BentoCard className="p-6" delay={0.08}>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold">详细介绍</h2>
-            <button className="btn-ghost !py-1.5 text-xs"
-              onClick={() => {
-                const st = useAssistant.getState()
-                st.setOpen(true)
-                window.setTimeout(() => st.send(`请介绍资源「${r.name}」能解决什么问题、怎么用？有什么注意事项？`), 60)
-              }}>
-              <Bot size={13} /> 问 AI 助手
-            </button>
+            <div className="flex gap-2">
+              <button className="btn-ghost !py-1.5 text-xs"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`请帮我从公司内网 AI Hub 安装/使用「${r.name}」，先告诉我它解决什么问题、怎么用。`)
+                    toast('success', '安装指令已复制，粘贴给 AI 即可')
+                  } catch { toast('error', '复制失败') }
+                }}>
+                <Copy size={13} /> 复制安装指令
+              </button>
+              <button className="btn-ghost !py-1.5 text-xs"
+                onClick={() => {
+                  const st = useAssistant.getState()
+                  st.setOpen(true)
+                  window.setTimeout(() => st.send(`请帮我从公司内网 AI Hub 安装/使用「${r.name}」，先告诉我它解决什么问题、怎么用。`), 60)
+                }}>
+                <Bot size={13} /> 问 AI 助手
+              </button>
+            </div>
           </div>
           <MarkdownView text={r.content} />
         </BentoCard>

@@ -13,6 +13,7 @@ backend/.env 配：
 - 无 tools 参数（ReAct 模式） → 输出 JSON 动作协议
 """
 import json
+import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 
@@ -45,6 +46,22 @@ def scripted_reply(body: dict) -> dict:
             if react_mode:
                 return make_response(json.dumps({"action": "final", "answer": answer}, ensure_ascii=False))
             return make_response(content=answer)
+        # 安装指令三步链：search → get_resource → 三段式回答
+        m_inst2 = re.search(r"安装/使用「([^」]+)」", last_user)
+        if m_inst2 and len(tool_results) == 1:
+            m_rid = re.search(r"#(\d+)", joined)
+            rid = int(m_rid.group(1)) if m_rid else 0
+            if react_mode:
+                return make_response(json.dumps({"action": "get_resource", "args": {"resource_id": rid}}, ensure_ascii=False))
+            return make_response(tool_calls=[{"id": "mock_call_2", "type": "function",
+                                              "function": {"name": "get_resource", "arguments": json.dumps({"resource_id": rid})}}])
+        if m_inst2 and len(tool_results) >= 2:
+            answer = ("## ① 解决什么问题\n批量合并多个 Excel 周报成一个汇总表。\n"
+                      "## ② 怎么用\n1. 下载附件\n2. `python excel_batch_merge.py 目录 -o merged.xlsx`\n"
+                      "## ③ 注意事项\n- 需要 pandas + openpyxl\n- 先用一份样例文件验证")
+            if react_mode:
+                return make_response(json.dumps({"action": "final", "answer": answer}, ensure_ascii=False))
+            return make_response(content=answer)
         answer = f"我已经查证过了（{len(tool_results)} 次工具调用）。平台内容的要点如下：\n- 这是一条 Mock 演示回答\n- 工具结果已注入上下文\n\n如需更详细的信息可以继续问我。"
         if react_mode:
             return make_response(json.dumps({"action": "final", "answer": answer}, ensure_ascii=False))
@@ -65,7 +82,11 @@ def scripted_reply(body: dict) -> dict:
         return make_response(tool_calls=[{"id": "mock_call_1", "type": "function",
                                           "function": {"name": "create_memo", "arguments": json.dumps(args, ensure_ascii=False)}}])
 
-    query = last_user[:12] or "AI"
+    m_inst = re.search(r'安装/使用「([^」]+)」', last_user)
+    if m_inst:
+        query = m_inst.group(1)  # 安装指令:精确搜资源名
+    else:
+        query = last_user[:12] or "AI"
     if react_mode:
         return make_response(json.dumps({"action": "search_platform", "args": {"query": query}}, ensure_ascii=False))
     return make_response(tool_calls=[{"id": "mock_call_1", "type": "function",

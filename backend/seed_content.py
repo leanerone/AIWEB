@@ -462,6 +462,14 @@ def seed_content() -> None:
             ))
             created += 1
         db.commit()
+        # 存量演示条目补许可标注（一次性，幂等）
+        for legacy in ("excel-batch-merge", "fix-notes-protocol", "zcode-commit-helper"):
+            r = db.query(Resource).filter(Resource.name == legacy,
+                                          Resource.license == "").first()
+            if r:
+                r.license = "MIT"
+                r.version = r.version or "1.0.0"
+        db.commit()
         logger.info("官方内容包播种完成：新增 %d，跳过 %d（SEED_CONTENT=1）", created, skipped)
     finally:
         db.close()

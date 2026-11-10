@@ -1,7 +1,8 @@
-import { BookmarkPlus, ExternalLink, Loader2, Plus, RefreshCw, Rss, Sparkles, Trash2 } from 'lucide-react'
+import { BookmarkPlus, Bot, ExternalLink, Loader2, Plus, RefreshCw, Rss, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
+import { useAssistant } from '../stores/assistant'
 import { BentoCard } from '../components/BentoCard'
 import { useToast } from '../components/ui/Toast'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -80,6 +81,14 @@ export function News() {
         <h1 className="mr-auto flex items-center gap-2 text-xl font-bold tracking-tight">
           <Rss size={19} className="text-brand-500" /> 资讯
         </h1>
+        <button className="btn-ghost !py-2 text-sm"
+          onClick={() => {
+            const st = useAssistant.getState()
+            st.setOpen(true)
+            window.setTimeout(() => st.send('总结一下最近的 AI 资讯要点，按重要程度排序'), 60)
+          }}>
+          <Bot size={15} /> 让 AI 总结资讯
+        </button>
         <Link to="/briefings" className="btn-ghost !py-2 text-sm">每日简报归档</Link>
         <button className="btn-primary" onClick={refreshAll} disabled={refreshing}>
           {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} 刷新资讯
@@ -111,6 +120,15 @@ export function News() {
                     <p className="mt-0.5 text-[11px] text-gray-400">{it.source} · {it.published_at || ''}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button title="问 AI 助手解读这条资讯"
+                      className="rounded-lg p-1.5 text-brand-600 transition hover:bg-brand-50"
+                      onClick={() => {
+                        const st = useAssistant.getState()
+                        st.setOpen(true)
+                        window.setTimeout(() => st.send(`用中文解读这条资讯，说明它对制造业/企业内网 AI 应用的参考价值：「${it.title}」`), 60)
+                      }}>
+                      <Bot size={14} />
+                    </button>
                     <button title="AI 生成知识卡" disabled={generating === it.id}
                       className="rounded-lg p-1.5 text-violet-500 transition hover:bg-violet-50 disabled:opacity-50"
                       onClick={() => makeCard(it)}>
