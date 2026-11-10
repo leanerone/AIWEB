@@ -8,6 +8,7 @@ import type { NoteLinkItem, SearchHit } from '../types'
 const PAGES = [
   { label: '首页', to: '/' },
   { label: '资源库', to: '/resources' },
+  { label: '资讯', to: '/news' },
   { label: '笔记', to: '/memos' },
   { label: 'AI 助手', to: 'assistant' },
   { label: '简报', to: '/briefings' },

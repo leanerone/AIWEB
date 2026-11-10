@@ -14,7 +14,7 @@ import type { Resource } from '../../types'
 
 /** 根据路由计算页面上下文标签（发给 AI 作隐藏上下文） */
 const PAGE_LABEL: Record<string, string> = {
-  '/': '首页', '/resources': '资源库', '/memos': '笔记',
+  '/': '首页', '/resources': '资源库', '/news': '资讯', '/memos': '笔记',
   '/briefings': '简报归档', '/settings': '设置',
 }
 

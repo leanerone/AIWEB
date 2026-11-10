@@ -490,3 +490,8 @@ pytest 82 ✓ · e2e_check 10/10 ✓
   ③首页 feed 初始 25→12 且列表封顶内部滚动，修左右失衡。
 - 后端零改动（复用 /resources?order=downloads、/rss/*、/ai/rss-card、/ai/briefing）；新增 src/pages/News.tsx。
 - 构建：npm run build（含 tsc）✓；浏览器明亮/深色双主题实拍验证 ✓（后台标签截图受 IAB 缓存限制，DOM 计算样式校验为准）。
+
+### 2026-11-10 · v0.10.1 适配与清扫（配合 v0.10.0 UI/IA 重构）
+- index.html 清理已无引用的液态玻璃 SVG 滤镜（v0.10.0 移除折射后的死代码）
+- 助手页面上下文补 /news（此前资讯页显示通用「平台内页」）；⌘K 页面列表补「资讯」
+- 复查确认：悬浮助手/个人 AI 设置/.glass-pop 面板/建议卡在 v0.10.0 下全部完好；build ✓ 86 用例 ✓
