@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Newspaper, Search, Settings as SettingsIcon, Sun } from 'lucide-react'
+import { Bell, Bot, BookOpen, CheckCheck, Heart, LayoutGrid, LogOut, MessageCircle, Moon, Notebook, Newspaper, Rss, Search, Settings as SettingsIcon, Sun } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
@@ -14,6 +14,7 @@ import type { NotificationItem } from '../types'
 const NAV = [
   { to: '/', label: '首页', icon: LayoutGrid },
   { to: '/resources', label: '资源库', icon: BookOpen },
+  { to: '/news', label: '资讯', icon: Rss },
   { to: '/briefings', label: '简报', icon: Newspaper },
   { to: '/memos', label: '笔记', icon: Notebook },
   { to: '/settings', label: '设置', icon: SettingsIcon },
@@ -24,6 +25,7 @@ export function Layout() {
   const nav = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  // 明亮为默认主题（SkillHub 风）；用户手动切换会记住偏好
   const [dark, setDark] = useState(() => localStorage.getItem('aiweb_theme') === 'dark')
   const [unread, setUnread] = useState(0)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -90,14 +92,12 @@ export function Layout() {
   return (
     <div className="min-h-full">
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-3 px-4 sm:gap-6 sm:px-8">
           <Link to="/" className="group flex items-center gap-2.5" aria-label="返回首页">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-bento transition-transform group-hover:-translate-y-0.5" style={{ backgroundImage: 'var(--brand-grad)' }}>
               <Bot size={19} />
             </span>
-            <span className="text-lg font-bold tracking-tight">
-              AI <span className="gradient-text">Hub</span>
-            </span>
+            <span className="text-lg font-semibold tracking-tight text-ink">AI Hub</span>
           </Link>
 
           <MegaMenu />
@@ -215,7 +215,7 @@ export function Layout() {
 
       <CommandPalette />
 
-      <main className="mx-auto max-w-6xl px-6 py-6">
+      <main className="mx-auto max-w-[1200px] px-6 py-7">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Geist 自托管（Halden 风格字体，内网离线可用；无 CJK 子集，中文自动回退 PingFang/YaHei） */
+/* Geist 自托管（内网离线可用；无 CJK 子集，中文自动回退 PingFang/YaHei） */
 @font-face {
   font-family: "Geist";
   font-style: normal;
@@ -19,37 +19,26 @@
 }
 
 :root {
-  --brand-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  /* Halden 适配版令牌（docs/design/halden-hero-morphing-nav-spec.txt） */
+  /* SkillHub 蓝：唯一强调色 */
+  --brand-grad: linear-gradient(135deg, #2563eb 0%, #1b3883 100%);
+  --accent: #2563eb;
+  --accent-soft: #6193ff;
+  --accent-glow: rgba(37, 99, 235, 0.35);
+  --accent-ring: rgba(37, 99, 235, 0.16);
+  /* 登录页 / 深色信息带令牌 */
   --h-ink: #0b1013;
   --h-panel: rgba(14, 19, 23, 0.84);
   --h-line: rgba(255, 255, 255, 0.08);
-  --h-hover: rgba(255, 255, 255, 0.065);
-  --h-soft: rgba(255, 255, 255, 0.74);
   --h-muted: rgba(255, 255, 255, 0.6);
   --h-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --h-morph: 0.5s;
 }
 
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -24px) scale(1.06); }
-  66% { transform: translate(-22px, 18px) scale(0.96); }
-}
+html, body, #root { height: 100%; }
 
-html, body, #root {
-  height: 100%;
-}
-
+/* 明亮为默认主题：干净的近白底 */
 body {
   @apply bg-base text-ink font-sans antialiased;
-  /* 浅色主题底衬：三团低饱和品牌色柔光。没有可透的背景，玻璃就退化成白卡 */
-  background:
-    radial-gradient(52% 40% at 84% 2%, rgba(129, 140, 248, .34), transparent 68%),
-    radial-gradient(44% 38% at 4% 22%, rgba(167, 139, 250, .26), transparent 70%),
-    radial-gradient(58% 44% at 62% 100%, rgba(56, 189, 248, .20), transparent 72%),
-    #f5f6fa;
-  background-attachment: fixed;
 }
 
 /* 细滚动条 */
@@ -62,13 +51,13 @@ body {
     @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium
       transition-all duration-200 select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
   }
+  /* 主按钮：SkillHub 蓝实心 */
   .btn-primary {
-    @apply btn text-white shadow-bento;
-    background-image: var(--brand-grad);
+    @apply btn bg-brand-600 text-white shadow-bento hover:bg-brand-700;
   }
-  .btn-primary:hover:not(:disabled) { @apply shadow-bentoHover -translate-y-px; }
+  /* 次要按钮：白底细边框，hover 转蓝（复制安装指令这类） */
   .btn-ghost {
-    @apply btn bg-white text-ink border border-gray-200 hover:border-brand-300 hover:text-brand-600;
+    @apply btn bg-white text-ink border border-gray-200 hover:border-brand-400 hover:text-brand-600;
   }
   .btn-danger {
     @apply btn bg-red-50 text-red-600 border border-red-100 hover:bg-red-100;
@@ -84,6 +73,14 @@ body {
     @apply bg-clip-text text-transparent;
     background-image: var(--brand-grad);
   }
+  /* 深色信息带：始终深色（SkillHub 的企业/简报区块用深色做明暗节奏） */
+  .hub-band {
+    @apply relative overflow-hidden text-white;
+    background: linear-gradient(140deg, #0e1526 0%, #0a0f1a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .hub-band .hub-band-title { color: #fff; }
+  .hub-band .hub-band-sub { color: rgba(255, 255, 255, 0.62); }
 }
 
 /* Markdown 正文 */
@@ -103,93 +100,103 @@ body {
 .md-body th { @apply bg-gray-50 px-3 py-2 border border-gray-200 font-semibold; }
 .md-body td { @apply px-3 py-2 border border-gray-100; }
 
-/* ── 深色模式：语义类覆盖（单一来源，避免散落 dark: 变体）── */
+/* ══════════ 卡片：明亮=白底细边框，深色=稍亮面板+细边（双主题都清晰可见）══════════ */
+.card-lg {
+  @apply rounded-bento border bg-white shadow-bento;
+  border-color: rgba(15, 23, 42, 0.09);
+}
+
+/* ── 深色主题覆盖 ── */
 .dark { color-scheme: dark; }
-.dark body { background: #0e1016; color: #e5e7eb; }
-.dark .bg-base { background: #0e1016; }
-.dark .bg-white { background: #151823; }
-.dark .bg-white\/80 { background: rgba(21, 24, 35, 0.82); }
-.dark .bg-white\/60 { background: rgba(21, 24, 35, 0.6); }
-.dark .bg-white\/85 { background: rgba(21, 24, 35, 0.88); }
-.dark .text-ink { color: #e5e7eb; }
-.dark .text-subtle { color: #9aa3b2; }
-.dark .text-gray-700, .dark .text-gray-600, .dark .text-gray-500 { color: #b6bcc9; }
-.dark .text-gray-400, .dark .text-gray-300 { color: #8b93a2; }  /* 玻璃底偏暗，原 #6b7280 仅 3.67:1 */
-.dark .border-gray-100 { border-color: #232733; }
+.dark body { background: #0f1115; color: #e6ebf2; }
+.dark .bg-base { background: #0f1115; }
+.dark .bg-white { background: #151821; }
+.dark .bg-white\/80 { background: rgba(15, 17, 21, 0.82); }
+.dark .bg-white\/60 { background: rgba(15, 17, 21, 0.6); }
+.dark .bg-white\/85 { background: rgba(15, 17, 21, 0.88); }
+.dark .text-ink { color: #e6ebf2; }
+.dark .text-subtle { color: #97a2b5; }
+.dark .text-gray-700, .dark .text-gray-600, .dark .text-gray-500 { color: #b7c1d1; }
+.dark .text-gray-400, .dark .text-gray-300 { color: #8a97a9; }
+.dark .border-gray-100 { border-color: #222632; }
 .dark .border-gray-200 { border-color: #2a2f3d; }
 .dark .border-gray-50 { border-color: #1c202c; }
 .dark .border-dashed.border-gray-200, .dark .border-dashed.border-gray-300 { border-color: #2f3545; }
-.dark .bg-gray-50 { background: #1a1e2a; }
-.dark .bg-gray-100 { background: #232838; }
-.dark .hover\:bg-gray-50:hover { background: #1c2130; }
-.dark .hover\:bg-gray-100:hover { background: #262c3d; }
-.dark .shadow-bento { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -10px rgba(0, 0, 0, 0.5); }
-.dark .shadow-bentoHover { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 44px -12px rgba(99, 102, 241, 0.35); }
-.dark .shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
-.dark .chip.bg-gray-100 { background: #232838; color: #9aa3b2; }
-.dark .input { background: #151823; border-color: #2a2f3d; color: #e5e7eb; }
-.dark .input:focus { border-color: #6366f1; }
-.dark .btn-ghost { background: #151823; color: #e5e7eb; border-color: #2a2f3d; }
-.dark .btn-ghost:hover { border-color: #6366f1; color: #a5b4fc; }
+.dark .bg-gray-50 { background: #171b25; }
+.dark .bg-gray-100 { background: #202532; }
+.dark .hover\:bg-gray-50:hover { background: #1a1f2b; }
+.dark .hover\:bg-gray-100:hover { background: #242a39; }
+.dark .shadow-bento { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -18px rgba(0, 0, 0, 0.6); }
+.dark .shadow-bentoHover { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 18px 40px -18px rgba(37, 99, 235, 0.4); }
+.dark .shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+.dark .chip.bg-gray-100 { background: #202532; color: #97a2b5; }
+.dark .input { background: #151821; border-color: #2a2f3d; color: #e6ebf2; }
+.dark .input:focus { border-color: var(--accent); }
+.dark .btn-ghost { background: #151821; color: #e6ebf2; border-color: #2a2f3d; }
+.dark .btn-ghost:hover { border-color: var(--accent); color: var(--accent-soft); }
+.dark .btn-primary { background: #2563eb; color: #fff; box-shadow: 0 8px 20px -10px rgba(37, 99, 235, 0.6); }
+.dark .btn-primary:hover:not(:disabled) { background: #3b76fb; }
 .dark .btn-danger { background: rgba(239, 68, 68, 0.12); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
-.dark .bg-brand-50 { background: rgba(99, 102, 241, 0.12); }
-.dark .bg-brand-100 { background: rgba(99, 102, 241, 0.2); color: #c7d2fe; }
+/* 卡片深色：稍亮面板 + 细边（不再"隐形"） */
+.dark .card-lg { background: #151821; border-color: rgba(255, 255, 255, 0.07); }
+/* brand 半透明底改为蓝色族，与 tailwind brand 一致 */
+.dark .bg-brand-50 { background: rgba(37, 99, 235, 0.14); }
+.dark .bg-brand-100 { background: rgba(37, 99, 235, 0.2); color: #bfd3ff; }
 .dark .bg-emerald-50 { background: rgba(16, 185, 129, 0.12); }
 .dark .bg-emerald-100 { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
 .dark .bg-amber-50 { background: rgba(245, 158, 11, 0.12); }
 .dark .bg-amber-100 { background: rgba(245, 158, 11, 0.18); color: #fcd34d; }
-.dark .bg-sky-50 { background: rgba(14, 165, 233, 0.12); }
-.dark .bg-sky-100 { background: rgba(14, 165, 233, 0.18); color: #7dd3fc; }
-.dark .bg-violet-100 { background: rgba(139, 92, 246, 0.18); color: #c4b5fd; }
+.dark .bg-sky-50 { background: rgba(56, 189, 248, 0.12); }
+.dark .bg-sky-100 { background: rgba(56, 189, 248, 0.18); color: #7dd3fc; }
+.dark .bg-violet-100 { background: rgba(139, 92, 246, 0.16); color: #c4b5fd; }
 .dark .bg-red-50 { background: rgba(239, 68, 68, 0.12); }
-.dark .bg-brand-200\/40 { background: rgba(99, 102, 241, 0.1); }
+.dark .bg-brand-200\/40 { background: rgba(37, 99, 235, 0.12); }
 .dark .bg-violet-300\/30 { background: rgba(139, 92, 246, 0.1); }
-.dark .bg-brand-100\/70 { background: rgba(99, 102, 241, 0.08); }
+.dark .bg-brand-100\/70 { background: rgba(37, 99, 235, 0.1); }
 .dark .bg-violet-200\/40 { background: rgba(139, 92, 246, 0.08); }
-.dark .dark\:bg-dark-card { background: #1c2130; }
+.dark .dark\:bg-dark-card { background: #1a1f2b; }
 /* markdown 深色 */
-.dark .md-body { color: #c3c9d4; }
-.dark .md-body h1, .dark .md-body h2, .dark .md-body h3 { color: #e5e7eb; }
-.dark .md-body code { background: #232838; color: #a5b4fc; }
-.dark .md-body pre { background: #0a0c12; }
-.dark .md-body th { background: #1a1e2a; border-color: #2a2f3d; }
-.dark .md-body td { border-color: #232733; }
-.dark .md-body blockquote { color: #9aa3b2; border-color: #3f3f8a; }
+.dark .md-body { color: #c3cbd8; }
+.dark .md-body h1, .dark .md-body h2, .dark .md-body h3 { color: #e6ebf2; }
+.dark .md-body code { background: #202532; color: #bfd3ff; }
+.dark .md-body pre { background: #0a0d14; }
+.dark .md-body th { background: #171b25; border-color: #2a2f3d; }
+.dark .md-body td { border-color: #222632; }
+.dark .md-body blockquote { color: #97a2b5; border-color: #2a4a8a; }
 
-/* ══════════ 变形下拉导航 MegaMenu（Halden 交互 + 跟随主题的配色）══════════ */
+/* ══════════ 变形下拉导航 MegaMenu（Halden 交互 + 跟随主题配色）══════════ */
 :root {
   --nav-soft: #6b7280; --nav-strong: #111827;
-  --dd-bg: rgba(255, 255, 255, 0.82);
-  --dd-line: rgba(17, 24, 39, 0.08);
+  --dd-bg: #ffffff;
+  --dd-line: rgba(17, 24, 39, 0.10);
   --dd-text: #111827;
   --dd-muted: #6b7280;
   --dd-hover: rgba(17, 24, 39, 0.05);
-  --dd-shadow: 0 24px 60px -24px rgba(16, 24, 40, 0.18), 0 2px 10px rgba(16, 24, 40, 0.06);
-  --dd-fade: rgba(255, 255, 255, 0.92);
+  --dd-shadow: 0 20px 44px -20px rgba(16, 24, 40, 0.22), 0 2px 8px rgba(16, 24, 40, 0.06);
+  --dd-fade: rgba(255, 255, 255, 0.95);
 }
 .dark {
   --nav-soft: rgba(255, 255, 255, 0.74); --nav-strong: #fff;
-  --dd-bg: rgba(14, 19, 23, 0.88);
+  --dd-bg: #171b25;
   --dd-line: rgba(255, 255, 255, 0.08);
   --dd-text: #ffffff;
   --dd-muted: rgba(255, 255, 255, 0.6);
-  --dd-hover: rgba(255, 255, 255, 0.065);
-  --dd-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.65), 0 2px 10px rgba(0, 0, 0, 0.2);
-  --dd-fade: rgba(14, 19, 23, 0.55);
+  --dd-hover: rgba(255, 255, 255, 0.06);
+  --dd-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.7), 0 2px 10px rgba(0, 0, 0, 0.3);
+  --dd-fade: rgba(23, 27, 37, 0.85);
 }
 
 .mega-nav { position: relative; display: none; align-items: center; gap: 8px; flex: 1; min-width: 0 }
 @media (min-width: 1024px) { .mega-nav { display: flex } }
 
 .mega-trigger {
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px;
   font-size: 14px; font-weight: 500; color: var(--nav-soft);
   transition: color .25s ease, background .2s ease;
 }
 .mega-trigger:hover, .mega-trigger[aria-expanded="true"] { color: var(--nav-strong); background: var(--dd-hover) }
-/* 当前页所在分组的触发词：与路由项同款高亮，回答"我现在在哪" */
-.mega-trigger.is-current { color: #4f46e5; background: #eef2ff }
-.dark .mega-trigger.is-current { color: #a5b4fc; background: rgba(255, 255, 255, 0.1) }
+.mega-trigger.is-current { color: var(--brand-600, #2563eb); background: #eef4ff }
+.dark .mega-trigger.is-current { color: var(--accent-soft); background: rgba(37, 99, 235, 0.16) }
 .mega-chev { transition: transform .35s var(--h-ease) }
 .mega-trigger[aria-expanded="true"] .mega-chev { transform: rotate(180deg) }
 
@@ -197,10 +204,9 @@ body {
   --x: 0px; --w: 400px; --h: 300px; --s: .97;
   position: absolute; top: 52px; left: 0; width: var(--w); height: var(--h);
   transform: translateX(var(--x)) scale(var(--s)); transform-origin: 50% 0;
-  opacity: 0; pointer-events: none; border-radius: 16px;
+  opacity: 0; pointer-events: none; border-radius: 14px;
   background: var(--dd-bg); border: 1px solid var(--dd-line);
   box-shadow: var(--dd-shadow);
-  backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
   overflow: hidden; z-index: 60;
   transition: transform var(--h-morph) var(--h-ease), width var(--h-morph) var(--h-ease),
               height var(--h-morph) var(--h-ease), opacity .3s ease;
@@ -224,7 +230,6 @@ body {
 }
 .mega-panel.is-noanim { transition: none !important }
 .panel-resources { width: 664px; height: 358px; display: grid; grid-template-columns: 236px 1fr }
-.panel-ai { width: 446px; height: 308px; padding: 7px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px }
 
 .mega-row {
   flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left;
@@ -234,7 +239,7 @@ body {
 .mega-row strong { font-size: 15px; font-weight: 500; margin-bottom: 4px }
 .mega-row span { font-size: 13px; line-height: 1.42; color: var(--dd-muted) }
 
-.mega-media { position: relative; overflow: hidden; border-radius: 0 15px 15px 0 }
+.mega-media { position: relative; overflow: hidden; border-radius: 0 13px 13px 0 }
 .mega-media::before {
   content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 70px; z-index: 2;
   background: linear-gradient(to right, var(--dd-fade), transparent);
@@ -246,50 +251,10 @@ body {
 }
 .mega-media img.is-active { opacity: 1; transform: scale(1); filter: blur(0); z-index: 1 }
 
-.mega-card {
-  position: relative; overflow: hidden; border-radius: 10px; display: flex; isolation: isolate;
-  flex-direction: column; justify-content: flex-end; padding: 14px; text-align: left;
-}
-.mega-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2;
-  transition: transform .9s var(--h-ease), filter .5s }
-.mega-card:hover img { transform: scale(1.05); filter: brightness(1.08) }
-.mega-card::after {
-  content: ""; position: absolute; inset: 0; z-index: -1;
-  background: linear-gradient(to top, rgba(8,11,13,.88) 0%, rgba(8,11,13,.35) 38%, rgba(8,11,13,0) 60%);
-}
-/* 图卡文字始终压暗底图上，保持白色 */
-.mega-card strong { font-size: 15.5px; font-weight: 500; margin-bottom: 5px; color: #fff }
-.mega-card span { font-size: 13px; line-height: 1.42; color: rgba(255, 255, 255, 0.75) }
-
-/* ══════════ 首页英雄带 + 登录页暗玻璃 ══════════ */
-.hero-band { position: relative; overflow: hidden; isolation: isolate; border-radius: var(--tw-rounded, 20px) }
-.hero-band .hero-img {
-  position: absolute; inset: 0; z-index: -2; background: #1b2a30 no-repeat center 45% / cover;
-  animation: heroIn 2.4s var(--h-ease) both;
-}
-@keyframes heroIn { from { transform: scale(1.08); filter: brightness(.6) } to { transform: scale(1); filter: brightness(1) } }
-.hero-band::after {
-  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    linear-gradient(to bottom, rgba(6,10,12,.35) 0%, rgba(6,10,12,0) 22%),
-    linear-gradient(to top, rgba(6,9,11,.82) 0%, rgba(6,9,11,.3) 40%, rgba(6,9,11,.05) 75%);
-}
-.hero-band .hero-title { color: #fff }
-.hero-band .hero-sub { color: rgba(255,255,255,.78) }
-
-/* 矮条形态：横向左深右浅遮罩（文字在左、按钮在右），首屏焦点让给统计卡 */
-.hero-band { min-height: 150px }
-/* 英雄带固定暗色玻璃底：浅色模式下 card-lg 的半透白会把暗图"洗白"，导致白字不可读 */
-.hero-band.card-lg { background-color: rgba(11, 16, 19, 0.5) !important }
-.hero-band.compact::after {
-  background: linear-gradient(100deg, rgba(6,10,12,.9) 0%, rgba(6,10,12,.7) 48%, rgba(6,10,12,.45) 100%);
-}
-.hero-band.compact .hero-img { background-position: center 38% }
-
+/* ══════════ 登录页暗玻璃 ══════════ */
 .login-stage { position: relative; overflow: hidden; background: var(--h-ink) }
 .login-stage .login-img {
   position: absolute; inset: 0; z-index: 0; background: #1b2a30 url('/hero/hero-server-room.jpg') no-repeat center 45% / cover;
-  animation: heroIn 2.4s var(--h-ease) both;
 }
 .login-stage .login-img::after {
   content: ""; position: absolute; inset: 0;
@@ -297,113 +262,21 @@ body {
     linear-gradient(to bottom, rgba(6,10,12,.5) 0%, rgba(6,10,12,.15) 30%),
     linear-gradient(to top, rgba(6,9,11,.86) 0%, rgba(6,9,11,.35) 45%, rgba(6,9,11,.1) 80%);
 }
-/* 浮层统一玻璃：⌘K / 通知下拉 / 各类弹层，随明暗主题切换 */
+/* 浮层：⌘K / 通知下拉 / 弹层（明亮=白，深色=暗面板） */
 .glass-pop {
   background: var(--dd-bg); border: 1px solid var(--dd-line); color: var(--dd-text);
   box-shadow: var(--dd-shadow);
-  backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
-}
-.glass-panel {
-  background: var(--h-panel); border: 1px solid var(--h-line); color: #fff;
-  backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
-  box-shadow: 0 30px 70px -25px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.2);
 }
 .login-glass {
   background: var(--h-panel); border: 1px solid var(--h-line); color: #fff;
   backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
   box-shadow: 0 30px 70px -25px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.2);
 }
-.login-glass .input {
-  background: rgba(255,255,255,.06); border-color: var(--h-line); color: #fff;
-}
+.login-glass .input { background: rgba(255,255,255,.06); border-color: var(--h-line); color: #fff; }
 .login-glass .input::placeholder { color: rgba(255,255,255,.45) }
 .login-glass .input:focus { border-color: rgba(255,255,255,.35); box-shadow: 0 0 0 4px rgba(255,255,255,.08) }
 .login-glass .btn-ghost { background: rgba(255,255,255,.08); color: #fff; border-color: var(--h-line) }
 
 @media (prefers-reduced-motion: reduce) {
-  .mega-panel, .mega-media img, .hero-band .hero-img, .login-stage .login-img { filter: none !important }
-  .hero-band .hero-img, .login-stage .login-img { animation-duration: 0.01s !important; animation-delay: 0s !important }
-}
-
-/* ══════════ 液态玻璃质感（源自 motionsites: Max Reed 高光边 + Coffee Rewards 折射）══════════ */
-:root {
-  /* 玻璃边缘高光：浅色主题用暗描边，深色主题用亮描边 */
-  --lg-edge: linear-gradient(180deg, rgba(17,24,39,.20) 0%, rgba(17,24,39,.06) 22%,
-             rgba(17,24,39,0) 45%, rgba(17,24,39,0) 62%, rgba(17,24,39,.07) 82%, rgba(17,24,39,.18) 100%);
-}
-.dark {
-  --lg-edge: linear-gradient(180deg, rgba(255,255,255,.45) 0%, rgba(255,255,255,.14) 20%,
-             rgba(255,255,255,0) 42%, rgba(255,255,255,0) 60%, rgba(255,255,255,.14) 82%, rgba(255,255,255,.42) 100%);
-}
-
-/* 高光描边：mask-composite 只在 1.2px 边框环上绘制渐变，内部完全透明 */
-.lg-edge { position: relative; overflow: hidden }
-.lg-edge::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; z-index: 3;
-  background: var(--lg-edge);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* 卡片玻璃：靠"透出底衬光斑 + 边缘高光"成立，故浅色需足够透 */
-.card-lg {
-  background: rgba(255, 255, 255, .42) !important;
-  backdrop-filter: blur(18px) saturate(1.8);
-  -webkit-backdrop-filter: blur(18px) saturate(1.8);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -1px 0 rgba(17, 24, 39, .04),
-              0 2px 20px rgba(16, 24, 40, .06);
-  border-color: rgba(255, 255, 255, .55) !important;
-}
-.dark .card-lg {
-  background: rgba(18, 23, 30, .62) !important;
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 20px rgba(0, 0, 0, .35);
-}
-
-/* 浅色幽灵按钮也玻璃化（文字为深色 ink，半透白底对比度仍达标） */
-.btn-ghost {
-  background: rgba(255, 255, 255, .55) !important;
-  backdrop-filter: blur(10px) saturate(1.5);
-  -webkit-backdrop-filter: blur(10px) saturate(1.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
-}
-
-/* 玻璃底衬偏亮，把灰色次要文字整体加深一档以满足 WCAG AA（仅浅色主题；深色不受影响） */
-html:not(.dark) .text-gray-500 { color: #5b6472; }
-html:not(.dark) .text-gray-400 { color: #5b6472; }
-
-/* 输入与幽灵按钮：深色下改为半透明玻璃（浅色保持原实色，避免对比度下降） */
-.dark .input {
-  background: rgba(255, 255, 255, .05) !important;
-  backdrop-filter: blur(8px) saturate(1.3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
-}
-.dark .input:focus { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 0 0 4px rgba(99, 102, 241, .18) }
-.dark .btn-ghost {
-  background: rgba(255, 255, 255, .06) !important;
-  backdrop-filter: blur(8px) saturate(1.3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14);
-}
-
-/* 浮层高光边：所有浏览器都给（不改 position——mega-dd 本身是 absolute，⌘K 面板由组件自带 relative） */
-.glass-pop, .mega-dd { overflow: hidden }
-.glass-pop::before, .mega-dd::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; z-index: 5;
-  background: var(--lg-edge);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
-}
-
-/* 浮层折射：仅 Chromium（.has-refract 由 main.tsx 能力探测添加）
-   折射来自 feTurbulence→feDisplacementMap；不支持时保留上面的 blur+saturate 普通磨砂 */
-.has-refract .glass-pop,
-.has-refract .mega-dd {
-  backdrop-filter: url(#liquid-glass) blur(10px) saturate(1.5) brightness(1.04);
-  -webkit-backdrop-filter: blur(10px) saturate(1.5);
-}
-/* 折射层数护栏：同时最多 3 个浮层，弹层动画只动 transform/opacity */
-@media (prefers-reduced-motion: reduce) {
-  .card-lg, .dark .input, .dark .btn-ghost, .glass-pop, .mega-dd { backdrop-filter: none; -webkit-backdrop-filter: none }
+  .mega-panel, .mega-media img { filter: none !important }
 }

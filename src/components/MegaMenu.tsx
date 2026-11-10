@@ -4,8 +4,11 @@ import { motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 
 /**
- * 顶栏导航 = 普通路由项（首页/笔记/设置，与页面同风格、当前页高亮）
- *          + 两个变形下拉面板（资源库 / AI 能力）。
+ * 顶栏导航 = 普通路由项（首页/资讯/简报/笔记/设置，与页面同风格、当前页高亮）
+ *          + 一个变形下拉面板（资源库）。
+ *
+ * 「AI 能力」下拉已移除：AI 助手有悬浮球 / 英雄带按钮 / ⌘+J 三重入口，资讯已升级为独立顶栏导航，
+ * 下拉里的两张卡都是重复入口。
  *
  * 变形逻辑移植自 docs/design/halden-hero-morphing-nav-spec.txt（vanilla 版在 aihub-preview 实测 1:1）：
  * 首次打开先无过渡定位再解除（is-instant），切换时容器 x/宽/高 0.5s 形变，
@@ -21,17 +24,11 @@ const RES_ITEMS = [
   { to: '/resources?type=plugin', title: '插件', desc: 'IDE 与平台扩展，团队内一键分发', img: '/hero/p-plugin-robot.jpg' },
   { to: '/memos#links', title: 'Notes 链接库', desc: 'notes:// 解析归档，一键唤起本机客户端', img: '/hero/p-notes-library.jpg' },
 ]
-const AI_CARDS = [
-  { to: 'assistant', title: 'AI 助手', desc: '悬浮窗随时唤起：问答 / 查资源 / 干活', img: '/hero/c-ai-network.jpg' },
-  // 每日简报不是一个页面：订阅源在设置页管理，生成按钮在首页。这里带锚点直达设置页的订阅区块
-  { to: '/settings#rss', title: '资讯订阅', desc: 'RSS 源管理与简报设置', img: '/hero/c-briefing-fans.jpg' },
-]
-const MENUS = ['resources', 'ai'] as const
+const MENUS = ['resources'] as const
 type MenuId = typeof MENUS[number]
 
 const MENU_PATH: Record<MenuId, string[]> = {
   resources: ['/resources'],
-  ai: [], // AI 助手是全局悬浮窗没有独立路由，资讯订阅属于设置页——触发词不做当前页高亮
 }
 
 export function MegaMenu() {
@@ -82,8 +79,10 @@ export function MegaMenu() {
         requestAnimationFrame(() => dd.classList.remove('is-instant'))
         window.setTimeout(() => dd.classList.remove('is-instant'), 60)
       } else {
-        const dir = MENUS.indexOf(id) > MENUS.indexOf(cur) ? 1 : -1
-        panels[cur].setAttribute('data-state', dir > 0 ? 'exit-left' : 'exit-right')
+        // 仅剩「资源库」一个下拉时此分支实际不可达；保留多面板形变逻辑以备将来再加
+        const prev = cur as MenuId
+        const dir = MENUS.indexOf(id) > MENUS.indexOf(prev) ? 1 : -1
+        panels[prev].setAttribute('data-state', dir > 0 ? 'exit-left' : 'exit-right')
         const p = panels[id]
         p.classList.add('is-noanim')
         p.setAttribute('data-state', dir > 0 ? 'exit-right' : 'exit-left')
@@ -146,14 +145,6 @@ export function MegaMenu() {
     })
 
     on(navEl, 'click', (e: MouseEvent) => {
-      // AI 助手卡：不走路由，直接唤起全局悬浮助手
-      const assistantCard = (e.target as Element).closest?.('[data-assistant]')
-      if (assistantCard) {
-        e.preventDefault()
-        close()
-        import('../stores/assistant').then(({ useAssistant }) => useAssistant.getState().setOpen(true))
-        return
-      }
       const a = (e.target as Element).closest?.('a[data-spa]') as HTMLAnchorElement | null
       if (!a) return
       e.preventDefault()
@@ -201,7 +192,7 @@ export function MegaMenu() {
       <div className="flex items-center gap-1.5">
         {plain('/', '首页', true)}
         {trigger('resources', '资源库')}
-        {trigger('ai', 'AI 能力')}
+        {plain('/news', '资讯')}
         {plain('/briefings', '简报')}
         {plain('/memos', '笔记')}
         {plain('/settings', '设置')}
@@ -222,19 +213,6 @@ export function MegaMenu() {
               <img key={it.img} src={it.img} alt="" className={i === 0 ? 'is-active' : ''} loading="lazy" />
             ))}
           </div>
-        </div>
-
-        <div className="mega-panel panel-ai" id="p-ai">
-          {AI_CARDS.map((c) => (
-            <a key={c.title} href={c.to === 'assistant' ? '#' : c.to}
-              data-spa={c.to === 'assistant' ? undefined : true}
-              data-assistant={c.to === 'assistant' ? true : undefined}
-              className="mega-card">
-              <img src={c.img} alt="" loading="lazy" />
-              <strong>{c.title}</strong>
-              <span>{c.desc}</span>
-            </a>
-          ))}
         </div>
       </div>
     </nav>

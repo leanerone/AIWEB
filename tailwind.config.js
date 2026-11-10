@@ -5,23 +5,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: '#f5f6fa',
-        ink: '#111827',
+        base: '#f6f7fb',
+        ink: '#16181d',
         subtle: '#5b6472',
+        // 强调色阶：SkillHub 皇家蓝（明亮为默认主题，蓝为唯一强调）
         brand: {
-          50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
-          400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
-          800: '#3730a3', 900: '#312e81',
+          50: '#eef4ff', 100: '#dbe7ff', 200: '#bfd3ff', 300: '#93b4ff',
+          400: '#6193ff', 500: '#3b76fb', 600: '#2563eb', 700: '#1d4fd0',
+          800: '#1c3fa8', 900: '#1b3883',
         },
         violet2: '#7c3aed',
       },
       borderRadius: {
-        bento: '1.25rem',
-        bento2: '1.75rem',
+        bento: '1rem',
+        bento2: '1.25rem',
       },
       boxShadow: {
-        bento: '0 1px 2px rgba(16,24,40,.04), 0 10px 28px -10px rgba(16,24,40,.10)',
-        bentoHover: '0 2px 4px rgba(16,24,40,.05), 0 18px 44px -12px rgba(79,70,229,.20)',
+        bento: '0 1px 2px rgba(16,24,40,.04), 0 10px 24px -14px rgba(16,24,40,.14)',
+        bentoHover: '0 2px 6px rgba(16,24,40,.06), 0 16px 36px -16px rgba(37,99,235,.26)',
       },
       fontFamily: {
         sans: ['Geist', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'PingFang SC',

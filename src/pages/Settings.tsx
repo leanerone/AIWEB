@@ -1,11 +1,10 @@
-import { BookmarkPlus, ChevronDown, ChevronRight, DatabaseBackup, ExternalLink, KeyRound, Loader2, Plus, RefreshCw, Rss, Save, Sparkles, Trash2, UserPlus, Users } from 'lucide-react'
+import { ChevronDown, ChevronRight, DatabaseBackup, KeyRound, Loader2, Save, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
 import { useToast } from '../components/ui/Toast'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import type { MyAiConfigData, RssItem, RssSourceItem } from '../types'
+import type { MyAiConfigData } from '../types'
 
 interface UserItem { id: number; username: string; display_name: string; role: string; department: string }
 
@@ -162,7 +161,7 @@ function MemberAdmin() {
   }
 
   return (
-    <BentoCard className="h-fit p-6" delay={0.18}>
+    <BentoCard className="h-fit p-6" delay={0.1}>
       <div className="mb-4 flex items-center gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-600"><Users size={17} /></span>
         <h2 className="text-sm font-bold">成员管理</h2>
@@ -227,138 +226,16 @@ function MemberAdmin() {
 }
 
 export function Settings() {
-  const toast = useToast()
-  const [sources, setSources] = useState<RssSourceItem[]>([])
-  const [items, setItems] = useState<RssItem[]>([])
-  const [newName, setNewName] = useState('')
-  const [newUrl, setNewUrl] = useState('')
-  const [refreshing, setRefreshing] = useState(false)
-  const [delId, setDelId] = useState<number | null>(null)
-
-  const load = () => {
-    api.get<never, RssSourceItem[]>('/rss/sources').then(setSources).catch(() => {})
-    api.get<never, { items: RssItem[] }>('/rss/items?limit=30').then((d) => setItems(d.items)).catch(() => {})
-  }
-  useEffect(() => { load() }, [])
-
-  const addSource = async () => {
-    if (!newUrl.trim()) { toast('info', '请填写 RSS 地址'); return }
-    try {
-      await api.post('/rss/sources', { name: newName || newUrl.slice(0, 40), url: newUrl })
-      toast('success', '订阅源已添加')
-      setNewName(''); setNewUrl('')
-      load()
-    } catch (e) {
-      toast('error', (e as Error).message)
-    }
-  }
-
-  const refreshAll = async () => {
-    setRefreshing(true)
-    try {
-      const r = await api.post<never, { new: number }>('/rss/refresh')
-      toast('success', `刷新完成，新增 ${r.new} 条`)
-      load()
-    } catch (e) {
-      toast('error', (e as Error).message)
-    } finally {
-      setRefreshing(false)
-    }
-  }
-
-  const delSource = async () => {
-    if (!delId) return
-    await api.delete(`/rss/sources/${delId}`).catch((e) => toast('error', (e as Error).message))
-    setDelId(null)
-    load()
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {/* 个人 AI 设置（折叠轻量入口）+ 管理员工具 */}
-      <div className="space-y-4">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="mr-auto text-xl font-bold tracking-tight">设置</h1>
+        <p className="text-xs text-gray-400">RSS 订阅已移至「资讯」页</p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <MyAiConfig />
         <MemberAdmin />
       </div>
-
-      {/* RSS 订阅 */}
-      <div className="space-y-4">
-        <BentoCard id="rss" className="scroll-mt-24 p-6" delay={0.06}>
-          <div className="mb-4 flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600"><Rss size={17} /></span>
-            <h2 className="mr-auto text-sm font-bold">AI 资讯订阅</h2>
-            <button className="btn-ghost !py-1.5" onClick={refreshAll} disabled={refreshing}>
-              {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} 全部刷新
-            </button>
-          </div>
-          <div className="mb-3 flex gap-2">
-            <input className="input w-28 shrink-0" placeholder="名称" value={newName} onChange={(e) => setNewName(e.target.value)} />
-            <input className="input flex-1" placeholder="RSS 地址，如 https://hnrss.org/newest?q=AI" value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addSource()} />
-            <button className="btn-primary shrink-0" onClick={addSource}><Plus size={15} /></button>
-          </div>
-          <div className="space-y-1.5">
-            {sources.map((s) => (
-              <div key={s.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-sm">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${s.enabled ? (s.last_error ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-gray-300'}`} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{s.name}</p>
-                  <p className="truncate text-[11px] text-gray-400">{s.url}</p>
-                  {s.last_error && <p className="truncate text-[11px] text-amber-600" title={s.last_error}>⚠ {s.last_error}</p>}
-                </div>
-                <button className="rounded-lg p-1.5 text-red-400 hover:bg-red-50" onClick={() => setDelId(s.id)}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-            {sources.length === 0 && (
-              <p className="py-4 text-center text-xs text-gray-400">还没有订阅源，先添加一个试试</p>
-            )}
-          </div>
-        </BentoCard>
-
-        <BentoCard className="p-5" delay={0.12}>
-          <h3 className="mb-3 text-sm font-bold">最新资讯</h3>
-          <div className="max-h-72 space-y-1 overflow-y-auto">
-            {items.map((it) => (
-              <div key={it.id} className="group flex items-start gap-2 rounded-xl p-2.5 transition hover:bg-gray-50">
-                <ExternalLink size={13} className="mt-1 shrink-0 text-sky-500" />
-                <a href={it.link} target="_blank" rel="noreferrer" className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{it.title}</p>
-                  <p className="text-[11px] text-gray-400">{it.source} · {it.published_at || ''}</p>
-                </a>
-                <button title="AI 生成知识卡并沉淀到首页" className="hidden shrink-0 rounded-lg p-1.5 text-violet-500 hover:bg-violet-50 group-hover:block"
-                  onClick={async () => {
-                    try {
-                      const d = await api.post<never, { id: number; title: string }>('/ai/rss-card', { rss_item_id: it.id })
-                      toast('success', `知识卡已生成：${d.title.slice(0, 30)}…`)
-                    } catch (e) { toast('error', (e as Error).message) }
-                  }}>
-                  <Sparkles size={14} />
-                </button>
-                <button title="保存为笔记" className="hidden shrink-0 rounded-lg p-1.5 text-subtle hover:bg-brand-50 hover:text-brand-600 group-hover:block"
-                  onClick={async () => {
-                    try {
-                      await api.post('/memos', {
-                        title: it.title,
-                        content: `${it.summary || it.title}\n\n原文：${it.link}\n来源：${it.source}`,
-                        tags: ['rss', it.source || '资讯'],
-                      })
-                      toast('success', '已保存为笔记')
-                    } catch (e) { toast('error', (e as Error).message) }
-                  }}>
-                  <BookmarkPlus size={14} />
-                </button>
-              </div>
-            ))}
-            {items.length === 0 && <p className="py-6 text-center text-xs text-gray-400">暂无资讯，点「全部刷新」抓取</p>}
-          </div>
-        </BentoCard>
-      </div>
-
-      <ConfirmDialog open={!!delId} danger title="删除订阅源" message="删除后该源的资讯条目也会清除。"
-        onConfirm={delSource} onCancel={() => setDelId(null)} />
     </div>
   )
 }

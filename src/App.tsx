@@ -7,6 +7,7 @@ import { Briefings } from './pages/Briefings'
 import { Dashboard } from './pages/Dashboard'
 import { Login } from './pages/Login'
 import { Memos } from './pages/Memos'
+import { News } from './pages/News'
 import { Resources } from './pages/Resources'
 import { ResourceDetail } from './pages/ResourceDetail'
 import { Settings } from './pages/Settings'
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/resources" element={<Resources />} />
         <Route path="/resources/:id" element={<ResourceDetail />} />
         <Route path="/memos" element={<Memos />} />
+        <Route path="/news" element={<News />} />
         <Route path="/chat" element={<AssistantRedirect />} />
         <Route path="/briefings" element={<Briefings />} />
         <Route path="/settings" element={<Settings />} />

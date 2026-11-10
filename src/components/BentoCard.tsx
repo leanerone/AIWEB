@@ -9,17 +9,16 @@ interface Props {
   id?: string
 }
 
-/** Bento 基础卡片：入场淡入上浮 + hover 微抬升 */
+/** 基础卡片：白底细边框浅阴影（.card-lg 统一），轻微入场淡入 */
 export function BentoCard({ children, className = '', delay = 0, onClick, id }: Props) {
   return (
     <motion.div
       id={id}
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: 'easeOut' }}
-      whileHover={{ y: -3 }}
+      transition={{ duration: 0.35, delay, ease: [0.22, 1, 0.36, 1] }}
       onClick={onClick}
-      className={`lg-edge card-lg rounded-bento border border-gray-100 bg-white shadow-bento transition-shadow hover:shadow-bentoHover ${className}`}
+      className={`card-lg transition-shadow hover:shadow-bentoHover ${className}`}
     >
       {children}
     </motion.div>
