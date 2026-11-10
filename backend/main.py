@@ -40,6 +40,9 @@ async def lifespan(_app: FastAPI):
     if os.getenv("SEED_DEMO", "").strip() == "1":
         from seed_demo import seed_demo
         seed_demo()
+    if os.getenv("SEED_CONTENT", "").strip() == "1":
+        from seed_content import seed_content
+        seed_content()
     from services.scheduler import start_scheduler
     start_scheduler()
     yield

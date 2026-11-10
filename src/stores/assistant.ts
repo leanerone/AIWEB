@@ -131,6 +131,7 @@ export const useAssistant = create<AssistantState>((set, get) => {
             gotMeta = true
             if (data.session_id && data.session_id !== get().sessionId) {
               set({ sessionId: data.session_id })
+              try { localStorage.setItem('aiweb_assistant_session', String(data.session_id)) } catch { /* 忽略 */ }
               get().loadSessions()
             }
             break
@@ -222,6 +223,7 @@ export const useAssistant = create<AssistantState>((set, get) => {
     openSession: (id) => {
       if (get().streaming) return // 流式中切换会把后续 token 写进新会话视图，禁止
       set({ sessionId: id, historyOpen: false, pendingConfirm: null, pendingAsk: null })
+      try { localStorage.setItem('aiweb_assistant_session', id ? String(id) : '') } catch { /* 忽略 */ }
       if (!id) { set({ messages: [] }); return }
       api.get<never, AssistantMsg[]>(`/chat/sessions/${id}/messages`)
         .then((messages) => set({ messages }))

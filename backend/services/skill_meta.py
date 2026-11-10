@@ -1,5 +1,13 @@
-"""SKILL.md frontmatter 解析：上传技能包时自动提取 name / description 等元数据。"""
+"""SKILL.md frontmatter 解析：上传/导入技能包时自动提取元数据。
+
+对齐 Agent Skills 开放标准（agentskills.io）：
+- name ≤64 字符，仅小写字母/数字/连字符
+- description 驱动 Agent 发现（≤1024 字符）
+- 可选 license / version / author / tags
+"""
 import re
+
+_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
 
 def parse_frontmatter(text: str) -> dict:
@@ -24,16 +32,29 @@ def parse_frontmatter(text: str) -> dict:
     return out
 
 
+def validate_skill_name(name: str) -> tuple[bool, str]:
+    """Agent Skills 规范的 name 校验；返回 (是否合规, 规范化建议)"""
+    n = (name or "").strip()
+    if not n:
+        return False, ""
+    if _NAME_RE.fullmatch(n):
+        return True, n
+    # 自动规范化：大写→小写、空格/下划线→连字符、去非法字符
+    fixed = re.sub(r"[^a-z0-9-]+", "-", n.lower()).strip("-")
+    fixed = re.sub(r"-{2,}", "-", fixed)[:64]
+    return (bool(_NAME_RE.fullmatch(fixed)), fixed)
+
+
 def extract_from_upload(path: str) -> dict:
     """从上传的附件提取元数据：.md 直接解析；.zip 内找 SKILL.md / *.md 解析。
 
-    返回 {"name": str, "description": str, "tags": [..]}，找不到字段则为空。
+    返回 {"name", "description", "tags", "license", "version", "author"}，找不到字段则为空。
     """
     import zipfile
     from pathlib import Path
 
     p = Path(path)
-    out = {"name": "", "description": "", "tags": []}
+    out = {"name": "", "description": "", "tags": [], "license": "", "version": "", "author": ""}
     try:
         texts: list[str] = []
         if p.suffix.lower() == ".md":
@@ -49,14 +70,17 @@ def extract_from_upload(path: str) -> dict:
                     texts.append(zf.read(n).decode("utf-8", errors="ignore"))
         for text in texts:
             fm = parse_frontmatter(text)
-            if not out["name"]:
-                out["name"] = str(fm.get("name", ""))
-            if not out["description"]:
-                out["description"] = str(fm.get("description", ""))
+            for key in ("name", "description", "license", "version", "author"):
+                if not out[key]:
+                    out[key] = str(fm.get(key, ""))
             if not out["tags"] and isinstance(fm.get("tags"), list):
                 out["tags"] = [str(t) for t in fm["tags"]][:8]
             if out["name"] and out["description"]:
                 break
+        # 规范化 name（Agent Skills 标准）
+        ok, fixed = validate_skill_name(out["name"])
+        if ok:
+            out["name"] = fixed
     except Exception:
         pass
     return out

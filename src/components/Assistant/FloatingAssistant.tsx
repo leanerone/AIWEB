@@ -150,6 +150,50 @@ export function FloatingAssistant() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollBoxRef = useRef<HTMLDivElement>(null)
 
+  // ── 面板尺寸可调（拖右下角手柄），记忆到 localStorage ──
+  const [size, setSize] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('aiweb_assistant_size') || 'null')
+      if (saved && saved.w >= 360 && saved.w <= 640 && saved.h >= 420 && saved.h <= 800) return saved
+    } catch { /* 忽略 */ }
+    return { w: 420, h: 560 }
+  })
+  const resizing = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    resizing.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h }
+    const onMove = (ev: MouseEvent) => {
+      if (!resizing.current) return
+      const w = Math.min(640, Math.max(360, resizing.current.w - (ev.clientX - resizing.current.x)))
+      const h = Math.min(800, Math.max(420, resizing.current.h - (ev.clientY - resizing.current.y)))
+      setSize({ w, h })
+    }
+    const onUp = () => {
+      resizing.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      setSize((cur: { w: number; h: number }) => {
+        try { localStorage.setItem('aiweb_assistant_size', JSON.stringify(cur)) } catch { /* 忽略 */ }
+        return cur
+      })
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  // ── 恢复上次会话：打开面板且为空时，若有记忆的会话则自动载入 ──
+  useEffect(() => {
+    if (!open) return
+    const saved = localStorage.getItem('aiweb_assistant_session')
+    if (saved && !sessionId && messages.length === 0) {
+      const id = Number(saved)
+      if (id > 0 && sessions.some((x) => x.id === id)) openSession(id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   useEffect(() => {
     if (open && sessions.length === 0) loadSessions()
   }, [open, sessions.length, loadSessions])
@@ -210,7 +254,8 @@ export function FloatingAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="glass-pop fixed bottom-[100px] right-4 z-[64] flex h-[560px] max-h-[calc(100vh-130px)] w-[min(420px,calc(100vw-32px))] flex-col overflow-hidden rounded-3xl lg:bottom-24 lg:right-6"
+            className="glass-pop fixed bottom-[100px] right-4 z-[64] flex max-h-[calc(100vh-130px)] flex-col overflow-hidden rounded-3xl lg:bottom-24 lg:right-6"
+            style={{ width: `min(${size.w}px, calc(100vw - 32px))`, height: `min(${size.h}px, calc(100vh - 130px))` }}
           >
             {/* 头部 */}
             <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3 dark:border-white/10">
@@ -364,6 +409,17 @@ export function FloatingAssistant() {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* 右下角拖拽调大小手柄 */}
+            <div
+              className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize text-gray-400 transition hover:text-brand-500"
+              title="拖拽调整面板大小"
+              onMouseDown={startResize}
+            >
+              <svg viewBox="0 0 16 16" className="h-4 w-4">
+                <path d="M14 14L8 14L14 8Z M14 14L11 14L14 11Z" fill="currentColor" opacity="0.5" />
+              </svg>
             </div>
           </motion.div>
         )}

@@ -16,6 +16,8 @@ export interface Resource {
   content: string
   tags: string[]
   author: string
+  license?: string
+  version?: string
   source_type: string
   file_name: string | null
   external_url: string | null

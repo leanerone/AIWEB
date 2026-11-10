@@ -1,4 +1,5 @@
 """资源库路由：skill / tool / plugin 统一管理，支持 zip 上传与下载。"""
+import os
 import shutil
 import uuid
 from pathlib import Path
@@ -42,6 +43,8 @@ class ResourceIn(BaseModel):
     content: str = ""
     tags: list[str] = []
     author: str = ""
+    license: str = ""
+    version: str = ""
     source_type: str = "none"
     external_url: str | None = None
 
@@ -114,6 +117,7 @@ def _serialize(r: Resource, viewer: str | None = None, bookmarked: bool = False)
     return {
         "id": r.id, "type": r.type, "name": r.name, "summary": r.summary,
         "content": r.content, "tags": r.tags or [], "author": r.author,
+        "license": getattr(r, "license", "") or "", "version": getattr(r, "version", "") or "",
         "source_type": r.source_type, "file_name": r.file_name,
         "external_url": r.external_url, "downloads": r.downloads,
         "views": r.views, "likes": r.likes,
@@ -133,6 +137,8 @@ async def create_resource(
     content: str = Form(""),
     tags: str = Form(""),
     author: str = Form(""),
+    license: str = Form(""),
+    version: str = Form(""),
     external_url: str = Form(""),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
@@ -143,7 +149,8 @@ async def create_resource(
     tag_list = [t.strip() for t in tags.replace("，", ",").split(",") if t.strip()]
     r = Resource(
         type=type, name=name.strip(), summary=summary, content=content,
-        tags=tag_list, author=author, created_by=user.username,
+        tags=tag_list, author=author, license=license.strip()[:60],
+        version=version.strip()[:30], created_by=user.username,
     )
     if external_url:
         r.external_url = _safe_external_url(external_url)
@@ -196,6 +203,36 @@ async def create_resource(
     fts.index_resource(db, r)  # 全文索引同步
     db.commit()
     return {"success": True, "data": _serialize(r, user.username)}
+
+
+@router.post("/preview-meta")
+async def preview_meta(file: UploadFile = File(...), _: object = Depends(get_current_user)):
+    """上传前元数据预览：解析 SKILL.md/zip 的 frontmatter，不创建资源。
+
+    用于拖拽/选择文件后即时回填表单（name/description/tags/license/version/author）。
+    """
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in ALLOWED_EXTS:
+        raise HTTPException(status_code=400, detail=f"不允许上传 {ext or '无扩展名'} 类文件（白名单制）")
+    file.file.seek(0, 2)
+    if file.file.tell() > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="附件超过 20MB 限制")
+    file.file.seek(0)
+    import tempfile
+
+    from services.skill_meta import extract_from_upload
+
+    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        meta = extract_from_upload(tmp_path)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+    return {"success": True, "data": meta}
 
 
 @router.get("/{resource_id}")
@@ -256,6 +293,10 @@ def update_resource(resource_id: int, body: ResourceIn,
     r.content = body.content
     r.tags = body.tags
     r.author = body.author
+    if "license" in body.model_fields_set:
+        r.license = (body.license or "")[:60]
+    if "version" in body.model_fields_set:
+        r.version = (body.version or "")[:30]
     if body.external_url:
         safe = _safe_external_url(body.external_url)
         if safe:

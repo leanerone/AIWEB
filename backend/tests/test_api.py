@@ -1559,3 +1559,48 @@ class TestSseEncoding:
             assert "".join(pieces) == "中文回答：机台通信超时排查 ✓"
         finally:
             srv.shutdown()
+
+
+class TestContentPack:
+    """官方内容包：幂等导入 + license/version 字段贯通。"""
+
+    def test_seed_content_idempotent(self):
+        from seed_content import PACK, seed_content
+
+        seed_content()
+        seed_content()  # 第二次应全部跳过
+        from database.session import SessionLocal
+        from database.models import Resource
+
+        db = SessionLocal()
+        names = {p["name"] for p in PACK}
+        found = db.query(Resource).filter(
+            Resource.created_by == "aihub-official",
+            Resource.name.in_(names)).all()
+        db.close()
+        assert len(found) == len(PACK), f"导入不完整：{len(found)}/{len(PACK)}"
+        for r in found:
+            assert r.license == "MIT" and r.version
+            assert r.summary and r.content
+
+    def test_license_version_roundtrip(self, token):
+        rid = client.post("/api/resources", data={
+            "type": "tool", "name": "lic-ver-rt", "license": "Apache-2.0", "version": "2.1.0"},
+            headers=auth(token)).json()["data"]["id"]
+        d = client.get(f"/api/resources/{rid}", headers=auth(token)).json()["data"]
+        assert d["license"] == "Apache-2.0" and d["version"] == "2.1.0"
+        # 更新（显式字段集内才改）
+        client.put(f"/api/resources/{rid}", json={"type": "tool", "name": "lic-ver-rt",
+                                                  "license": "MIT", "version": "2.2.0", "tags": []},
+                   headers=auth(token))
+        d2 = client.get(f"/api/resources/{rid}", headers=auth(token)).json()["data"]
+        assert d2["license"] == "MIT" and d2["version"] == "2.2.0"
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+    def test_skill_name_validation(self):
+        from services.skill_meta import validate_skill_name
+
+        ok, fixed = validate_skill_name("My Great Skill!")
+        assert ok and fixed == "my-great-skill"
+        ok2, _ = validate_skill_name("x" * 70)
+        assert ok2 and len(validate_skill_name("x" * 70)[1]) <= 64

@@ -124,8 +124,9 @@ export function ResourceDetail() {
       <BentoCard className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className={`chip ${TYPE_BADGE[r.type]}`}>{TYPE_LABEL[r.type]}</span>
+              {r.license && <span className="chip border border-emerald-200 bg-emerald-50 text-emerald-700" title="开源许可">{r.license}{r.version ? ` · v${r.version}` : ''}</span>}
               {r.tags.map((t) => <span key={t} className="chip bg-gray-100 text-gray-600">#{t}</span>)}
             </div>
             <h1 className="mt-2 text-2xl font-bold tracking-tight">{r.name}</h1>

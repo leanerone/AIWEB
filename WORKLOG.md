@@ -495,3 +495,12 @@ pytest 82 ✓ · e2e_check 10/10 ✓
 - index.html 清理已无引用的液态玻璃 SVG 滤镜（v0.10.0 移除折射后的死代码）
 - 助手页面上下文补 /news（此前资讯页显示通用「平台内页」）；⌘K 页面列表补「资讯」
 - 复查确认：悬浮助手/个人 AI 设置/.glass-pop 面板/建议卡在 v0.10.0 下全部完好；build ✓ 86 用例 ✓
+
+### 2026-11-11 · v0.11.0 内容与上传体系（官方内容包 + 摩擦-free 上传 + 窗口改良）
+- **Resource 新增 license/version**（模型+迁移+API+卡片徽章+详情徽章）
+- **skill_meta 对齐 Agent Skills 开放标准**：license/version/author 提取 + validate_skill_name 自动规范化
+- **官方内容包 seed_content.py**：19 条原创 MIT 条目（13 skills + 3 tools + 3 plugins），
+  SEED_CONTENT=1 幂等导入；贴 CIM/EAP/DeepSeek Harness/VSCode 场景；合规原则见 docs/research/ECOSYSTEM.md
+- **上传三模式**：拖拽文件(.md 客户端解析/.zip 服务端 preview-meta 回填) / 粘贴 Markdown 自动识别 / SKILL.md 规范模板
+- **悬浮助手**：右下角拖拽手柄调大小（360-640 × 420-800，记忆 localStorage）+ 恢复上次会话
+- 测试 86 → 89（内容包幂等/license 贯通/name 校验）

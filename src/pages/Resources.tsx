@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import { Check, Copy, Download, FileText, FileUp, Heart, Loader2, Package, Plus, Puzzle, Search, Sparkles, Wrench } from 'lucide-react'
-import { useState } from 'react'
-import type { MouseEvent } from 'react'
+import { Check, ClipboardPaste, Copy, Download, FileText, FileUp, Heart, Loader2, Package, Plus, Puzzle, Search, Sparkles, SquarePen, Wrench } from 'lucide-react'
+import { useRef, useState } from 'react'
+import type { DragEvent, MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
@@ -47,6 +47,60 @@ const TYPE_META: Record<string, { dot: string; chip: string }> = {
   skill: { dot: 'bg-brand-500', chip: 'bg-brand-50 text-brand-700' },
   tool: { dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700' },
   plugin: { dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700' },
+}
+
+/** SKILL.md 规范模板（对齐 agentskills.io 开放标准） */
+export const SKILL_TEMPLATE = `---
+name: my-skill
+description: 一句话说明做什么、什么时候用（AI 靠它决定何时加载本技能）
+license: MIT
+version: 0.1.0
+author: 你的名字
+tags: [标签1, 标签2]
+---
+
+## 解决什么问题
+
+一两句话说清楚使用场景。
+
+## 使用步骤
+
+1. 前置条件…
+2. 操作步骤…
+3. 验证方式…
+
+## 注意事项
+
+- 敏感数据先脱敏
+- 常见坑…
+
+## 让 AI 帮忙
+
+把本技能交给悬浮助手时，附上：现象、环境、目标。`
+
+/** 客户端 frontmatter 解析（与服务端 skill_meta 同规则，用于即时回填） */
+export function parseFrontmatter(text: string): Record<string, string | string[]> {
+  const m = text.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?/)
+  if (!m) return {}
+  const out: Record<string, string | string[]> = {}
+  for (const line of m[1].split(/\r?\n/)) {
+    const i = line.indexOf(':')
+    if (i < 0) continue
+    const key = line.slice(0, i).trim().toLowerCase()
+    let val = line.slice(i + 1).trim()
+    if (!key || !val) continue
+    if (val.startsWith('[') && val.endsWith(']')) {
+      out[key] = val.slice(1, -1).split(',').map(v => v.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
+    } else {
+      out[key] = val.replace(/^['"]|['"]$/g, '')
+    }
+  }
+  return out
+}
+
+/** 剥掉 frontmatter 后的正文 */
+function stripFrontmatter(text: string): string {
+  return text.replace(/^---\s*\r?\n[\s\S]*?\r?\n---\s*\r?\n?/, '').trim()
 }
 
 export function Resources() {
@@ -161,7 +215,8 @@ export function Resources() {
                   {r.summary || r.content.slice(0, 60) || '（无描述）'}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {r.tags.slice(0, 4).map((t) => (
+                  {r.license && <span className="chip border border-emerald-200 bg-emerald-50 text-emerald-700" title="开源许可">{r.license}</span>}
+                  {r.tags.slice(0, 3).map((t) => (
                     <span key={t}
                       className={`chip cursor-pointer transition ${tagFilter === t ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700'}`}
                       onClick={() => setTagFilter(tagFilter === t ? '' : t)}>
@@ -200,15 +255,87 @@ export function Resources() {
 
 function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAuthor: string }) {
   const toast = useToast()
+  const [mode, setMode] = useState<'file' | 'paste' | 'template'>('file')
   const [type, setType] = useState('skill')
   const [name, setName] = useState('')
   const [summary, setSummary] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState('')
+  const [license, setLicense] = useState('MIT')
+  const [version, setVersion] = useState('0.1.0')
   const [externalUrl, setExternalUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [aiBusy, setAiBusy] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  /** 把（客户端或服务端）解析出的元数据回填表单 */
+  const applyMeta = (meta: Record<string, unknown>, body?: string) => {
+    if (meta.name) setName(String(meta.name))
+    if (meta.description) setSummary(String(meta.description))
+    if (body !== undefined) setContent(body)
+    else if (meta.description && !content) setContent(String(meta.description))
+    if (Array.isArray(meta.tags) && meta.tags.length) setTags(meta.tags.join(','))
+    else if (typeof meta.tags === 'string' && meta.tags) setTags(meta.tags)
+    if (meta.license) setLicense(String(meta.license))
+    if (meta.version) setVersion(String(meta.version))
+    if (meta.author && !defaultAuthor) setName((n) => n)  // author 由 defaultAuthor 兜底
+  }
+
+  /** .md 文件：客户端直接解析（无网络往返） */
+  const readFile = async (f: File) => {
+    const text = await f.text()
+    const fm = parseFrontmatter(text)
+    applyMeta(fm, stripFrontmatter(text))
+    if (!name) setName(f.name.replace(/\.(md|markdown)$/i, ''))
+    toast('success', '已解析 frontmatter 并回填表单')
+  }
+
+  /** .zip 等：走服务端 preview-meta 解析 */
+  const previewOnServer = async (f: File) => {
+    const fd = new FormData()
+    fd.append('file', f)
+    try {
+      const d = await api.post<never, Record<string, unknown>>('/resources/preview-meta', fd)
+      applyMeta(d, d.description ? String(d.description) : undefined)
+      setFile(f)
+      toast('success', '已解析压缩包元数据并回填表单')
+    } catch (e) {
+      toast('error', (e as Error).message)
+    }
+  }
+
+  const handleFiles = async (files: FileList | null) => {
+    const f = files?.[0]
+    if (!f) return
+    if (/\.(md|markdown|txt)$/i.test(f.name)) {
+      setFile(f)
+      await readFile(f)
+    } else {
+      await previewOnServer(f)
+    }
+  }
+
+  const onDrop = async (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault()
+    setDragOver(false)
+    await handleFiles(e.dataTransfer.files)
+  }
+
+  const pasteParse = (text: string) => {
+    const fm = parseFrontmatter(text)
+    if (Object.keys(fm).length) {
+      applyMeta(fm, stripFrontmatter(text))
+      toast('success', '识别到 frontmatter，已回填表单')
+    }
+  }
+
+  const useTemplate = () => {
+    setMode('template')
+    setContent(SKILL_TEMPLATE)
+    pasteParse(SKILL_TEMPLATE)
+  }
 
   const aiDescribe = async () => {
     if (!name.trim()) { toast('info', '先填写资源名称，AI 才能写简介'); return }
@@ -235,6 +362,8 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
       fd.append('content', content)
       fd.append('tags', tags)
       fd.append('author', defaultAuthor)
+      fd.append('license', license)
+      fd.append('version', version)
       fd.append('external_url', externalUrl)
       if (file) fd.append('file', file)
       await api.post('/resources', fd)
@@ -247,6 +376,12 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
     }
   }
 
+  const MODES = [
+    { key: 'file' as const, label: '上传文件', icon: FileUp, hint: '拖入 SKILL.md / zip，自动识别元数据' },
+    { key: 'paste' as const, label: '粘贴创建', icon: ClipboardPaste, hint: '粘贴 Markdown（含 frontmatter 自动识别）' },
+    { key: 'template' as const, label: '从模板开始', icon: SquarePen, hint: '载入 SKILL.md 规范模板再改' },
+  ]
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm" onClick={onClose}>
       <motion.div
@@ -254,33 +389,75 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
         className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-bento2 bg-white p-6 shadow-bentoHover"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-bold">上传资源</h2>
+        <h2 className="mb-3 text-lg font-bold">上传资源</h2>
+        {/* 三种创建方式 */}
+        <div className="mb-3 grid grid-cols-3 gap-2">
+          {MODES.map((m) => (
+            <button key={m.key} onClick={() => (m.key === 'template' ? useTemplate() : setMode(m.key))}
+              title={m.hint}
+              className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-medium transition ${
+                (mode === m.key || (m.key === 'template' && mode === 'template'))
+                  ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-subtle hover:border-brand-300'
+              }`}>
+              <m.icon size={15} /> {m.label}
+            </button>
+          ))}
+        </div>
+
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             {TABS.slice(1).map((t) => (
               <button key={t.key} onClick={() => setType(t.key)}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition ${
                   type === t.key ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-subtle hover:border-brand-300'
                 }`}>
-                <t.icon size={15} /> {t.label}
+                <t.icon size={14} /> {t.label}
               </button>
             ))}
           </div>
-          <input className="input" placeholder="名称，如：excel-batch-tool" value={name} onChange={(e) => setName(e.target.value)} />
+
+          {/* 拖拽区（文件模式） */}
+          {mode === 'file' && (
+            <label
+              className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm transition ${
+                dragOver ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 text-subtle hover:border-brand-400 hover:text-brand-600'
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+            >
+              <FileUp size={20} />
+              {file ? file.name : '把 SKILL.md / zip / 脚本拖到这里，或点击选择'}
+              <span className="text-[11px] text-gray-400">.md 自动解析 frontmatter 并回填下方表单；zip 走服务端解析</span>
+              <input ref={fileRef} type="file" className="hidden" accept=".md,.markdown,.txt,.zip"
+                onChange={(e) => handleFiles(e.target.files)} />
+            </label>
+          )}
+
+          {/* 粘贴区（粘贴模式） */}
+          {mode === 'paste' && (
+            <textarea className="input min-h-[140px] font-mono text-[12px]"
+              placeholder={'粘贴 Markdown（支持 SKILL.md frontmatter，自动识别 name/description/tags/license…）'}
+              onChange={(e) => pasteParse(e.target.value)} />
+          )}
+
+          <input className="input" placeholder="名称（Agent Skills 规范：小写字母/数字/连字符）" value={name} onChange={(e) => setName(e.target.value)} />
           <div className="flex gap-2">
-            <input className="input flex-1" placeholder="一句话简介" value={summary} onChange={(e) => setSummary(e.target.value)} />
+            <input className="input flex-1" placeholder="一句话简介（AI 靠它发现你的技能）" value={summary} onChange={(e) => setSummary(e.target.value)} />
             <button className="btn-ghost shrink-0" onClick={aiDescribe} disabled={aiBusy} title="AI 根据名称生成简介">
               {aiBusy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} AI 简介
             </button>
           </div>
-          <textarea className="input min-h-[110px]" placeholder="详细介绍（支持 Markdown）" value={content} onChange={(e) => setContent(e.target.value)} />
-          <input className="input" placeholder="标签，逗号分隔：excel,自动化" value={tags} onChange={(e) => setTags(e.target.value)} />
+          <textarea className="input min-h-[100px]" placeholder="详细介绍（支持 Markdown）" value={content} onChange={(e) => setContent(e.target.value)} />
+          <div className="grid grid-cols-3 gap-2">
+            <input className="input" placeholder="标签，逗号分隔" value={tags} onChange={(e) => setTags(e.target.value)} />
+            <input className="input" placeholder="许可（MIT…）" value={license} onChange={(e) => setLicense(e.target.value)} />
+            <input className="input" placeholder="版本（0.1.0）" value={version} onChange={(e) => setVersion(e.target.value)} />
+          </div>
           <input className="input" placeholder="外链地址（可选，如 Git 仓库 / 文档链接）" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm text-subtle transition hover:border-brand-400 hover:text-brand-600">
-            <FileUp size={16} />
-            {file ? file.name : '上传附件（可选）：SKILL.md / zip / 脚本…'}
-            <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          </label>
+          {mode === 'file' && file && /\.(zip|7z|gz|tar)$/i.test(file.name) && (
+            <p className="rounded-xl bg-brand-50 px-3 py-2 text-[11px] text-brand-700">已选压缩包：{file.name}（上架后同事可下载）</p>
+          )}
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-ghost" onClick={onClose}>取消</button>

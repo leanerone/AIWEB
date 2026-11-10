@@ -1,7 +1,0 @@
-INFO:     Started server process [22904]
-INFO:     Waiting for application startup.
-2026-11-10 23:52:22,013 INFO aiweb.fts: FTS5 全文索引已重建
-2026-11-10 23:52:22,013 INFO aiweb: 数据库就绪，默认账号已播种
-2026-11-10 23:52:22,019 INFO aiweb.scheduler: 后台任务线程已启动（RSS 立即刷新后每 3600 秒 / 备份每 86400 秒）
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
