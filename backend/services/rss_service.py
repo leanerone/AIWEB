@@ -18,6 +18,14 @@ def _strip_html(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def _clean_summary(text: str) -> str:
+    """清洗摘要噪音：HN 类源把 Article URL / Comments URL / Points 塞进摘要，入库前剥掉"""
+    out = re.sub(r"Article URL:.*?(?=Comments URL:|$)", "", text or "", flags=re.I | re.S)
+    out = re.sub(r"Comments URL:.*?(?=Points:|$|$)", "", out, flags=re.I | re.S)
+    out = re.sub(r"Points:\s*\d+.*$", "", out, flags=re.I)
+    return out.strip() or (text or "").strip()
+
+
 def _to_dt(entry) -> datetime | None:
     for attr in ("published_parsed", "updated_parsed"):
         st = getattr(entry, attr, None)
@@ -63,7 +71,7 @@ def refresh_source(source: RssSource, db) -> dict:
             source_id=source.id,
             title=title,
             link=link,
-            summary=_strip_html(getattr(entry, "summary", ""))[:1000],
+            summary=_clean_summary(_strip_html(getattr(entry, "summary", "")))[:1000],
             published_at=_to_dt(entry),
         )
         db.add(item)

@@ -1618,3 +1618,22 @@ class TestAdminSeedContent:
         admin = auth(generate_token("administrator", "admin"))
         r2 = client.post("/api/admin/seed-content", headers=admin)
         assert r2.status_code == 200 and r2.json()["success"]
+
+
+class TestRssSummaryClean:
+    """HN 类源摘要噪音清洗（Article URL / Comments URL / Points）。"""
+
+    def test_clean_summary(self):
+        from services.rss_service import _clean_summary
+
+        raw = "Show HN: Deedglass – Verify AI Agent SQL Changes Using Postgres WAL " \
+              "Article URL: https://github.com/x/y Comments URL: https://news.ycombinator.com/item?id=1 " \
+              "Points: 3 # Comments: 2"
+        out = _clean_summary(raw)
+        assert "Article URL" not in out and "Comments URL" not in out and "Points" not in out
+        assert "Show HN: Deedglass" in out
+
+    def test_clean_keeps_normal_summary(self):
+        from services.rss_service import _clean_summary
+
+        assert _clean_summary("正常摘要内容") == "正常摘要内容"
