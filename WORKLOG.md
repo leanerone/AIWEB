@@ -570,3 +570,6 @@ pytest 92 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 16（02:57）
 pytest 92 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 17（03:06）
+pytest 92 ✓ · e2e_check 10/10 ✓
