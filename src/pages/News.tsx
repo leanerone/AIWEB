@@ -1,4 +1,4 @@
-import { BookmarkPlus, Bot, ExternalLink, Loader2, Plus, RefreshCw, Rss, Sparkles, Trash2 } from 'lucide-react'
+import { BookmarkPlus, Bot, ExternalLink, Loader2, Newspaper, Plus, RefreshCw, Rss, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
@@ -18,6 +18,7 @@ export function News() {
   const [newUrl, setNewUrl] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [generating, setGenerating] = useState<number | null>(null)
+  const [briefingBusy, setBriefingBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [delId, setDelId] = useState<number | null>(null)
 
@@ -55,6 +56,15 @@ export function News() {
     load()
   }
 
+  const genBriefing = async () => {
+    setBriefingBusy(true)
+    try {
+      const d = await api.post<never, { title: string }>('/ai/briefing')
+      toast('success', `简报已生成：${d.title}`)
+    } catch (e) { toast('error', (e as Error).message) }
+    finally { setBriefingBusy(false) }
+  }
+
   const saveAsNote = async (it: RssItem) => {
     try {
       await api.post('/memos', {
@@ -88,6 +98,10 @@ export function News() {
             window.setTimeout(() => st.send('总结一下最近的 AI 资讯要点，按重要程度排序'), 60)
           }}>
           <Bot size={15} /> 让 AI 总结资讯
+        </button>
+        <button className="btn-ghost !py-2 text-sm" onClick={genBriefing} disabled={briefingBusy}
+          title="抓取最新资讯，AI 生成今日简报并归档">
+          {briefingBusy ? <Loader2 size={15} className="animate-spin" /> : <Newspaper size={15} />} 生成今日简报
         </button>
         <Link to="/briefings" className="btn-ghost !py-2 text-sm">每日简报归档</Link>
         <button className="btn-primary" onClick={refreshAll} disabled={refreshing}>

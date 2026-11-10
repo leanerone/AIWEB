@@ -1604,3 +1604,17 @@ class TestContentPack:
         assert ok and fixed == "my-great-skill"
         ok2, _ = validate_skill_name("x" * 70)
         assert ok2 and len(validate_skill_name("x" * 70)[1]) <= 64
+
+
+class TestAdminSeedContent:
+    """管理员导入官方内容包接口。"""
+
+    def test_seed_content_admin_only(self, token):
+        # 普通用户 403
+        r = client.post("/api/admin/seed-content", headers=auth(plain_user_token()))
+        assert r.status_code == 403
+        # 管理员 200（幂等）
+        from services.auth_service import generate_token
+        admin = auth(generate_token("administrator", "admin"))
+        r2 = client.post("/api/admin/seed-content", headers=admin)
+        assert r2.status_code == 200 and r2.json()["success"]

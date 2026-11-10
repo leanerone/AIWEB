@@ -56,10 +56,13 @@ export function Dashboard() {
     api.get<never, FeedItem[]>('/hub/feed?limit=10').then(setFeed).catch(() => {}).finally(() => setFeedLoading(false))
   }, [])
 
-  const filtered = useMemo(
-    () => (resType ? resList.filter((r) => r.type === resType) : resList),
-    [resList, resType],
-  )
+  // 类型切换走服务端取数（资源超过 24 条时客户端过滤会漏）
+  useEffect(() => {
+    api.get<never, { items: Resource[] }>(`/resources?order=downloads&limit=9${resType ? `&type=${resType}` : ''}`)
+      .then((d) => setResList(d.items)).catch(() => {})
+  }, [resType])
+
+  const filtered = useMemo(() => resList, [resList])
   const ranking = useMemo(() => {
     const arr = [...resList]
     if (rankTab === 'likes') arr.sort((a, b) => b.likes - a.likes || b.downloads - a.downloads)
@@ -153,6 +156,22 @@ export function Dashboard() {
           ))}
         </div>
       </section>
+
+      {/* 冷启动引导 */}
+      {stats && stats.skills + stats.tools + stats.plugins === 0 && (
+        <section className="mx-auto max-w-2xl">
+          <BentoCard className="p-5 text-center">
+            <p className="text-sm font-bold text-ink">从上传第一个资源开始</p>
+            <p className="mt-1 text-xs leading-5 text-subtle">
+              把你的 SKILL.md 技能包、脚本或插件传上来（支持拖拽自动识别），全组就能搜索、安装、复用
+            </p>
+            <div className="mt-3 flex justify-center gap-2">
+              <Link to="/resources" className="btn-primary !py-1.5 text-xs">去上传</Link>
+              <Link to="/settings" className="btn-ghost !py-1.5 text-xs">先配置我的 AI Key</Link>
+            </div>
+          </BentoCard>
+        </section>
+      )}
 
       {/* ═══ 发现好资源 ═══ */}
       <section>

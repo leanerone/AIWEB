@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, DatabaseBackup, KeyRound, Loader2, Save, UserPlus, Users } from 'lucide-react'
+import { ChevronDown, ChevronRight, DatabaseBackup, KeyRound, Loader2, Package, Save, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../stores/auth'
@@ -139,6 +139,7 @@ function MemberAdmin() {
   const [users, setUsers] = useState<UserItem[]>([])
   const [form, setForm] = useState({ username: '', display_name: '', password: '', role: 'user' })
   const [busy, setBusy] = useState(false)
+  const [seeding, setSeeding] = useState(false)
 
   const load = () => api.get<never, UserItem[]>('/auth/users').then(setUsers).catch(() => {})
   useEffect(() => { load() }, [])
@@ -198,6 +199,17 @@ function MemberAdmin() {
         </div>
         <button className="btn-primary w-full" onClick={create} disabled={busy}>
           {busy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} 创建成员
+        </button>
+        <button className="btn-ghost w-full" disabled={seeding}
+          onClick={async () => {
+            setSeeding(true)
+            try {
+              await api.post('/admin/seed-content', {})
+              toast('success', '官方内容包已导入（幂等，不覆盖人工改动）')
+            } catch (e) { toast('error', (e as Error).message) }
+            finally { setSeeding(false) }
+          }}>
+          {seeding ? <Loader2 size={15} className="animate-spin" /> : <Package size={15} />} 导入官方内容包（19 条）
         </button>
         <button
           className="btn-ghost w-full"
