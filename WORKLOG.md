@@ -543,3 +543,6 @@ pytest 92 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 7（01:33）
 pytest 92 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 8（01:43）
+pytest 92 ✓ · e2e_check 10/10 ✓
