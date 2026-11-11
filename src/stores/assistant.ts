@@ -10,12 +10,20 @@ export interface AgentStep {
   ts: string
 }
 
+export interface RecommendCard {
+  id: number
+  name: string
+  type: string
+  summary: string
+  license?: string
+}
+
 export interface AssistantMsg {
   id?: number
   role: 'user' | 'assistant'
   content: string
   created_at?: string
-  meta?: { steps?: AgentStep[] }
+  meta?: { steps?: AgentStep[]; recommendations?: RecommendCard[] }
 }
 
 export interface PendingConfirm {
@@ -162,12 +170,18 @@ export const useAssistant = create<AssistantState>((set, get) => {
             gotMeta = true
             patchLast((m) => ({ ...m, content: m.content || `⚠️ ${data.message}` }))
             break
-          case 'done':
+          case 'done': {
+            const recs = (data.recommendations || []) as RecommendCard[]
             if (data.reply !== undefined) {
-              patchLast((m) => ({ ...m, content: data.reply || m.content, meta: data.steps ? { steps: data.steps } : m.meta }))
+              patchLast((m) => ({
+                ...m,
+                content: data.reply || m.content,
+                meta: { ...(m.meta ?? {}), ...(data.steps ? { steps: data.steps } : {}), ...(recs.length ? { recommendations: recs } : {}) },
+              }))
             }
             set({ pendingConfirm: null, pendingAsk: null })
             break
+          }
         }
       })
     } catch (e) {

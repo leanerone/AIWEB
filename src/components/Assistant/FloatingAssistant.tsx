@@ -6,7 +6,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
-import { useAssistant, type AssistantMsg } from '../../stores/assistant'
+import { useAssistant, type AssistantMsg, type RecommendCard } from '../../stores/assistant'
 import { downloadText } from '../../utils/time'
 import { useLiquidGlass } from '../../hooks/useLiquidGlass'
 import { MarkdownView } from '../MarkdownView'
@@ -46,11 +46,43 @@ function usePageContext() {
 }
 
 /** 一条消息：气泡 + Agent 任务卡 + 操作按钮 */
+const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件' }
+
+/** AI 推荐卡：点「详情」跳资源页，「安装指令」一键复制 */
+function RecommendRow({ recs }: { recs: RecommendCard[] }) {
+  const nav = useNavigate()
+  const toast = useToast()
+  if (!recs.length) return null
+  return (
+    <div className="mt-2 space-y-1.5">
+      <p className="text-[11px] font-medium text-subtle">✦ 为你找到这些资源：</p>
+      {recs.map((r) => (
+        <div key={r.id} className="flex items-center gap-2 rounded-xl border border-black/10 bg-white/70 px-2.5 py-2 dark:border-white/10 dark:bg-white/5">
+          <button className="min-w-0 flex-1 text-left" onClick={() => { nav(`/resources/${r.id}`) }}>
+            <span className="block truncate text-xs font-bold text-ink">{r.name}</span>
+            <span className="block truncate text-[11px] text-subtle">{r.summary || '（无简介）'}</span>
+          </button>
+          <span className="chip shrink-0 bg-gray-100 text-gray-600">{TYPE_LABEL[r.type] || '资源'}</span>
+          {r.license && <span className="chip shrink-0 border border-emerald-200 bg-emerald-50 text-emerald-700">{r.license}</span>}
+          <button title="复制安装指令" className="shrink-0 rounded-lg p-1 text-subtle transition hover:text-brand-600"
+            onClick={async () => {
+              await navigator.clipboard.writeText(`请帮我从公司内网 AI Hub 安装/使用「${r.name}」，先告诉我它解决什么问题、怎么用。`)
+              toast('success', '安装指令已复制')
+            }}>
+            <Copy size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function MessageBubble({ m, streaming, isLast }: { m: AssistantMsg; streaming: boolean; isLast: boolean }) {
   const toast = useToast()
   const saveCard = useAssistant((s) => s.saveCard)
   const regenerate = useAssistant((s) => s.regenerate)
   const steps = m.meta?.steps ?? []
+  const recs = m.meta?.recommendations ?? []
 
   return (
     <div className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -74,6 +106,7 @@ function MessageBubble({ m, streaming, isLast }: { m: AssistantMsg; streaming: b
               ? (m.content || <Loader2 size={14} className="inline animate-spin" />)
               : <MarkdownView text={m.content} />)
           : m.content}
+        {m.role === 'assistant' && recs.length > 0 && <RecommendRow recs={recs} />}
         {m.role === 'assistant' && !streaming && m.content && !m.content.startsWith('⚠️') && (
           <div className="mt-1.5 flex justify-end gap-2.5 border-t border-black/5 pt-1.5 dark:border-white/10">
             <button className="flex items-center gap-1 text-[11px] text-subtle hover:text-brand-600"

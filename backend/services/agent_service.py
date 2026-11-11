@@ -199,6 +199,12 @@ def _execute(db, user, run: AgentRun, state: dict, tool: str, args: dict) -> tup
     step = {"tool": tool, "summary": summary or tool, "ok": ok, "ts": _now()}
     state["steps"].append(step)
     run.steps = list(state["steps"])
+    # 搜索/读资源命中 → 收集资源 id，供 done 时的结构化推荐卡
+    if tool in ("search_platform", "get_resource") and ok:
+        for rid in re.findall(r"#(\d+)", result)[:6]:
+            state.setdefault("recommend_ids", [])
+            if int(rid) not in state["recommend_ids"]:
+                state["recommend_ids"].append(int(rid))
     from database.models import AgentToolCall
 
     db.add(AgentToolCall(run_id=run.id, username=user.username, tool=tool,
@@ -235,13 +241,33 @@ def _maybe_name_session(db, session, question: str, answer: str, username: str |
         logger.debug("会话命名失败（保留默认标题）", exc_info=True)
 
 
+def _collect_recommendations(db, state: dict) -> list[dict]:
+    """把 recommend_ids 转成结构化推荐卡数据（去重、限 4 个）"""
+    ids = (state.get("recommend_ids") or [])[:4]
+    if not ids:
+        return []
+    from database.models import Resource
+
+    out = []
+    for rid in ids:
+        r = db.get(Resource, rid)
+        if r:
+            out.append({"id": r.id, "name": r.name, "type": r.type,
+                        "summary": (r.summary or "")[:80],
+                        "license": getattr(r, "license", "") or ""})
+    return out
+
+
 def _finish(db, run: AgentRun, session, user, state: dict, answer: str) -> str:
-    """落库最终回答（带任务卡轨迹），返回答案文本。
+    """落库最终回答（带任务卡轨迹 + 推荐卡），返回答案文本。
     流式模式下前端已逐 token 收到全部内容，落库取累积全文（前导 + 最终轮）。"""
     from database.models import ChatMessage
 
     full = "".join(state.get("streamed") or []).strip() or answer
+    recs = _collect_recommendations(db, state)
     meta = {"run_id": run.id, "steps": state["steps"]} if state["steps"] else {"run_id": run.id}
+    if recs:
+        meta["recommendations"] = recs
     msg = ChatMessage(session_id=session.id, role="assistant", content=full, meta=meta)
     db.add(msg)
     _persist(db, run, state, "done")
@@ -425,7 +451,8 @@ def _loop(db, user, run: AgentRun, state: dict) -> Generator[str, None, None]:
             _persist(db, run, state)
             _finish(db, run, run.session, user, state, answer)
             yield _sse("done", {"session_id": run.session_id, "reply": answer,
-                                "steps": state["steps"]})
+                                "steps": state["steps"],
+                                "recommendations": _collect_recommendations(db, state)})
             return
 
         state["messages"].append(assistant_msg)
@@ -498,7 +525,8 @@ def _loop_react(db, user, run: AgentRun, state: dict, data: dict):
         answer = text.strip() or "（AI 未返回内容）"
         _finish(db, run, run.session, user, state, answer)
         yield _sse("delta", {"text": answer})
-        yield _sse("done", {"session_id": run.session_id, "reply": answer, "steps": state["steps"]})
+        yield _sse("done", {"session_id": run.session_id, "reply": answer, "steps": state["steps"],
+                            "recommendations": _collect_recommendations(db, state)})
         return
     yield from _dispatch_react(db, user, run, state, parsed)
 
@@ -509,7 +537,8 @@ def _dispatch_react(db, user, run: AgentRun, state: dict, parsed: dict):
         answer = str(parsed.get("answer") or "").strip() or "（AI 未返回内容）"
         _finish(db, run, run.session, user, state, answer)
         yield _sse("delta", {"text": answer})
-        yield _sse("done", {"session_id": run.session_id, "reply": answer, "steps": state["steps"]})
+        yield _sse("done", {"session_id": run.session_id, "reply": answer, "steps": state["steps"],
+                            "recommendations": _collect_recommendations(db, state)})
         return
     if action == "ask_user":
         args = parsed.get("args") or {}

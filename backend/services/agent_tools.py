@@ -11,7 +11,7 @@ summary 展示在前端任务卡（一行），result 是回传给模型的完�
 import json
 from collections.abc import Callable
 
-from database.models import Bookmark, FeedCard, Memo, RssItem, RssSource, User
+from database.models import Bookmark, FeedCard, Memo, Resource, RssItem, RssSource, User
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -35,8 +35,16 @@ def tool_search_platform(db: Session, user: User, args: dict) -> tuple[bool, str
     hits = fts.search(db, q, limit=limit)
     if not hits:
         return True, f"搜索「{q}」无结果", f"平台内没有找到与「{q}」相关的内容。"
-    lines = [f"- [{h['kind']}] #{h['id']} {h['title']}：{h['snippet']}" for h in hits]
-    return True, f"搜索「{q}」命中 {len(hits)} 条", "\n".join(lines)
+    lines: list[str] = []
+    for h in hits:
+        if h["kind"] == "resource":
+            r = db.get(Resource, h["id"])
+            if r and getattr(r, "visibility", "public") == "private" and r.created_by != user.username:
+                continue  # 别人的私有资源不出现在 AI 视野
+        lines.append(f"- [{h['kind']}] #{h['id']} {h['title']}：{h['snippet']}")
+    if not lines:
+        return True, f"搜索「{q}」无结果", f"平台内没有找到与「{q}」相关的内容。"
+    return True, f"搜索「{q}」命中 {len(lines)} 条", "\n".join(lines)
 
 
 def tool_get_resource(db: Session, user: User, args: dict) -> tuple[bool, str, str]:
@@ -46,6 +54,8 @@ def tool_get_resource(db: Session, user: User, args: dict) -> tuple[bool, str, s
     r = db.get(Resource, rid)
     if not r:
         return False, f"资源 #{rid} 不存在", f"错误：资源 #{rid} 不存在"
+    if getattr(r, "visibility", "public") == "private" and r.created_by != user.username:
+        return False, f"资源 #{rid} 不存在", f"错误：资源 #{rid} 不存在"  # 别人的私有对外等于不存在
     tags = "、".join(r.tags or [])
     summary = (f"资源 #{r.id} [{r.type}] {r.name}\n"
                f"简介：{r.summary}\n标签：{tags}\n作者：{r.author or r.created_by}\n"

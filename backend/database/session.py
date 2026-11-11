@@ -37,7 +37,8 @@ def ensure_schema_upgrade() -> None:
 
     additions: dict[str, list[tuple[str, str]]] = {
         "chat_messages": [("meta", "JSON")],
-        "resources": [("license", "VARCHAR(64)"), ("version", "VARCHAR(32)")],
+        "resources": [("license", "VARCHAR(64)"), ("version", "VARCHAR(32)"),
+                      ("visibility", "VARCHAR(16)")],
     }
     with engine.begin() as conn:
         for table, columns in additions.items():

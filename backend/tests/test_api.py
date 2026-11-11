@@ -1678,3 +1678,85 @@ class TestAgentUserNamespace:
                 evs.append(ev)
         assert "step" in evs
         assert "error" not in evs
+
+
+class TestRecommendations:
+    """AI 分配:search 命中后 done 事件带结构化推荐卡。"""
+
+    def test_search_yields_recommendations(self, token, monkeypatch):
+        mock_agent(monkeypatch, [
+            {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function",
+                 "function": {"name": "search_platform", "arguments": "{\"query\": \"excel\"}"}}]}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "给你找到了。"}}]},
+        ])
+        rid = client.post("/api/resources", data={"type": "tool", "name": "rec-excel-tool",
+                                                  "summary": "excel 工具", "license": "MIT"},
+                          headers=auth(token)).json()["data"]["id"]
+        resp = client.post("/api/agent/run", json={"message": "帮我找一个 excel 工具"},
+                           headers=auth(token))
+        done = None
+        for block in resp.text.split(chr(10) + chr(10)):
+            ev = next((l[6:].strip() for l in block.split(chr(10)) if l.startswith("event:")), None)
+            dat = next((l[5:] for l in block.split(chr(10)) if l.startswith("data:")), None)
+            if ev == "done" and dat:
+                done = json.loads(dat)
+        assert done and done["recommendations"], "done 未带推荐卡"
+        rec = next((r for r in done["recommendations"] if r["id"] == rid), None)
+        assert rec and rec["name"] == "rec-excel-tool" and rec["license"] == "MIT"
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+
+class TestVisibility:
+    """资源公开/私有：列表过滤 / 详情 404 / agent 工具过滤 / owner 可见。"""
+
+    def _create(self, token, name, visibility):
+        return client.post("/api/resources", data={"type": "tool", "name": name,
+                                                   "visibility": visibility},
+                           headers=auth(token)).json()["data"]["id"]
+
+    def test_private_hidden_from_others(self, token):
+        plain = auth(plain_user_token())
+        rid = self._create(token, "private-tool-x", "private")
+        # owner 可见
+        lst = client.get(f"/api/resources?keyword=private-tool-x", headers=auth(token)).json()["data"]
+        assert any(r["id"] == rid for r in lst["items"])
+        assert lst["items"][0]["visibility"] == "private"
+        # 他人列表不可见
+        lst2 = client.get("/api/resources?keyword=private-tool-x", headers=plain).json()["data"]
+        assert not any(r["id"] == rid for r in lst2["items"])
+        # 他人详情 404
+        assert client.get(f"/api/resources/{rid}", headers=plain).status_code == 404
+        # 管理员可见
+        from services.auth_service import generate_token
+        admin = auth(generate_token("administrator", "admin"))
+        assert client.get(f"/api/resources/{rid}", headers=admin).status_code == 200
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+    def test_agent_tools_filter_private(self, token):
+        plain = auth(plain_user_token())
+        rid = self._create(token, "private-tool-y", "private")
+        from services.agent_tools import tool_search_platform, tool_get_resource, tool_list_resources
+        from database.session import SessionLocal
+        from database.models import User
+        db = SessionLocal()
+        other = db.query(User).filter(User.username == "plain.user").first() or db.query(User).first()
+        ok, _, result = tool_search_platform(db, other, {"query": "private-tool-y"})
+        db.close()
+        assert "没有找到" in result and "[resource]" not in result  # 不泄露条目
+        assert "不存在" in tool_get_resource(db, other, {"resource_id": rid})[2]
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+
+class TestVisibilityAdmin:
+    """管理员列表可见他人私有资源。"""
+
+    def test_admin_sees_all(self, token):
+        rid = client.post("/api/resources", data={"type": "tool", "name": "admin-vis-tool",
+                                                  "visibility": "private"},
+                          headers=auth(plain_user_token())).json()["data"]["id"]
+        from services.auth_service import generate_token
+        admin = auth(generate_token("administrator", "admin"))
+        lst = client.get("/api/resources?keyword=admin-vis-tool", headers=admin).json()["data"]
+        assert any(r["id"] == rid for r in lst["items"])
+        client.delete(f"/api/resources/{rid}", headers=auth(plain_user_token()))

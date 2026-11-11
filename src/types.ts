@@ -18,6 +18,7 @@ export interface Resource {
   author: string
   license?: string
   version?: string
+  visibility?: 'public' | 'private'
   source_type: string
   file_name: string | null
   external_url: string | null

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Check, ClipboardPaste, Copy, Download, FileText, FileUp, Heart, Loader2, Package, Plus, Puzzle, Search, Sparkles, SquarePen, Wrench } from 'lucide-react'
+import { Check, ClipboardPaste, Copy, Download, FileText, FileUp, Heart, Loader2, Lock, Package, Plus, Puzzle, Search, Sparkles, SquarePen, Wrench } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { DragEvent, MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -209,7 +209,10 @@ export function Resources() {
                   <span className="text-[11px] text-gray-400">{r.created_at}</span>
                 </div>
                 <Link to={`/resources/${r.id}`} className="mt-3 block">
-                  <h3 className="truncate text-[15px] font-bold text-ink transition-colors hover:text-brand-600">{r.name}</h3>
+                  <h3 className="flex items-center gap-1.5 truncate text-[15px] font-bold text-ink transition-colors hover:text-brand-600">
+                    {r.visibility === 'private' && <Lock size={13} className="shrink-0 text-amber-500" />}
+                    <span className="truncate">{r.name}</span>
+                  </h3>
                 </Link>
                 <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-[13px] leading-5 text-subtle">
                   {r.summary || r.content.slice(0, 60) || '（无描述）'}
@@ -263,6 +266,7 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
   const [tags, setTags] = useState('')
   const [license, setLicense] = useState('MIT')
   const [version, setVersion] = useState('0.1.0')
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public')
   const [externalUrl, setExternalUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
@@ -364,6 +368,7 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
       fd.append('author', defaultAuthor)
       fd.append('license', license)
       fd.append('version', version)
+      fd.append('visibility', visibility)
       fd.append('external_url', externalUrl)
       if (file) fd.append('file', file)
       await api.post('/resources', fd)
@@ -453,6 +458,16 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
             <input className="input" placeholder="标签，逗号分隔" value={tags} onChange={(e) => setTags(e.target.value)} />
             <input className="input" placeholder="许可（MIT…）" value={license} onChange={(e) => setLicense(e.target.value)} />
             <input className="input" placeholder="版本（0.1.0）" value={version} onChange={(e) => setVersion(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {([['public', '🌐 公开（全员可见）'], ['private', '🔒 私有（仅自己/管理员）']] as const).map(([k, label]) => (
+              <button key={k} onClick={() => setVisibility(k)}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition ${
+                  visibility === k ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-subtle hover:border-brand-300'
+                }`}>
+                {label}
+              </button>
+            ))}
           </div>
           <input className="input" placeholder="外链地址（可选，如 Git 仓库 / 文档链接）" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
           {mode === 'file' && file && /\.(zip|7z|gz|tar)$/i.test(file.name) && (

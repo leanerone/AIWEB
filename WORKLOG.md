@@ -746,3 +746,13 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
 - **修复其引入的回归**：SimpleNamespace(username=...) 丢 display_name → bookmark 工具通知路径
   AttributeError（开 auto_exec 的用户收藏时崩）；现带 display_name 进生成器 + 回归测试
 - 验证：build ✓ 93 用例 ✓ e2e 10/10 ✓ 玻璃面板/光球/拖拽手柄/会话恢复共存 ✓
+
+### 2026-11-12 · v0.14.0 对话式 AI 主界面 + 推荐卡 + 资源可见性（用户需求重构）
+- **首页 = AI 主界面**：Hero 大输入框直发助手（Enter 即问），文案强调「AI 分配技能/工具/插件」；
+  发现好资源+热门榜折叠进「精选资源」（默认收起，目录让位 AI 分配）
+- **AI 推荐卡**：search/get_resource 命中收集 → done 事件带结构化 recommendations（限4，含 license）→
+  消息气泡内渲染卡片（点详情跳转 / 一键复制安装指令）+ 随 meta 落库（历史可回放）
+- **资源可见性 public/private**：列表（他人不可见）/ 详情与版本 404 / agent 工具(search/get/list)过滤 /
+  管理员全可见 / 上传表单🌐公开🔒私有开关 / 卡片锁图标
+- 修复：SSE SimpleNamespace 补 display_name（bookmark 通知）；search_platform 双重补丁互覆盖致 result 空
+- 测试 92 → 97

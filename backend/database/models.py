@@ -86,6 +86,7 @@ class Resource(Base):
     author: Mapped[str] = mapped_column(String(64), default="")
     license: Mapped[str] = mapped_column(String(64), default="")  # MIT / Apache-2.0 / CC-BY-4.0…
     version: Mapped[str] = mapped_column(String(32), default="")
+    visibility: Mapped[str] = mapped_column(String(16), default="public")  # public / private
     # 来源：upload(有附件) / path(内网路径) / url(外链) / none
     source_type: Mapped[str] = mapped_column(String(16), default="none")
     file_path: Mapped[str | None] = mapped_column(String(512), nullable=True)

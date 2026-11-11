@@ -1,6 +1,6 @@
 import {
-  ArrowUpRight, Bot, Check, Copy, Download, FileText, Flame, Heart,
-  Loader2, Newspaper, Package, Search, Send,
+  ArrowUpRight, Bot, ChevronDown, Check, Copy, Download, FileText, Flame, Heart,
+  Loader2, Newspaper, Package, Send,
   Sparkles, Star, Trash2, Trophy,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -46,6 +46,8 @@ export function Dashboard() {
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [viewing, setViewing] = useState<FeedItem | null>(null)
   const [feedLoading, setFeedLoading] = useState(true)
+  const [aiInput, setAiInput] = useState('')
+  const [showDiscover, setShowDiscover] = useState(false)
 
   useEffect(() => {
     api.get<never, Stats>('/hub/stats').then(setStats).catch(() => {})
@@ -117,19 +119,35 @@ export function Dashboard() {
           让团队的能力 <span className="gradient-text">可复用</span>
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-[15px] leading-7 text-subtle">
-          发现并安装同事沉淀的技能与工具，AI 助手帮你查资料、写笔记、生成简报——一个入口全搞定。
+          提出你的需求，AI 会告诉你<strong className="text-ink">用什么 Skill、装什么工具、组合哪些插件</strong>——
+          上千个技能不用翻，一个对话框全搞定。
         </p>
 
-        {/* 搜索胶囊（唤起 ⌘K）——纯 CSS 焦点玻璃，圆角干净、无滤镜卡顿 */}
-        <div
-          className="glass-focal lg-edge mx-auto mt-8 flex max-w-xl items-center gap-3 rounded-2xl px-4 py-3 text-left transition hover:shadow-bentoHover">
-          <button
-            className="flex flex-1 items-center gap-3 text-sm text-gray-400"
-            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
-          >
-            <Search size={16} /> 搜索资源、笔记、资讯…
-          </button>
-          <Link to="/resources" className="btn-primary !py-1.5 text-xs">浏览资源库</Link>
+        {/* AI 主输入框：直接提问，AI 分配技能/工具/插件 */}
+        <div className="glass-focal lg-edge mx-auto mt-8 max-w-2xl rounded-2xl px-4 py-3 text-left transition hover:shadow-bentoHover">
+          <div className="flex items-center gap-3">
+            <Bot size={18} className="shrink-0 text-brand-500" />
+            <input
+              className="flex-1 border-0 bg-transparent text-[15px] text-ink outline-none placeholder:text-gray-400"
+              placeholder="问我任何事：AI 会告诉你用什么技能、装什么工具…"
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && aiInput.trim()) { askAssistant(aiInput.trim()); setAiInput('') }
+              }}
+            />
+            <button className="btn-primary !py-1.5 text-xs" disabled={!aiInput.trim()}
+              onClick={() => { if (aiInput.trim()) { askAssistant(aiInput.trim()); setAiInput('') } }}>
+              提问 <Send size={12} className="inline" />
+            </button>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
+            <span>AI 会推荐用什么 Skill、装什么工具、组合哪些插件实现你的需求</span>
+            <button className="ml-auto transition hover:text-brand-500"
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}>
+              全库搜索 Ctrl+K
+            </button>
+          </div>
         </div>
 
         {/* 快捷指令 chips */}
@@ -174,16 +192,26 @@ export function Dashboard() {
         </section>
       )}
 
-      {/* ═══ 发现好资源 ═══ */}
+      {/* ═══ 精选资源（默认折叠：目录让位 AI 分配，点开浏览） ═══ */}
       <section>
+        <button className="mb-4 flex w-full items-center justify-between rounded-bento border border-gray-100 bg-white px-5 py-4 text-left transition hover:border-brand-300"
+          onClick={() => setShowDiscover((v) => !v)}>
+          <span>
+            <span className="block text-lg font-bold tracking-tight text-ink">精选资源</span>
+            <span className="mt-0.5 block text-sm text-subtle">目录浏览交给资源库；这里只放精选——想要什么直接问 AI</span>
+          </span>
+          <span className="flex items-center gap-3 text-sm text-brand-600">
+            <Link to="/resources" className="hidden hover:underline sm:block"
+              onClick={(e) => e.stopPropagation()}>全部资源</Link>
+            <ChevronDown size={18} className={`transition-transform ${showDiscover ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+        <div className={showDiscover ? '' : 'hidden'}>
         <div className="mb-4 flex items-end justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-ink">发现好资源</h2>
             <p className="mt-1 text-sm text-subtle">按下载量排序的热门技能、工具与插件</p>
           </div>
-          <Link to="/resources" className="hidden items-center gap-1 text-sm text-brand-600 hover:underline sm:flex">
-            全部资源 <ArrowUpRight size={14} />
-          </Link>
         </div>
         {/* 类型筛选 */}
         <div className="mb-5 flex flex-wrap gap-2">
@@ -244,10 +272,8 @@ export function Dashboard() {
             })}
           </div>
         )}
-      </section>
 
-      {/* ═══ 热门资源榜 ═══ */}
-      <section>
+        {/* ═══ 热门资源榜 ═══ */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-ink">
             <Flame size={20} className="text-brand-500" /> 热门资源榜
@@ -312,6 +338,8 @@ export function Dashboard() {
             </ul>
           </BentoCard>
         </div>
+
+      </div>
       </section>
 
       {/* ═══ 深色信息带：AI 每日简报 ═══ */}

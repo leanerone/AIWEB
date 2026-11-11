@@ -45,6 +45,7 @@ class ResourceIn(BaseModel):
     author: str = ""
     license: str = ""
     version: str = ""
+    visibility: str = "public"  # public / private
     source_type: str = "none"
     external_url: str | None = None
 
@@ -72,7 +73,11 @@ def list_resources(
     db: Session = Depends(get_db),
     user: object = Depends(get_current_user),
 ):
-    query = db.query(Resource)
+    # 管理员可见全部（含他人私有）；普通用户见 public + 自己的 private
+    vis_filter = (Resource.visibility == "public") | (Resource.created_by == user.username)
+    if user.role == "admin":
+        vis_filter = (Resource.visibility.isnot(None))
+    query = db.query(Resource).filter(vis_filter)
     if type in ALLOWED_TYPES:
         query = query.filter(Resource.type == type)
     if liked:
@@ -118,6 +123,7 @@ def _serialize(r: Resource, viewer: str | None = None, bookmarked: bool = False)
         "id": r.id, "type": r.type, "name": r.name, "summary": r.summary,
         "content": r.content, "tags": r.tags or [], "author": r.author,
         "license": getattr(r, "license", "") or "", "version": getattr(r, "version", "") or "",
+        "visibility": getattr(r, "visibility", "public") or "public",
         "source_type": r.source_type, "file_name": r.file_name,
         "external_url": r.external_url, "downloads": r.downloads,
         "views": r.views, "likes": r.likes,
@@ -139,6 +145,7 @@ async def create_resource(
     author: str = Form(""),
     license: str = Form(""),
     version: str = Form(""),
+    visibility: str = Form("public"),
     external_url: str = Form(""),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
@@ -150,7 +157,9 @@ async def create_resource(
     r = Resource(
         type=type, name=name.strip(), summary=summary, content=content,
         tags=tag_list, author=author, license=license.strip()[:60],
-        version=version.strip()[:30], created_by=user.username,
+        version=version.strip()[:30],
+        visibility="private" if visibility == "private" else "public",
+        created_by=user.username,
     )
     if external_url:
         r.external_url = _safe_external_url(external_url)
@@ -241,6 +250,8 @@ def get_resource(resource_id: int, db: Session = Depends(get_db),
     r = db.get(Resource, resource_id)
     if not r:
         raise HTTPException(status_code=404, detail="资源不存在")
+    if getattr(r, "visibility", "public") == "private"             and r.created_by != user.username and user.role != "admin":
+        raise HTTPException(status_code=404, detail="资源不存在")  # 私有资源对外不可见
     r.views += 1
     bookmarked = bool(db.query(Bookmark)
                       .filter(Bookmark.username == user.username,
@@ -297,6 +308,8 @@ def update_resource(resource_id: int, body: ResourceIn,
         r.license = (body.license or "")[:60]
     if "version" in body.model_fields_set:
         r.version = (body.version or "")[:30]
+    if "visibility" in body.model_fields_set and body.visibility in ("public", "private"):
+        r.visibility = body.visibility
     if body.external_url:
         safe = _safe_external_url(body.external_url)
         if safe:
@@ -364,6 +377,11 @@ def list_versions(resource_id: int, db: Session = Depends(get_db),
 
     r = db.get(Resource, resource_id)
     if not r:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    r0 = db.get(Resource, resource_id)
+    if not r0:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    if getattr(r0, "visibility", "public") == "private"             and r0.created_by != user.username and user.role != "admin":
         raise HTTPException(status_code=404, detail="资源不存在")
     rows = (db.query(ResourceVersion)
             .filter(ResourceVersion.resource_id == resource_id)
