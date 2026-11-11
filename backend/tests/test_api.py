@@ -1644,3 +1644,37 @@ class TestRssSummaryClean:
         from services.rss_service import _clean_summary
 
         assert _clean_summary("正常摘要内容") == "正常摘要内容"
+
+
+class TestAgentUserNamespace:
+    """回归：SSE 生成器的 SimpleNamespace 用户必须带 display_name（工具通知依赖）。"""
+
+    def test_bookmark_tool_no_attrerror(self, token, monkeypatch):
+        mock_agent(monkeypatch, [
+            {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function",
+                 "function": {"name": "bookmark_resource", "arguments": "{\"resource_id\": 999999}"}}]}}]},
+            {"choices": [{"message": {"role": "assistant", "content": "好的。"}}]},
+        ])
+        # 资源不存在 → 确认挂起 → 批准执行（工具 ok=False 诚实回报）；
+        # 若 SimpleNamespace 缺 display_name，resume 里的工具通知路径会 AttributeError
+        resp = client.post("/api/agent/run", json={"message": "收藏个资源试试"},
+                           headers=auth(token))
+        run_id = None
+        for block in resp.text.split(chr(10) + chr(10)):
+            dat = next((l[5:] for l in block.split(chr(10)) if l.startswith("data:")), None)
+            if "run_id" in (dat or ""):
+                try:
+                    run_id = json.loads(dat).get("run_id", run_id)
+                except json.JSONDecodeError:
+                    pass
+        assert run_id, "未收到 confirm 挂起"
+        resp2 = client.post("/api/agent/resume", json={"run_id": run_id, "approved": True},
+                            headers=auth(token))
+        evs = []
+        for block in resp2.text.split(chr(10) + chr(10)):
+            ev = next((l[6:].strip() for l in block.split(chr(10)) if l.startswith("event:")), None)
+            if ev:
+                evs.append(ev)
+        assert "step" in evs
+        assert "error" not in evs

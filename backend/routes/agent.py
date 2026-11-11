@@ -79,12 +79,13 @@ def run(body: AgentRequest, db: Session = Depends(get_db),
     # SSE 生成器不能复用请求级 db/ORM user：FastAPI>=0.106 在响应体开始流式前就执行
     # `yield` 依赖的收尾（session.close()），流里再访问 user.username 会 DetachedInstanceError。
     # 因此这里只把纯数据（username/session_id）带进生成器，并由生成器自持一个 Session。
-    username, session_id = user.username, session.id
+    # display_name 也要带：工具通知（如收藏）会用 user.display_name
+    username, display_name, session_id = user.username, user.display_name, session.id
 
     def gen():
         own = SessionLocal()
         try:
-            yield from stream_run(own, SimpleNamespace(username=username),
+            yield from stream_run(own, SimpleNamespace(username=username, display_name=display_name),
                                   own.get(ChatSession, session_id), question, page_context)
         finally:
             own.close()
@@ -97,13 +98,13 @@ def resume(body: ResumeRequest, db: Session = Depends(get_db),
            user: object = Depends(get_current_user)):
     if body.approved is None and (body.answer is None or not body.answer.strip()):
         raise HTTPException(status_code=400, detail="请提供确认结果或回答内容")
-    username = user.username
+    username, display_name = user.username, user.display_name
     approved, answer, run_id = body.approved, (body.answer or "").strip() or None, body.run_id
 
     def gen():
         own = SessionLocal()
         try:
-            yield from stream_resume(own, SimpleNamespace(username=username), run_id,
+            yield from stream_resume(own, SimpleNamespace(username=username, display_name=display_name), run_id,
                                      approved=approved, answer=answer)
         finally:
             own.close()

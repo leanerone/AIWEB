@@ -739,3 +739,10 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
 - 面板头部拖拽保留(不锁死右下角)；面板背景 .86→.5 透度让折射透出，overflow:clip 圆角干净。
 - CDP 实测：光球 siri-spin 运行；悬浮球拖到[172,172]精确+持久化+不误触；面板拖[-150,-100]持久化、
   折射档、零运行时错误；光球彩色像素渲染。pytest 92 ✓ · e2e 10/10 ✓ · build ✓
+
+### 2026-11-12 · v0.13.1 适配 v0.12/v0.13（用户重构的回归修复 + 审查）
+- **审查结论**：v0.12/v0.13 质量很高——LiquidGlassUI 内联合规规范（MIT+LICENSE+VENDOR.md 记录上游 commit）、
+  agent.py SSE 修复是真生产 bug（FastAPI≥0.106 流式前关请求级 session）
+- **修复其引入的回归**：SimpleNamespace(username=...) 丢 display_name → bookmark 工具通知路径
+  AttributeError（开 auto_exec 的用户收藏时崩）；现带 display_name 进生成器 + 回归测试
+- 验证：build ✓ 93 用例 ✓ e2e 10/10 ✓ 玻璃面板/光球/拖拽手柄/会话恢复共存 ✓
