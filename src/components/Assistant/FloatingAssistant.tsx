@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Bot, Check, ChevronLeft, Copy, FileDown, History, Loader2, MessageCircle, Pencil, Plus,
+  Bot, Check, ChevronLeft, Copy, FileDown, GripHorizontal, History, Loader2, MessageCircle, Pencil, Plus,
   Send, Sparkles, Square, Trash2, X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -164,10 +164,12 @@ export function FloatingAssistant() {
     e.preventDefault()
     e.stopPropagation()
     resizing.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h }
+    // 未拖拽时面板锚定右下角（手柄左移=变宽）；被拖过之后锚定左上角，符号要反过来
+    const sgn = pos ? 1 : -1
     const onMove = (ev: MouseEvent) => {
       if (!resizing.current) return
-      const w = Math.min(640, Math.max(360, resizing.current.w - (ev.clientX - resizing.current.x)))
-      const h = Math.min(800, Math.max(420, resizing.current.h - (ev.clientY - resizing.current.y)))
+      const w = Math.min(640, Math.max(360, resizing.current.w + sgn * (ev.clientX - resizing.current.x)))
+      const h = Math.min(800, Math.max(420, resizing.current.h + sgn * (ev.clientY - resizing.current.y)))
       setSize({ w, h })
     }
     const onUp = () => {
@@ -182,6 +184,71 @@ export function FloatingAssistant() {
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
   }
+
+  // ── 面板可拖拽：按住头部移动，双击头部复位到右下角；位置记忆到 localStorage ──
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const dragging = useRef<{ dx: number; dy: number } | null>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('aiweb_assistant_pos') || 'null')
+      if (p && Number.isFinite(p.left) && Number.isFinite(p.top)) return p
+    } catch { /* 忽略 */ }
+    return null
+  })
+
+  // 钳制在视口内，留 8px 边距，避免小屏被拖到看不见的地方
+  const clampPos = (left: number, top: number) => {
+    const el = panelRef.current
+    const w = el?.offsetWidth ?? size.w
+    const h = el?.offsetHeight ?? size.h
+    return {
+      left: Math.min(Math.max(left, 8), Math.max(8, window.innerWidth - w - 8)),
+      top: Math.min(Math.max(top, 8), Math.max(8, window.innerHeight - h - 8)),
+    }
+  }
+
+  const startDrag = (e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    const el = panelRef.current
+    if (!el || (e.target as HTMLElement).closest('button')) return   // 头部按钮不参与拖拽
+    e.preventDefault()
+    const r = el.getBoundingClientRect()
+    dragging.current = { dx: e.clientX - r.left, dy: e.clientY - r.top }
+    setPos(clampPos(r.left, r.top))                                  // 转为受控位置
+    const onMove = (ev: PointerEvent) => {
+      if (!dragging.current) return
+      const { dx, dy } = dragging.current
+      setPos(clampPos(ev.clientX - dx, ev.clientY - dy))
+    }
+    const onUp = () => {
+      dragging.current = null
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      setPos((cur) => {
+        try {
+          if (cur) localStorage.setItem('aiweb_assistant_pos', JSON.stringify(cur))
+          else localStorage.removeItem('aiweb_assistant_pos')
+        } catch { /* 忽略 */ }
+        return cur
+      })
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  const resetPos = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return   // 头部按钮的双击不复位
+    setPos(null)
+    try { localStorage.removeItem('aiweb_assistant_pos') } catch { /* 忽略 */ }
+  }
+
+  // 视口变化（含移动端软键盘/旋转）后把面板拉回可见区域
+  useEffect(() => {
+    const onResize = () => setPos((p) => (p ? clampPos(p.left, p.top) : p))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── 恢复上次会话：打开面板且为空时，若有记忆的会话则自动载入 ──
   useEffect(() => {
@@ -255,10 +322,19 @@ export function FloatingAssistant() {
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="glass-pop fixed bottom-[100px] right-4 z-[64] flex max-h-[calc(100vh-130px)] flex-col overflow-hidden rounded-3xl lg:bottom-24 lg:right-6"
-            style={{ width: `min(${size.w}px, calc(100vw - 32px))`, height: `min(${size.h}px, calc(100vh - 130px))` }}
+            style={{
+              width: `min(${size.w}px, calc(100vw - 32px))`,
+              height: `min(${size.h}px, calc(100vh - 130px))`,
+              // 拖拽过之后由 left/top 定位（清掉 right/bottom 类），否则保持右下角默认
+              ...(pos ? { left: pos.left, top: pos.top, right: 'auto', bottom: 'auto' } : null),
+            }}
+            ref={panelRef}
           >
-            {/* 头部 */}
-            <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3 dark:border-white/10">
+            {/* 头部：按住可拖动，双击复位 */}
+            <div className="flex cursor-grab touch-none select-none items-center gap-2 border-b border-black/5 px-4 py-3 active:cursor-grabbing dark:border-white/10"
+              onPointerDown={startDrag} onDoubleClick={resetPos}
+              title="按住拖动窗口位置，双击回到右下角">
+              <GripHorizontal size={14} className="-ml-1 shrink-0 text-gray-300 dark:text-white/20" />
               <span className="flex h-8 w-8 items-center justify-center rounded-xl text-white" style={{ backgroundImage: 'var(--brand-grad)' }}>
                 <Sparkles size={15} />
               </span>
