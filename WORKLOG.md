@@ -781,3 +781,6 @@ pytest 97 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 7（02:08）
 pytest 97 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 8（02:18）
+pytest 97 ✓ · e2e_check 10/10 ✓
