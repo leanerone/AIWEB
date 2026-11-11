@@ -217,7 +217,7 @@ export function Dashboard() {
             {filtered.slice(0, 9).map((r, i) => {
               const meta = TYPE_META[r.type] ?? TYPE_META.skill
               return (
-                <BentoCard key={r.id} glass className="p-0" delay={Math.min(i * 0.03, 0.2)}>
+                <BentoCard key={r.id} className="p-0" delay={Math.min(i * 0.03, 0.2)}>
                   <div className="flex h-full flex-col p-5">
                     <div className="flex items-center justify-between">
                       <span className={`chip ${meta.chip}`}><span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${meta.dot}`} />{meta.label}</span>
@@ -413,7 +413,7 @@ export function Dashboard() {
       {/* ═══ 内容卡全文弹窗 ═══ */}
       {viewing && (
         <div className="fixed inset-0 z-[85] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm" onClick={() => setViewing(null)}>
-          <div className="max-h-[82vh] w-full max-w-xl overflow-y-auto rounded-bento2 bg-white p-6 shadow-bentoHover" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[82vh] w-full max-w-xl overflow-y-auto glass-modal lg-edge rounded-bento2 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <span className={`chip ${KIND_META[viewing.kind]?.cls ?? KIND_META.announcement.cls}`}>{KIND_META[viewing.kind]?.label}</span>

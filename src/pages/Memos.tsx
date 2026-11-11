@@ -261,7 +261,7 @@ export function Memos() {
       {/* 批量导入 Notes 链接 */}
       {batchOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm" onClick={() => setBatchOpen(false)}>
-          <div className="w-full max-w-md rounded-bento2 bg-white p-6 shadow-bentoHover" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md glass-modal lg-edge rounded-bento2 p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-1 text-base font-bold">批量导入 Notes 链接</h3>
             <p className="mb-3 text-xs text-subtle">每行一条：notes:// 链接或 Notes 客户端复制的 NDL 文本（可含标题行）</p>
             <textarea className="input min-h-[160px] font-mono text-xs" placeholder={'notes://Server/db.nsf/0/UNID\n标题xxx\n<NDL>…</NDL>'}

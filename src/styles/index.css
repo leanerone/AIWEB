@@ -269,6 +269,25 @@ body {
   background: var(--dd-bg); border: 1px solid var(--dd-line); color: var(--dd-text);
   box-shadow: var(--dd-shadow);
 }
+/* 模态框玻璃：比卡片略实（.78）保证表单可读，但仍透光 + 磨砂 + 顶部镜面高光。
+   配合 .lg-edge 出边光；替代原先的纯白 rounded-bento2 bg-white 模态 */
+.glass-modal {
+  background:
+    linear-gradient(158deg, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, 0) 42%),
+    rgba(255, 255, 255, .78) !important;
+  backdrop-filter: blur(26px) saturate(1.8);
+  -webkit-backdrop-filter: blur(26px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, .8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95),
+              0 24px 60px -22px rgba(16, 24, 40, .35);
+}
+.dark .glass-modal {
+  background:
+    linear-gradient(158deg, rgba(255, 255, 255, .05) 0%, rgba(255, 255, 255, 0) 42%),
+    rgba(23, 27, 37, .82) !important;
+  border-color: rgba(255, 255, 255, .1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 24px 60px -20px rgba(0, 0, 0, .7);
+}
 .login-glass {
   background: var(--h-panel); border: 1px solid var(--h-line); color: #fff;
   backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
@@ -286,9 +305,13 @@ body {
       均匀柔光位移后几乎无变化（实测 A/B 均差仅 1.0/255），所以这里用
       多色网格渐变 + 高频颗粒，给边缘折射提供真实的位移素材。
       色相取自本项目语义：电蓝(平台主色)/青(资讯)/紫(AI)/琥珀(技能能量)。 */
+/* 颗粒烘焙进 background 顶层（SVG 自带低透明度），不用独立 fixed + mix-blend 层——
+   后者会强制全屏混合合成，实测把滚动从 60fps 拖到 50fps。作为背景图层则与网格渐变
+   一起廉价合成，同时仍给折射提供高频位移素材。 */
 body {
   background-color: #eef1f8;
   background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),
     radial-gradient(46% 38% at 88% -6%, rgba(37, 99, 235, .40), transparent 60%),
     radial-gradient(40% 34% at -8% 22%, rgba(56, 189, 248, .34), transparent 62%),
     radial-gradient(44% 40% at 72% 108%, rgba(124, 58, 237, .30), transparent 64%),
@@ -298,15 +321,10 @@ body {
       rgba(124, 58, 237, .09) 55%, rgba(245, 158, 11, .06) 78%, rgba(37, 99, 235, .10));
   background-attachment: fixed;
 }
-/* 高频颗粒：折射弯折的主要可见来源。低透明度，不影响文字对比度 */
-body::before {
-  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  opacity: .10; mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-}
 .dark body {
   background-color: #0f1115;
   background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
     radial-gradient(48% 40% at 88% 0%, rgba(37, 99, 235, .30), transparent 64%),
     radial-gradient(42% 36% at 2% 96%, rgba(56, 189, 248, .18), transparent 66%),
     radial-gradient(40% 36% at 66% 106%, rgba(124, 58, 237, .20), transparent 64%),
@@ -315,28 +333,44 @@ body::before {
       rgba(124, 58, 237, .10) 58%, rgba(37, 99, 235, .12));
   background-attachment: fixed;
 }
-.dark body::before { opacity: .12; mix-blend-mode: screen }
 
 /* 2) 卡片玻璃：明亮模式要透到能透出底衬色块（.50 + 高 saturate），
       反光做进 background 图层而非 ::after，避免白色渐变浮在文字上方影响可读性 */
 .card-lg {
+  /* 性能关键：卡片数量多（每页 8+），backdrop-filter 会让滚动时反复重采样背景
+     （实测开=34fps/13卡顿，关=60fps/0卡顿）。故卡片**不用 blur**，
+     靠「半透底 + 顶部镜面高光 + .lg-edge 边光」呈现透明玻璃质感——
+     底衬的网格渐变与颗粒会透出来，观感仍是液体玻璃，但 GPU 成本极低。
+     blur/折射只留给少量焦点与 transient 表面（见 .glass-pop/.glass-modal/折射 hook）。 */
   background:
-    linear-gradient(158deg, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, 0) 38%),
-    rgba(255, 255, 255, .5) !important;
-  backdrop-filter: blur(18px) saturate(1.9);
-  -webkit-backdrop-filter: blur(18px) saturate(1.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 -1px 0 rgba(17, 24, 39, .04),
-              0 1px 2px rgba(16, 24, 40, .05), 0 14px 34px -20px rgba(16, 24, 40, .16);
-  border-color: rgba(255, 255, 255, .72) !important;
+    linear-gradient(158deg, rgba(255, 255, 255, .66) 0%, rgba(255, 255, 255, .14) 30%, rgba(255, 255, 255, 0) 56%),
+    rgba(255, 255, 255, .42) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(17, 24, 39, .05),
+              0 1px 2px rgba(16, 24, 40, .05), 0 16px 38px -20px rgba(16, 24, 40, .2);
+  border-color: rgba(255, 255, 255, .78) !important;
 }
 .dark .card-lg {
   background:
     linear-gradient(158deg, rgba(255, 255, 255, .06) 0%, rgba(255, 255, 255, 0) 38%),
     rgba(21, 24, 33, .62) !important;
-  backdrop-filter: blur(16px) saturate(1.45);
-  -webkit-backdrop-filter: blur(16px) saturate(1.45);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 12px 30px -18px rgba(0, 0, 0, .6);
   border-color: rgba(255, 255, 255, .07) !important;
+}
+
+/* 2b) 小控件统一轻玻璃：顶栏图标按钮 / hero 徽章 / 快捷 chips / 筛选 tab 等所有
+       非卡片的白底控件，统一改半透，与卡片同语言（彻底消除"有的模块没效果"）。
+       只改背景色、不加 backdrop-filter——这类控件数量多，避免合成成本。
+       .card-lg/.glass-modal 自带 !important 背景，不受此规则影响。 */
+html:not(.dark) .bg-white:not(.card-lg):not(.glass-modal) {
+  background-color: rgba(255, 255, 255, .58);
+}
+.dark .bg-white:not(.card-lg):not(.glass-modal) {
+  background-color: rgba(21, 24, 33, .58);
+}
+/* 顶栏按钮额外加顶部镜面高光，呼应玻璃语言 */
+html:not(.dark) header .bg-white {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 1px 2px rgba(16, 24, 40, .05);
+  border-color: rgba(255, 255, 255, .7);
 }
 
 /* 3) 边缘高光：改用上游 LiquidGlassUI 实测更稳的 inset box-shadow 方案。
@@ -374,7 +408,7 @@ html:not(.dark) .lg-edge::before {
       frost      = 磨砂：Firefox/Safari 对 backdrop-filter:url() 静默不渲染，
                    所以必须按 UA 门控（CSS.supports 会谎报 true）
       solid      = 实心兜底 */
-.glass-pop, .mega-dd, [data-lg-support="frost"] {
+.glass-pop, [data-lg-support="frost"] {
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
 }
@@ -384,6 +418,20 @@ html:not(.dark) .lg-edge::before {
 [data-lg-support="solid"] {
   backdrop-filter: none;
   background: var(--dd-solid) !important;
+}
+/* 性能关键：mega-dd 常驻 DOM（靠 opacity 切换显隐）。即便 opacity:0，
+   backdrop-filter 仍会每帧合成背景 → 实测把滚动从 60fps 拖到 44fps。
+   故只在展开(.is-open)时启用磨砂/折射，收起时彻底关掉。 */
+.mega-dd.is-open {
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+}
+.mega-dd.is-open[data-lg-support="refraction"] {
+  backdrop-filter: var(--lg-filter);
+}
+.mega-dd:not(.is-open) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* 5) 玻璃变亮后，浅色主题的次要灰字要压深一档才守得住 WCAG AA */

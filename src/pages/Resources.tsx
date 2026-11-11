@@ -386,7 +386,7 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-bento2 bg-white p-6 shadow-bentoHover"
+        className="max-h-[88vh] w-full max-w-lg overflow-y-auto glass-modal lg-edge rounded-bento2 p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-3 text-lg font-bold">上传资源</h2>

@@ -301,7 +301,7 @@ export function ResourceDetail() {
       {/* 编辑弹窗 */}
       {editOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm" onClick={() => setEditOpen(false)}>
-          <div className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-bento2 bg-white p-6 shadow-bentoHover"
+          <div className="max-h-[88vh] w-full max-w-lg overflow-y-auto glass-modal lg-edge rounded-bento2 p-6"
             onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-4 text-lg font-bold">编辑资源</h2>
             <div className="space-y-3">

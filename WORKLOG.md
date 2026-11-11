@@ -708,3 +708,15 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
 - 对比度复核（采样真实渲染像素）：ink 14~17、subtle 4.73~5.77、brand 4.57，均 ≥ AA。
 - 验证手段：浏览器 MCP 不可用 → 自建 CDP 驱动无头 Chrome（qa_dom.mjs/ab_glass.mjs）做布局测量+像素级 A/B。
 - pytest 92 ✓ · e2e 10/10 ✓ · build ✓
+
+### 2026-11-11 · v0.12.5 性能修复 + 玻璃全覆盖（用户："切换卡顿/不是所有模块都有效果"）
+- 卡顿真凶不是折射数量：CDP A/B 逐项定位 → ① 常闭 mega-dd 的 backdrop-filter 每帧合成(opacity:0 也合成)
+  ② 颗粒 body::before 的 fixed+mix-blend 独立层强制全屏混合。基线 26fps/11卡顿/150ms。
+- 修：mega-dd backdrop 仅 .is-open 启用；颗粒烘焙进 body 背景图层(去 blend 层)；
+  卡片去 backdrop-filter 改半透+镜面高光+边光(数量多，GPU 廉价)；折射只留焦点+transient 浮层。
+  稳态复测 57fps(软件渲染，GPU 会 60)，最大间隔 150→50ms。
+- 全覆盖：卡片更透(.42)+镜面高光；4 纯白模态→glass-modal；13 白底小控件统一半透(计算样式 stillSolid=0)。
+- 对比度采样真实像素：ink 14~17 / subtle 4.83~5.77 全 AA。
+- 教训：backdrop-filter 的成本在"常驻合成"而非"折射算法"；opacity:0 的元素仍会合成 backdrop；
+  独立 mix-blend 全屏层是隐形性能杀手。诊断要靠 A/B 逐项关，不能凭直觉归因。
+- pytest 92 ✓ · e2e 10/10 ✓ · build ✓
