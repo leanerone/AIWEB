@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Bot, Check, ChevronLeft, Copy, FileDown, GripHorizontal, History, Loader2, MessageCircle, Pencil, Plus,
-  Send, Sparkles, Square, Trash2, X,
+  Check, ChevronLeft, Copy, FileDown, GripHorizontal, History, Loader2, MessageCircle, Pencil, Plus,
+  Send, Square, Trash2, X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -10,6 +10,7 @@ import { useAssistant, type AssistantMsg } from '../../stores/assistant'
 import { downloadText } from '../../utils/time'
 import { useLiquidGlass } from '../../hooks/useLiquidGlass'
 import { MarkdownView } from '../MarkdownView'
+import { SiriOrb } from './SiriOrb'
 import { useToast } from '../ui/Toast'
 import type { Resource } from '../../types'
 
@@ -249,6 +250,54 @@ export function FloatingAssistant() {
     try { localStorage.removeItem('aiweb_assistant_pos') } catch { /* 忽略 */ }
   }
 
+  // ── 悬浮球可自由拖动：位置记忆 + 双击复位；用 5px 阈值区分"拖动"与"点击" ──
+  const fabRef = useRef<HTMLButtonElement | null>(null)
+  const fabDidDrag = useRef(false)
+  const [fabPos, setFabPos] = useState<{ left: number; top: number } | null>(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('aiweb_assistant_fab') || 'null')
+      if (p && Number.isFinite(p.left) && Number.isFinite(p.top)) return p
+    } catch { /* 忽略 */ }
+    return null
+  })
+  const startFabDrag = (e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    const el = fabRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const dx = e.clientX - r.left
+    const dy = e.clientY - r.top
+    let moved = false
+    const onMove = (ev: PointerEvent) => {
+      if (!moved && Math.hypot(ev.clientX - r.left - dx, ev.clientY - r.top - dy) < 5) return
+      moved = true
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      const left = Math.min(Math.max(ev.clientX - dx, 8), window.innerWidth - w - 8)
+      const top = Math.min(Math.max(ev.clientY - dy, 8), window.innerHeight - h - 8)
+      setFabPos({ left, top })
+    }
+    const onUp = () => {
+      fabDidDrag.current = moved
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      if (moved) setFabPos((cur) => {
+        try { if (cur) localStorage.setItem('aiweb_assistant_fab', JSON.stringify(cur)) } catch { /* 忽略 */ }
+        return cur
+      })
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+  const onFabClick = () => {
+    if (fabDidDrag.current) { fabDidDrag.current = false; return }  // 拖动结束不触发开关
+    open ? setOpen(false) : toggle()
+  }
+  const resetFab = () => {
+    setFabPos(null)
+    try { localStorage.removeItem('aiweb_assistant_fab') } catch { /* 忽略 */ }
+  }
+
   // 视口变化（含移动端软键盘/旋转）后把面板拉回可见区域
   useEffect(() => {
     const onResize = () => setPos((p) => (p ? clampPos(p.left, p.top) : p))
@@ -302,17 +351,25 @@ export function FloatingAssistant() {
 
   return (
     <>
-      {/* 悬浮球 */}
+      {/* 悬浮球：Siri 光球 + 玻璃底座，可自由拖动（双击复位） */}
       <motion.button
+        ref={fabRef}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="fixed bottom-24 right-6 z-[65] flex h-13 w-13 items-center justify-center rounded-full text-white shadow-bentoHover lg:bottom-6"
-        style={{ backgroundImage: 'var(--brand-grad)', width: 52, height: 52 }}
-        title="AI 助手"
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.94 }}
+        className="assistant-fab fixed bottom-24 right-6 z-[65] flex cursor-grab touch-none items-center justify-center rounded-full active:cursor-grabbing lg:bottom-6"
+        style={{
+          width: 56, height: 56,
+          ...(fabPos ? { left: fabPos.left, top: fabPos.top, right: 'auto', bottom: 'auto' } : null),
+        }}
+        title="AI 助手 · 拖动可移动，双击复位"
         aria-label="打开 AI 助手"
-        onClick={() => (open ? setOpen(false) : toggle())}
+        onPointerDown={startFabDrag}
+        onClick={onFabClick}
+        onDoubleClick={resetFab}
       >
-        {open ? <X size={22} /> : <Bot size={24} />}
+        <SiriOrb active={streaming || open} size={36} />
         {!open && badge > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
             {badge > 9 ? '9+' : badge}
@@ -328,7 +385,7 @@ export function FloatingAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="glass-pop lg-edge fixed bottom-[100px] right-4 z-[64] flex max-h-[calc(100vh-130px)] flex-col overflow-hidden rounded-3xl lg:bottom-24 lg:right-6"
+            className="assistant-panel glass-pop lg-edge fixed bottom-[100px] right-4 z-[64] flex max-h-[calc(100vh-130px)] flex-col overflow-hidden rounded-3xl lg:bottom-24 lg:right-6"
             style={{
               width: `min(${size.w}px, calc(100vw - 32px))`,
               height: `min(${size.h}px, calc(100vh - 130px))`,
@@ -342,8 +399,8 @@ export function FloatingAssistant() {
               onPointerDown={startDrag} onDoubleClick={resetPos}
               title="按住拖动窗口位置，双击回到右下角">
               <GripHorizontal size={14} className="-ml-1 shrink-0 text-gray-300 dark:text-white/20" />
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl text-white" style={{ backgroundImage: 'var(--brand-grad)' }}>
-                <Sparkles size={15} />
+              <span className="flex h-8 w-8 items-center justify-center">
+                <SiriOrb active={streaming} size={26} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold leading-4">AI 助手</p>

@@ -731,3 +731,11 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
 - 教训：backdrop-filter:url() 的滤镜区域是矩形，必须 overflow:clip/hidden 才贴圆角；
   "玻璃不明显"在浅底上要靠"清晰边光+抬升阴影+透光着色"三者叠加，单靠半透不够。
 - pytest 92 ✓ · e2e 10/10 ✓ · build ✓
+
+### 2026-11-11 · v0.13.0 AI 助手 Siri 光球 + 自由拖动 + 液态玻璃（用户三点需求）
+- 新增 SiriOrb.tsx：多层旋转极光+呼吸光晕+球面高光+涟漪(active)，替代静态 Bot 图标；
+  悬浮球/面板头部共用，悬浮球玻璃底座 .assistant-fab。仅 transform/opacity，reduced-motion 静止。
+- 悬浮球自由拖动：5px 阈值区分拖动/点击(拖动不误触开关)，视口钳制+localStorage 记忆+双击复位。
+- 面板头部拖拽保留(不锁死右下角)；面板背景 .86→.5 透度让折射透出，overflow:clip 圆角干净。
+- CDP 实测：光球 siri-spin 运行；悬浮球拖到[172,172]精确+持久化+不误触；面板拖[-150,-100]持久化、
+  折射档、零运行时错误；光球彩色像素渲染。pytest 92 ✓ · e2e 10/10 ✓ · build ✓
