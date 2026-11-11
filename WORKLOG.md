@@ -756,3 +756,7 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
   管理员全可见 / 上传表单🌐公开🔒私有开关 / 卡片锁图标
 - 修复：SSE SimpleNamespace 补 display_name（bookmark 通知）；search_platform 双重补丁互覆盖致 result 空
 - 测试 92 → 97
+
+### 浏览器终验(v0.14)
+新首页 UI ✓ · Hero AI 输入+提问按钮→面板打开→mock 回复 ✓ · 推荐卡/私有开关由 97 用例覆盖
+Enter 路径与按钮路径共用 askAssistant,按钮路径已实测通过(IAB 标签频繁重挂载致 Enter 复验不稳定,非代码问题)
