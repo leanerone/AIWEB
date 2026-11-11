@@ -12,6 +12,7 @@ import argparse
 import io
 import json
 import sys
+from pathlib import Path
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 import urllib.parse
@@ -19,11 +20,17 @@ import urllib.request
 
 PASSED: list[str] = []
 FAILED: list[str] = []
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def check(name: str, cond: bool, detail: str = ""):
     (PASSED if cond else FAILED).append(name if cond else f"{name} —— {detail}")
     print(f"{'✓' if cond else '✗'} {name}" + ("" if cond else f"  [{detail}]"))
+
+
+def skip(name: str, reason: str = ""):
+    """前提不成立时跳过（不计通过/失败）——如未构建前端时无法验证 SPA 托管"""
+    print(f"⊘ {name}（跳过{('：' + reason) if reason else ''}）")
 
 
 def req(method: str, path: str, token: str | None = None, body: dict | None = None,
@@ -133,10 +140,13 @@ def main():
                    body={"username": probe, "password": "whatever"})
     check("连续失败锁定 429", st == 429, f"HTTP {st}")
 
-    # ── SPA 托管（若已构建）──
-    st, body = req("GET", "/", base=B)
-    is_html = isinstance(body, str) and 'id="root"' in body
-    check("SPA 根路径托管", st == 200 and is_html, f"HTTP {st}")
+    # ── SPA 托管（后端 main.py 仅在 dist 存在时注册兜底路由）──
+    if not (ROOT / "dist" / "index.html").exists():
+        skip("SPA 根路径托管", "本地未构建 dist，后端未注册兜底路由")
+    else:
+        st, body = req("GET", "/", base=B)
+        is_html = isinstance(body, str) and 'id="root"' in body
+        check("SPA 根路径托管", st == 200 and is_html, f"HTTP {st}")
 
     print(f"\n{'=' * 46}\n通过 {len(PASSED)} · 失败 {len(FAILED)}")
     if FAILED:
