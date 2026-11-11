@@ -5,13 +5,9 @@ import App from './App'
 import { ToastProvider } from './components/ui/Toast'
 import './styles/index.css'
 
-// 能力探测：只有 Chromium 系支持 backdrop-filter: url(#filter)，
-// 其余浏览器（Firefox/Safari）保持普通毛玻璃回退，避免浮层失去背景模糊
-try {
-  if (window.CSS?.supports?.('backdrop-filter', 'url(#liquid-glass) blur(2px)')) {
-    document.documentElement.classList.add('has-refract')
-  }
-} catch { /* 探测异常按不支持处理 */ }
+// 玻璃能力门控不放在这里：CSS.supports('backdrop-filter','url()') 在 Firefox/Safari
+// 会返回 true 却静默不渲染。改由 useLiquidGlass 逐元素 UA 门控并写入 data-lg-support
+// （refraction / frost / solid 三级降级），见 src/hooks/useLiquidGlass.ts。
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

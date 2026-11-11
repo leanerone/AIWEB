@@ -8,6 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
 import { useAssistant, type AssistantMsg } from '../../stores/assistant'
 import { downloadText } from '../../utils/time'
+import { useLiquidGlass } from '../../hooks/useLiquidGlass'
 import { MarkdownView } from '../MarkdownView'
 import { useToast } from '../ui/Toast'
 import type { Resource } from '../../types'
@@ -187,6 +188,12 @@ export function FloatingAssistant() {
 
   // ── 面板可拖拽：按住头部移动，双击头部复位到右下角；位置记忆到 localStorage ──
   const panelRef = useRef<HTMLDivElement | null>(null)
+  // 面板条件渲染，用 enabled 让 effect 在挂载后重跑
+  const glassRef = useLiquidGlass<HTMLDivElement>({ radius: 24, level: 'focused', enabled: open })
+  const setPanelRef = (el: HTMLDivElement | null) => {
+    panelRef.current = el
+    glassRef.current = el
+  }
   const dragging = useRef<{ dx: number; dy: number } | null>(null)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(() => {
     try {
@@ -321,14 +328,14 @@ export function FloatingAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="glass-pop fixed bottom-[100px] right-4 z-[64] flex max-h-[calc(100vh-130px)] flex-col overflow-hidden rounded-3xl lg:bottom-24 lg:right-6"
+            className="glass-pop lg-edge fixed bottom-[100px] right-4 z-[64] flex max-h-[calc(100vh-130px)] flex-col overflow-hidden rounded-3xl lg:bottom-24 lg:right-6"
             style={{
               width: `min(${size.w}px, calc(100vw - 32px))`,
               height: `min(${size.h}px, calc(100vh - 130px))`,
               // 拖拽过之后由 left/top 定位（清掉 right/bottom 类），否则保持右下角默认
               ...(pos ? { left: pos.left, top: pos.top, right: 'auto', bottom: 'auto' } : null),
             }}
-            ref={panelRef}
+            ref={setPanelRef}
           >
             {/* 头部：按住可拖动，双击复位 */}
             <div className="flex cursor-grab touch-none select-none items-center gap-2 border-b border-black/5 px-4 py-3 active:cursor-grabbing dark:border-white/10"

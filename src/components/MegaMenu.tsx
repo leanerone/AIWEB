@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
+import { useLiquidGlass } from '../hooks/useLiquidGlass'
 
 /**
  * 顶栏导航 = 普通路由项（首页/资讯/简报/笔记/设置，与页面同风格、当前页高亮）
@@ -37,6 +38,8 @@ export function MegaMenu() {
   const rootRef = useRef<HTMLElement>(null)
   const closeRef = useRef<() => void>(() => {})
   const [current, setCurrent] = useState<MenuId | null>(null)
+  // 面板常驻 DOM（靠 opacity/visibility 切换），无需 enabled 门控
+  const ddGlassRef = useLiquidGlass<HTMLDivElement>({ radius: 14, level: 'focused' })
 
   const menuActive = (id: MenuId) => MENU_PATH[id].some((p) => pathname.startsWith(p))
 
@@ -198,7 +201,7 @@ export function MegaMenu() {
         {plain('/settings', '设置')}
       </div>
 
-      <div className="mega-dd">
+      <div className="mega-dd lg-edge" ref={ddGlassRef}>
         <div className="mega-panel panel-resources" id="p-resources">
           <div className="flex flex-col gap-0.5 p-2">
             {RES_ITEMS.map((it, i) => (

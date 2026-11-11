@@ -3,6 +3,7 @@ import { BookOpen, CornerDownLeft, Mail, Newspaper, Notebook, Search, Sparkles }
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
+import { useLiquidGlass } from '../hooks/useLiquidGlass'
 import type { NoteLinkItem, SearchHit } from '../types'
 
 const PAGES = [
@@ -25,6 +26,8 @@ export function CommandPalette() {
   const [cursor, setCursor] = useState(0)
   const nav = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
+  // 面板是条件渲染的，必须用 enabled 让 effect 在真正挂载后重跑（否则拿不到元素）
+  const glassRef = useLiquidGlass<HTMLDivElement>({ radius: 28, level: 'focused', enabled: open })
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -106,7 +109,8 @@ export function CommandPalette() {
             initial={{ opacity: 0, scale: 0.96, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: -6 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="glass-pop relative w-full max-w-lg overflow-hidden rounded-bento2"
+            className="glass-pop lg-edge relative w-full max-w-lg overflow-hidden rounded-bento2"
+            ref={glassRef}
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
               <Search size={16} className="text-gray-400" />

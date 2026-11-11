@@ -675,3 +675,19 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
   反光做进 background 图层而非 ::after（防止白渐变压在文字上）；页脚 gray-300 → text-subtle
 - 最坏位置（最强光斑中心）手算：subtle 5.05 / ink 14.98，均 ≥ AA 4.5
 - 校验：build ✓（tsc）、pytest 92 ✓；本会话浏览器工具不可用 → 拖拽交互待用户手测
+
+### 2026-11-11 · v0.12.3 液态玻璃换引擎（用户："效果不行"，给了三个库对比）
+- 对比：shuding/liquid-glass（npm 包装周下载 455，最多但无组件 API）、
+  archisvaze/liquid-glass（SVG+WebGL 双引擎，效果最好但是演示站不是库、WebGL 需 three.js）、
+  Wei-Zhang09/LiquidGlassUI（MIT、零依赖、SDF+Snell 折射+逐像素镜面高光+几何缓存+UA 门控+测试）→ 采用后者
+- 内联 5 个引擎文件(893 行)到 src/vendor/liquidglass（含 LICENSE + VENDOR.md 记录上游 commit）；
+  未内联 Web Components/React 封装，避免 shadow DOM 与既有 Tailwind 冲突
+- 新增 src/hooks/useLiquidGlass.ts：复刻上游三级降级(refraction→frost→solid)、ResizeObserver+rAF、
+  0×0 不降档、<4px 降 frost
+- 纠正自己的错：CSS.supports('backdrop-filter','url()') 在 FF/Safari 谎报 true → 删探测与 feTurbulence 滤镜，
+  改 UA 门控；边光从 mask-composite 边环换成 inset box-shadow + screen（上游实测边环在圆角处有硬切接缝 +38/+55）
+- 折射只给浮层(⌘K/通知/用户菜单/mega-dd/助手面板)，卡片走磨砂，滤镜按几何缓存
+- 无头 Chrome 实证：data-lg-support=refraction、--lg-filter:url(#lg-filter-0)、
+  3×feDisplacementMap(RGB 色散 scale≈167.6) + 2×feImage(位移/镜面贴图)；卡片 0 个 data-lg-support
+- pytest 92 ✓ · e2e 10/10 ✓ · build ✓（主包 177→218KB，gzip 68KB）
+- 教训：浏览器自动化工具不可用时，用无头 Chrome --dump-dom 也能拿到硬证据，别退化成"我觉得没问题"

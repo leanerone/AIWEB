@@ -1,5 +1,34 @@
 # 更新日志
 
+## v0.12.3 · 2026-11-11 液态玻璃换引擎：内联 LiquidGlassUI（真折射替代湍流噪声）
+
+用户反馈"液态玻璃效果不行"。对比三个候选实现后换引擎：
+
+| 来源 | 技术 | 结论 |
+|---|---|---|
+| `shuding/liquid-glass` | 全局 SVG 滤镜套用到圆角元素（npm 包装 `liquid-glass-js` 周下载 455，三者中最高） | 效果可用但无组件 API/令牌/测试，可控性差 |
+| `archisvaze/liquid-glass` | SVG feDisplacementMap + Three.js WebGL 双引擎，可调厚度/bezel/IOR | 效果最好但是**演示站**不是库；WebGL 需 three.js 且是全屏着色器，不适配多卡片应用 |
+| **`Wei-Zhang09/LiquidGlassUI`（采用）** | SDF + Snell 折射剖面 + 逐像素镜面高光 + 按几何缓存滤镜 + UA 能力门控 + vitest | MIT、零运行时依赖、有 React 封装与令牌体系，**最贴合本项目**；未发布 npm（故下载量为 0） |
+
+- **内联引擎**（`src/vendor/liquidglass/`，MIT，附 `LICENSE` + `VENDOR.md` 记录上游 commit）：
+  `capabilities.ts` / `refraction.ts` / `sdf.ts` / `core/filter-registry.ts` / `generated/tokens.*`
+  共 893 行；未内联 `elements/`（Web Components）与 `react/` 封装——本项目已有组件体系，
+  引入 shadow DOM 与既有 Tailwind 样式冲突，收益不抵成本
+- **`src/hooks/useLiquidGlass.ts`**：复刻上游 `glass-base` 的三级降级（refraction→frost→solid）、
+  ResizeObserver + rAF 调度、0×0 不降档（未布局）、<4px 降 frost（避免"声称折射实则空白"）
+- **修正我们此前的错误探测**：`CSS.supports('backdrop-filter','url()')` 在 Firefox/Safari
+  **返回 true 但静默不渲染**，故删除 `main.tsx` 的探测与 `index.html` 的 feTurbulence 滤镜，
+  改用上游 UA 嗅探（含 HeadlessChrome 无词边界的坑）
+- **边缘高光换做法**：`mask-composite` 边环在圆角处是硬边（上游实测亮度突跳 +38/+55，
+  正是"看着像塑料框"的原因）→ 改多层 inset box-shadow + `mix-blend-mode: screen`
+- **性能护栏**：真折射只给浮层（⌘K / 通知 / 用户菜单 / MegaMenu 面板 / 助手面板），
+  卡片走磨砂 + inset 高光；滤镜按 `尺寸×圆角×表面×模糊` 缓存，同尺寸共用一个
+- 清理死代码：`--lg-edge` 令牌已无引用，删除
+- **无头 Chrome 实证**：`data-lg-support="refraction"`、`--lg-filter: url(#lg-filter-0)`、
+  滤镜链含 3× `feDisplacementMap`（RGB 色散，scale≈167.6）+ 2× `feImage`（位移贴图 / 镜面高光贴图）；
+  卡片 0 个 `data-lg-support`（确认走磨砂档）
+- 回归：pytest **92 全过**、`e2e_check` **10/10**、build ✓；主包 177→218KB（gzip 68KB，引擎成本）
+
 ## v0.12.2 · 2026-11-11 助手窗口可拖拽 + 明亮模式玻璃加强（用户反馈）
 
 **助手不能拖动** → `FloatingAssistant` 原来只有右下角缩放手柄，面板被 Tailwind

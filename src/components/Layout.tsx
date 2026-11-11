@@ -9,6 +9,7 @@ import { useAssistant } from '../stores/assistant'
 import { BackToTop } from './BackToTop'
 import { CommandPalette } from './CommandPalette'
 import { MegaMenu } from './MegaMenu'
+import { useLiquidGlass } from '../hooks/useLiquidGlass'
 import type { NotificationItem } from '../types'
 
 const NAV = [
@@ -31,6 +32,9 @@ export function Layout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifItems, setNotifItems] = useState<NotificationItem[]>([])
   const notifTimer = useRef<number | undefined>(undefined)
+  // 两个下拉都是条件渲染，必须用 enabled 让 effect 在挂载后重跑
+  const notifGlassRef = useLiquidGlass<HTMLDivElement>({ radius: 16, level: 'elevated', enabled: notifOpen })
+  const menuGlassRef = useLiquidGlass<HTMLDivElement>({ radius: 16, level: 'elevated', enabled: menuOpen })
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -140,7 +144,7 @@ export function Layout() {
               )}
             </button>
             {notifOpen && (
-              <div className="glass-pop absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl">
+              <div className="glass-pop lg-edge absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl" ref={notifGlassRef}>
                 <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
                   <span className="text-sm font-bold">通知中心</span>
                   {unread > 0 && (
@@ -200,7 +204,7 @@ export function Layout() {
               <span className="max-w-[120px] truncate">{user?.display_name || user?.username}</span>
             </button>
             {menuOpen && (
-              <div className="glass-pop absolute right-0 mt-2 w-44 rounded-2xl p-1.5" onMouseLeave={() => setMenuOpen(false)}>
+              <div className="glass-pop lg-edge absolute right-0 mt-2 w-44 rounded-2xl p-1.5" ref={menuGlassRef} onMouseLeave={() => setMenuOpen(false)}>
                 <div className="px-3 py-2 text-xs text-subtle">
                   {user?.domain ? `${user.domain} \\ ` : ''}{user?.username}
                 </div>

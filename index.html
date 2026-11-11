@@ -8,15 +8,6 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
   </head>
   <body>
-    <!-- 液态玻璃折射滤镜（浮层专用）。main.tsx 用 CSS.supports 探测 url() 支持度后
-         给 <html> 加 .has-refract；不支持的浏览器保留 CSS 里的 blur+saturate 磨砂回退。 -->
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-      <filter id="liquid-glass" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.016" numOctaves="2" seed="9" result="n" />
-        <feGaussianBlur in="n" stdDeviation="5" result="nb" />
-        <feDisplacementMap in="SourceGraphic" in2="nb" scale="18" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
