@@ -229,7 +229,7 @@ export function Layout() {
         </AnimatePresence>
       </main>
 
-      <footer className="py-8 text-center text-xs text-gray-300">AI Hub · 内网 AI 分享平台</footer>
+      <footer className="py-8 text-center text-xs text-subtle">AI Hub · 内网 AI 分享平台</footer>
       <BackToTop />
       <FloatingAssistant />
     </div>

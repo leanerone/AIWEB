@@ -1,5 +1,23 @@
 # 更新日志
 
+## v0.12.2 · 2026-11-11 助手窗口可拖拽 + 明亮模式玻璃加强（用户反馈）
+
+**助手不能拖动** → `FloatingAssistant` 原来只有右下角缩放手柄，面板被 Tailwind
+`bottom-*/right-*` 钉死。现在：
+- 头部整体为拖拽把手（`onPointerDown` + window `pointermove/pointerup`），带 `GripHorizontal` 提示、
+  `cursor-grab/grabbing`、`touch-none`、`select-none`；头部按钮 `closest('button')` 排除，不误拖
+- 位置钳制在视口内（留 8px 边距，小屏也拖不丢），写入 `localStorage.aiweb_assistant_pos`，刷新后保留
+- **双击头部复位**回右下角（同样排除按钮双击）；`window.resize` 后自动拉回可见区域
+- 一致性：拖拽前面板右下锚定、拖拽后左上锚定，缩放符号随锚定切换（否则"往右拖却变窄"）
+
+**明亮模式玻璃不明显** → 根因是可透内容太弱：底衬仅 10%/8%，卡片 `.62` 近实色。现：
+- 底衬三团品牌光 `.20 / .17 / .14`（原两团 10%/8%），基色微调到 `#f4f6fb`
+- 卡片 `.card-lg` 降到 `.50` + `blur(18px) saturate(1.9)`，斜向反光做进 `background` 图层
+  （不用 `::after`，避免白色渐变盖在文字上方影响可读性）；边框高光提到 `.72`
+- 页脚 `text-gray-300`（浅底约 3:1）改 `text-subtle`
+- 对比度复算（最坏=最强光斑中心）：`text-subtle #5b6472` **5.05**、`text-ink` **14.98**，
+  次要灰阶覆盖仍为 `#5b6472` → 全部 ≥ AA 4.5
+
 ## v0.12.1 · 2026-11-11 Agent SSE 会话生命周期修复 + 液态玻璃回归新结构
 
 **fix：Agent SSE 在真实流式路径上必然报错（生产缺陷，非测试问题）**

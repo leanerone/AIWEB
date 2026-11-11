@@ -288,30 +288,36 @@ body {
 /* 1) 底衬：两团极淡品牌光（fixed，滚动时视差感来自卡片磨砂） */
 body {
   background:
-    radial-gradient(52% 38% at 88% 0%, rgba(37, 99, 235, .10), transparent 68%),
-    radial-gradient(46% 34% at 0% 100%, rgba(56, 189, 248, .08), transparent 70%),
-    #f5f6fa;
+    radial-gradient(58% 42% at 86% -4%, rgba(37, 99, 235, .20), transparent 66%),
+    radial-gradient(48% 38% at -6% 26%, rgba(56, 189, 248, .17), transparent 68%),
+    radial-gradient(62% 44% at 68% 104%, rgba(37, 99, 235, .14), transparent 70%),
+    #f4f6fb;
   background-attachment: fixed;
 }
 .dark body {
   background:
-    radial-gradient(54% 40% at 88% 2%, rgba(37, 99, 235, .16), transparent 68%),
-    radial-gradient(46% 36% at 4% 98%, rgba(56, 189, 248, .10), transparent 70%),
+    radial-gradient(54% 40% at 88% 2%, rgba(37, 99, 235, .18), transparent 68%),
+    radial-gradient(46% 36% at 4% 98%, rgba(56, 189, 248, .11), transparent 70%),
     #0f1115;
   background-attachment: fixed;
 }
 
-/* 2) 卡片玻璃（覆盖上面的实色 .card-lg 定义；同特异度、后置生效） */
+/* 2) 卡片玻璃：明亮模式要透到能透出底衬色块（.50 + 高 saturate），
+      反光做进 background 图层而非 ::after，避免白色渐变浮在文字上方影响可读性 */
 .card-lg {
-  background: rgba(255, 255, 255, .62) !important;
-  backdrop-filter: blur(16px) saturate(1.6);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), inset 0 -1px 0 rgba(17, 24, 39, .03),
-              0 1px 2px rgba(16, 24, 40, .04), 0 12px 30px -18px rgba(16, 24, 40, .12);
-  border-color: rgba(255, 255, 255, .6) !important;
+  background:
+    linear-gradient(158deg, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, 0) 38%),
+    rgba(255, 255, 255, .5) !important;
+  backdrop-filter: blur(18px) saturate(1.9);
+  -webkit-backdrop-filter: blur(18px) saturate(1.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 -1px 0 rgba(17, 24, 39, .04),
+              0 1px 2px rgba(16, 24, 40, .05), 0 14px 34px -20px rgba(16, 24, 40, .16);
+  border-color: rgba(255, 255, 255, .72) !important;
 }
 .dark .card-lg {
-  background: rgba(21, 24, 33, .62) !important;
+  background:
+    linear-gradient(158deg, rgba(255, 255, 255, .06) 0%, rgba(255, 255, 255, 0) 38%),
+    rgba(21, 24, 33, .62) !important;
   backdrop-filter: blur(16px) saturate(1.45);
   -webkit-backdrop-filter: blur(16px) saturate(1.45);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 12px 30px -18px rgba(0, 0, 0, .6);
