@@ -282,22 +282,40 @@ body {
 /* ══════════ 液态玻璃层（v0.10 扁平重构后重新装回，沿用 SkillHub 蓝作强调色）══════════
    玻璃成立 = 底衬有内容可透 + 卡片半透磨砂 + 边缘高光。三者缺一就退回"白卡"观感。 */
 
-/* 1) 底衬：两团极淡品牌光（fixed，滚动时视差感来自卡片磨砂） */
+/* 1) 底衬：折射要"看得见"，前提是背后有可弯折的细节。
+      均匀柔光位移后几乎无变化（实测 A/B 均差仅 1.0/255），所以这里用
+      多色网格渐变 + 高频颗粒，给边缘折射提供真实的位移素材。
+      色相取自本项目语义：电蓝(平台主色)/青(资讯)/紫(AI)/琥珀(技能能量)。 */
 body {
-  background:
-    radial-gradient(58% 42% at 86% -4%, rgba(37, 99, 235, .20), transparent 66%),
-    radial-gradient(48% 38% at -6% 26%, rgba(56, 189, 248, .17), transparent 68%),
-    radial-gradient(62% 44% at 68% 104%, rgba(37, 99, 235, .14), transparent 70%),
-    #f4f6fb;
+  background-color: #eef1f8;
+  background-image:
+    radial-gradient(46% 38% at 88% -6%, rgba(37, 99, 235, .40), transparent 60%),
+    radial-gradient(40% 34% at -8% 22%, rgba(56, 189, 248, .34), transparent 62%),
+    radial-gradient(44% 40% at 72% 108%, rgba(124, 58, 237, .30), transparent 64%),
+    radial-gradient(30% 26% at 18% 78%, rgba(245, 158, 11, .24), transparent 60%),
+    conic-gradient(from 214deg at 68% 18%,
+      rgba(37, 99, 235, .10), rgba(56, 189, 248, .08) 28%,
+      rgba(124, 58, 237, .09) 55%, rgba(245, 158, 11, .06) 78%, rgba(37, 99, 235, .10));
   background-attachment: fixed;
+}
+/* 高频颗粒：折射弯折的主要可见来源。低透明度，不影响文字对比度 */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  opacity: .10; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 .dark body {
-  background:
-    radial-gradient(54% 40% at 88% 2%, rgba(37, 99, 235, .18), transparent 68%),
-    radial-gradient(46% 36% at 4% 98%, rgba(56, 189, 248, .11), transparent 70%),
-    #0f1115;
+  background-color: #0f1115;
+  background-image:
+    radial-gradient(48% 40% at 88% 0%, rgba(37, 99, 235, .30), transparent 64%),
+    radial-gradient(42% 36% at 2% 96%, rgba(56, 189, 248, .18), transparent 66%),
+    radial-gradient(40% 36% at 66% 106%, rgba(124, 58, 237, .20), transparent 64%),
+    conic-gradient(from 214deg at 70% 16%,
+      rgba(37, 99, 235, .12), rgba(56, 189, 248, .08) 30%,
+      rgba(124, 58, 237, .10) 58%, rgba(37, 99, 235, .12));
   background-attachment: fixed;
 }
+.dark body::before { opacity: .12; mix-blend-mode: screen }
 
 /* 2) 卡片玻璃：明亮模式要透到能透出底衬色块（.50 + 高 saturate），
       反光做进 background 图层而非 ::after，避免白色渐变浮在文字上方影响可读性 */
@@ -325,7 +343,10 @@ body {
       原先用 mask-composite: exclude 挖 1.2px 边环，但 mask 边界是硬边、圆角处抗锯齿弱，
       会在上下边缘出现竖直接缝（上游实测亮度突跳 +38 / +55，肉眼即"硬切"）。
       inset 阴影沿圆角轮廓是连续渐变，天然无接缝；screen 混合只提亮不压暗。 */
-.lg-edge { position: relative }   /* 不加 overflow:hidden：v0.10 卡片未裁剪，避免回归 */
+/* :where() 把特异度降为 0 —— 只给"本来没有定位"的元素补 relative，
+   绝不覆盖 .mega-dd 等自带的 position:absolute（否则下拉会被拽进文档流，顶栏错位）。
+   这是第二次踩同一个坑，故用特异度而非书写顺序来保证。 */
+:where(.lg-edge) { position: relative }
 .lg-edge::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: 3;
   pointer-events: none; background: none; mix-blend-mode: screen;
@@ -335,6 +356,16 @@ body {
     inset 0 -1px 0 rgba(255, 255, 255, .30),
     inset -1px 0 0 rgba(255, 255, 255, .22),
     inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+/* 浅色底上 screen 混合等于看不见（白+白），必须换 normal 并用暗描边勾出玻璃轮廓 */
+html:not(.dark) .lg-edge::before {
+  mix-blend-mode: normal;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    inset 1px 0 0 rgba(255, 255, 255, .6),
+    inset 0 -1px 0 rgba(17, 24, 39, .07),
+    inset -1px 0 0 rgba(17, 24, 39, .05),
+    inset 0 0 0 1px rgba(17, 24, 39, .07);
 }
 .dark .lg-edge::before { opacity: .85 }
 

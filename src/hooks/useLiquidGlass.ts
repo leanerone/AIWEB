@@ -24,6 +24,17 @@ export type GlassLevel = 'plain' | 'regular' | 'elevated' | 'focused'
 const LEVEL_BLUR_PX: Record<GlassLevel, number> = { plain: 0, regular: 2, elevated: 6, focused: 14 }
 const MIN_FILTER_SIZE = 4
 
+/** 光学参数覆盖（对应上游 tokens.optical）。默认值见 generated/tokens.ts */
+export interface GlassOptics {
+  bezelWidth?: number          // 边缘折射带宽度 px（默认 22）
+  displacementScale?: number   // 位移强度（默认 70）
+  ior?: number                 // 折射率（默认 1.6）
+  dispersion?: number          // RGB 色散（默认 2.0）
+  saturation?: number          // 背景饱和度 %（默认 180）
+  refractionHeight?: number    // 剖面高度（默认 12）
+  refractionAmount?: number    // 折射量（默认 24）
+}
+
 interface Options {
   /** 圆角 px，需与元素实际 border-radius 一致，否则折射剖面对不上 */
   radius?: number
@@ -31,11 +42,15 @@ interface Options {
   /** 边缘剖面形状，上游默认 convexSquircle */
   surface?: string
   enabled?: boolean
+  /** 加强/减弱折射。注意：参与滤镜缓存 key，不同参数会各建一个滤镜 */
+  optics?: GlassOptics
 }
 
 export function useLiquidGlass<T extends HTMLElement>(opts: Options = {}) {
-  const { radius = 26, level = 'elevated', surface = 'convexSquircle', enabled = true } = opts
+  const { radius = 26, level = 'elevated', surface = 'convexSquircle', enabled = true, optics } = opts
   const ref = useRef<T | null>(null)
+  // 对象字面量每次渲染都是新引用，用序列化值做依赖，避免 effect 反复重建滤镜
+  const opticsKey = optics ? JSON.stringify(optics) : ''
 
   useEffect(() => {
     const el = ref.current
@@ -67,6 +82,7 @@ export function useLiquidGlass<T extends HTMLElement>(opts: Options = {}) {
         radius: Math.min(radius, Math.min(w, h) / 2),
         surface,
         blur: LEVEL_BLUR_PX[level],
+        ...(opticsKey ? { overrides: JSON.parse(opticsKey) } : null),
       })
       if (!id) {                                         // 几何不足以构成边缘带
         el.dataset.lgSupport = 'frost'
@@ -89,7 +105,7 @@ export function useLiquidGlass<T extends HTMLElement>(opts: Options = {}) {
       ro.disconnect()
       if (frame) cancelAnimationFrame(frame)
     }
-  }, [radius, level, surface, enabled])
+  }, [radius, level, surface, enabled, opticsKey])
 
   return ref
 }

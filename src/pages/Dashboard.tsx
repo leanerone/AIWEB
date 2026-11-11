@@ -9,6 +9,7 @@ import { api } from '../services/api'
 import { useAssistant } from '../stores/assistant'
 import { useAuth } from '../stores/auth'
 import { BentoCard } from '../components/BentoCard'
+import { useLiquidGlass } from '../hooks/useLiquidGlass'
 import { MarkdownView } from '../components/MarkdownView'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
@@ -44,6 +45,10 @@ export function Dashboard() {
   const [rankTab, setRankTab] = useState<'downloads' | 'likes' | 'new'>('downloads')
   const [briefing, setBriefing] = useState(false)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  // 首屏重点表面用更强的光学参数：底衬有颗粒细节后，加大折射量/色散才看得出弯折。
+  // 只给搜索胶囊与统计面板用（各建一个滤镜），资源卡仍用默认参数以复用缓存。
+  const HERO_OPTICS = { bezelWidth: 26, displacementScale: 96, ior: 1.78, dispersion: 2.8, refractionAmount: 32 }
+  const searchGlassRef = useLiquidGlass<HTMLDivElement>({ radius: 16, level: 'elevated', optics: HERO_OPTICS })
   const [viewing, setViewing] = useState<FeedItem | null>(null)
   const [feedLoading, setFeedLoading] = useState(true)
 
@@ -121,7 +126,8 @@ export function Dashboard() {
         </p>
 
         {/* 搜索胶囊（唤起 ⌘K） */}
-        <div className="mx-auto mt-8 flex max-w-xl items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-bento transition hover:border-brand-300">
+        <div ref={searchGlassRef}
+          className="glass-pop lg-edge mx-auto mt-8 flex max-w-xl items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-bento transition hover:shadow-bentoHover">
           <button
             className="flex flex-1 items-center gap-3 text-sm text-gray-400"
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
@@ -141,8 +147,8 @@ export function Dashboard() {
           ))}
         </div>
 
-        {/* 蓝色统计数字 */}
-        <div className="mx-auto mt-8 flex max-w-2xl items-center justify-center gap-6 sm:gap-10">
+        {/* 统计数字：包一层真折射玻璃面板（单个滤镜，几何固定可缓存） */}
+        <BentoCard glass optics={HERO_OPTICS} className="mx-auto mt-8 flex max-w-2xl items-center justify-center gap-6 px-8 py-5 sm:gap-10">
           {[
             { k: 'Skills', v: stats?.skills ?? 0 },
             { k: '工具', v: stats?.tools ?? 0 },
@@ -154,7 +160,7 @@ export function Dashboard() {
               <div className="mt-0.5 text-xs text-subtle">{s.k}</div>
             </div>
           ))}
-        </div>
+        </BentoCard>
       </section>
 
       {/* 冷启动引导 */}
@@ -211,7 +217,7 @@ export function Dashboard() {
             {filtered.slice(0, 9).map((r, i) => {
               const meta = TYPE_META[r.type] ?? TYPE_META.skill
               return (
-                <BentoCard key={r.id} className="p-0" delay={Math.min(i * 0.03, 0.2)}>
+                <BentoCard key={r.id} glass className="p-0" delay={Math.min(i * 0.03, 0.2)}>
                   <div className="flex h-full flex-col p-5">
                     <div className="flex items-center justify-between">
                       <span className={`chip ${meta.chip}`}><span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${meta.dot}`} />{meta.label}</span>

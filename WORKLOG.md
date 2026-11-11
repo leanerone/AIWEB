@@ -691,3 +691,20 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
   3×feDisplacementMap(RGB 色散 scale≈167.6) + 2×feImage(位移/镜面贴图)；卡片 0 个 data-lg-support
 - pytest 92 ✓ · e2e 10/10 ✓ · build ✓（主包 177→218KB，gzip 68KB）
 - 教训：浏览器自动化工具不可用时，用无头 Chrome --dump-dom 也能拿到硬证据，别退化成"我觉得没问题"
+
+### 2026-11-11 · v0.12.4 修顶栏错位 + 让玻璃真正看得见（用户："没变化/标题栏乱了"）
+- **顶栏错位根因**：`.lg-edge{position:relative}` 写在 `.mega-dd{position:absolute}` 之后、同特异度，
+  把下拉拽进文档流（CDP 实测 ddPosition=relative、面板 x=574/y=-65 挤进顶栏、资源库项 y=-7）。
+  改用 `:where(.lg-edge)` 把特异度降为 0，只给无定位元素补 relative，绝不覆盖 absolute。
+  这是第二次踩同一坑 → 用特异度而非书写顺序保证。修复后 6 个导航项全 y=14、下拉回到 y=74。
+- **"没变化"根因（两层）**：① v0.10 重构已把 StatCard 移出首页，我上一轮改的 StatCard 根本没渲染；
+  ② 折射只给了默认隐藏的浮层，首屏全是实色白卡。→ 把真折射接到首屏可见处：搜索胶囊、统计面板、
+  9 张资源卡（BentoCard 新增 glass/optics 开关）。
+- **折射太弱的根因**：A/B 像素实测初版均差仅 1.0~1.6/255——底衬是均匀柔光，位移了也看不出。
+  折射需要背后有可弯折的细节。→ 底衬改多色网格渐变(电蓝/青/紫/琥珀，取自项目语义)+高频颗粒(feTurbulence)，
+  并给首屏重点表面更强光学参数(bezel26/scale96/ior1.78/dispersion2.8)。
+  A/B 复测：均差 1.0→2.04，资源卡变化像素最高 57.9%，折射确实可见。
+- hook 暴露 optics overrides（参与滤镜缓存 key）；BentoCard 透传 glass/glassRadius/optics。
+- 对比度复核（采样真实渲染像素）：ink 14~17、subtle 4.73~5.77、brand 4.57，均 ≥ AA。
+- 验证手段：浏览器 MCP 不可用 → 自建 CDP 驱动无头 Chrome（qa_dom.mjs/ab_glass.mjs）做布局测量+像素级 A/B。
+- pytest 92 ✓ · e2e 10/10 ✓ · build ✓

@@ -42,12 +42,13 @@ export function StatCard({ icon: Icon, label, value, to, delay = 0, tone = 'bran
     </div>
   )
 
+  // 统计卡只有 4 张且几何相同 → 开真折射，滤镜按几何缓存复用，首屏即可见玻璃质感
   if (to) {
     return (
-      <BentoCard delay={delay} onClick={() => (location.href = to)} className="cursor-pointer">
+      <BentoCard glass delay={delay} onClick={() => (location.href = to)} className="cursor-pointer">
         {inner}
       </BentoCard>
     )
   }
-  return <BentoCard delay={delay}>{inner}</BentoCard>
+  return <BentoCard glass delay={delay}>{inner}</BentoCard>
 }
