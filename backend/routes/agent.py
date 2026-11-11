@@ -3,8 +3,10 @@
 POST /api/agent/run     发起新任务（创建会话或续写已有会话）
 POST /api/agent/resume  恢复挂起任务（确认写操作 / 回答提问）
 """
+from types import SimpleNamespace
+
 from database.models import ChatSession
-from database.session import get_db
+from database.session import SessionLocal, get_db
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -74,8 +76,20 @@ def run(body: AgentRequest, db: Session = Depends(get_db),
         db.add(ChatMessage(session_id=session.id, role="user", content=question))
         db.commit()
 
-    gen = stream_run(db, user, session, question, page_context)
-    return StreamingResponse(gen, media_type="text/event-stream", headers=SSE_HEADERS)
+    # SSE 生成器不能复用请求级 db/ORM user：FastAPI>=0.106 在响应体开始流式前就执行
+    # `yield` 依赖的收尾（session.close()），流里再访问 user.username 会 DetachedInstanceError。
+    # 因此这里只把纯数据（username/session_id）带进生成器，并由生成器自持一个 Session。
+    username, session_id = user.username, session.id
+
+    def gen():
+        own = SessionLocal()
+        try:
+            yield from stream_run(own, SimpleNamespace(username=username),
+                                  own.get(ChatSession, session_id), question, page_context)
+        finally:
+            own.close()
+
+    return StreamingResponse(gen(), media_type="text/event-stream", headers=SSE_HEADERS)
 
 
 @router.post("/resume")
@@ -83,9 +97,18 @@ def resume(body: ResumeRequest, db: Session = Depends(get_db),
            user: object = Depends(get_current_user)):
     if body.approved is None and (body.answer is None or not body.answer.strip()):
         raise HTTPException(status_code=400, detail="请提供确认结果或回答内容")
-    gen = stream_resume(db, user, body.run_id, approved=body.approved,
-                        answer=(body.answer or "").strip() or None)
-    return StreamingResponse(gen, media_type="text/event-stream", headers=SSE_HEADERS)
+    username = user.username
+    approved, answer, run_id = body.approved, (body.answer or "").strip() or None, body.run_id
+
+    def gen():
+        own = SessionLocal()
+        try:
+            yield from stream_resume(own, SimpleNamespace(username=username), run_id,
+                                     approved=approved, answer=answer)
+        finally:
+            own.close()
+
+    return StreamingResponse(gen(), media_type="text/event-stream", headers=SSE_HEADERS)
 
 
 @router.get("/runs/{run_id}")

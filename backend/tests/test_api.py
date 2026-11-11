@@ -60,9 +60,14 @@ def mock_agent(monkeypatch, responses, api_key="sk-mock"):
     monkeypatch.setattr(agent_service, "_chat_completion_stream", stream_fake)
     monkeypatch.setattr(agent_service, "_chat_completion", lambda db, u, m, tools: next(it))
     real_cfg = agent_service.get_ai_config
-    monkeypatch.setattr(agent_service, "get_ai_config",
-                        lambda db, username=None, _real=real_cfg, _k=api_key:
-                        {**_real(db, username), "api_key": _k})
+    fake_cfg = (lambda db, username=None, _real=real_cfg, _k=api_key:
+                {**_real(db, username), "api_key": _k})
+    monkeypatch.setattr(agent_service, "get_ai_config", fake_cfg)
+    # 路由 routes/agent.py 是函数内 `from services.ai_service import get_ai_config`，
+    # 拿到的是模块真身；只 patch agent_service 会让 AI 预检走真实配置（测试环境无 Key → 400），
+    # 导致 9 个 Agent 用例全线失败。必须连 services.ai_service 一起 patch。
+    from services import ai_service
+    monkeypatch.setattr(ai_service, "get_ai_config", fake_cfg)
     return agent_service
 
 
@@ -1065,12 +1070,14 @@ class TestAgentApi:
         client.delete(f"/api/resources/{rid}", headers=auth(token))
 
     def test_run_requires_key(self, token, monkeypatch):
-        from services import agent_service
-
         mock_agent(monkeypatch, [], api_key="")   # 预检即失败
+        before = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
         resp = client.post("/api/agent/run", json={"message": "hi"}, headers=auth(token))
-        evs = self._events(resp.text)
-        assert evs and evs[-1][0] == "error" and "未配置" in evs[-1][1]["message"]
+        # 契约（与 /chat/completions 一致）：未配置 Key 走 HTTP 400 + detail，
+        # 且在任何落库之前拦截（前端 assistant store 读 err.detail 展示）
+        assert resp.status_code == 400 and "未配置" in resp.json()["detail"]
+        after = client.get("/api/chat/sessions", headers=auth(token)).json()["data"]
+        assert len(after) == len(before)          # 没留下孤儿会话/消息
 
     def test_foreign_run_rejected(self, token):
         resp = client.post("/api/agent/resume", json={"run_id": 999999, "approved": True},
