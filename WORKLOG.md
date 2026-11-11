@@ -763,3 +763,6 @@ Enter 路径与按钮路径共用 askAssistant,按钮路径已实测通过(IAB �
 
 ### 巡检拍 1（01:10）
 pytest 97 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 2（01:19）
+pytest 97 ✓ · e2e_check 10/10 ✓
