@@ -637,3 +637,32 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
 共 15 次功能提交全部推送（cf65297~745fe2c + 0388d8c/6e6e293/745fe2c 等）。
 最终基线：**pytest 92 ✓ · build ✓ · e2e_check 10/10 ✓ · 浏览器全功能验证 ✓**
 三服务运行中：前端 :5173 / 后端 :8000 / Mock LLM :9377。
+
+---
+
+### 2026-11-11 · v0.12.1 Agent SSE 会话生命周期 + 液态玻璃回归
+
+**背景**：用户反馈"液体玻璃效果怎么都没了"，并要求按我的顺序（先修红测试、再装玻璃）。
+
+- 拉取 43 个提交（v0.9.x → v0.11.4 + 巡检拍 1~35）。玻璃消失的定位：
+  v0.10.0「SkillHub 扁平重构」删掉了 body 底衬光斑、`.card-lg` 半透磨砂、`--lg-edge`/`lg-edge`、
+  `.glass-pop` 的 backdrop-filter；v0.10.1 又把 `index.html` 的 SVG 滤镜当死代码删了，
+  但 `main.tsx` 还在探测并加 `.has-refract`（无 CSS 消费 = 残留死代码）。
+- 全量 pytest 实测 **9 失败 / 83 通过**（WORKLOG 前文记的是 92 ✓）：
+  根因是 Agent SSE 复用请求级 `db` + ORM `user`，FastAPI ≥0.106 会在流开始前 close session →
+  `DetachedInstanceError`。本机 fastapi 0.115 触发，builder 机版本恰好未暴露 ——
+  `requirements.txt` 只写 `>=0.110`，属版本敏感缺陷。
+- 修复：`routes/agent.py` 两个生成器改为自持 `SessionLocal()` + `finally` 关闭，只把
+  `username`/`session_id` 这类纯数据带进流（服务层零改动）；配套修 `mock_agent` 的 patch 目标
+  （路由是函数内 import 真身，必须 patch `services.ai_service`）与 `test_run_requires_key`
+  的契约（HTTP 400 + detail，并断言预检不落库）。→ **pytest 92 全过**；`requirements-dev.txt` 补 alembic。
+- 液态玻璃按新结构重装：body 两团极淡品牌光(fixed)、`.card-lg` 半透磨砂+inset 高光（浅 .62/深 .62）、
+  `BentoCard` 挂 `.lg-edge` 边缘高光（**不加 overflow:hidden**，避免裁剪）、浮层 `--dd-bg` 转半透 +
+  `blur(20) saturate(1.6)`、`#liquid-glass` 滤镜回归（`.has-refract` 重新有消费者，非 Chromium 回退普通磨砂）。
+  `prefers-reduced-motion` 关闭全部模糊。
+- 可达性：卡片变亮致浅灰字跌破 AA → `html:not(.dark) .text-gray-400/500` 压到 `#5b6472`；
+  合成底色手算 **8/8 PASS**（浅 5.53~16.39、深 5.85~14.49）。
+- AGENTS.md 更新：基线 80→92（并注明需 alembic）、新增两条已知坑（SSE 不能用请求级 session；
+  函数内 import 需 patch 源模块）。
+- 教训：①"死代码清理"要先确认探测/消费两端；②测试环境依赖版本要锁，否则"我这边是绿的"；
+  ③做玻璃必须先保证有可透的底衬。

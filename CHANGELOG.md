@@ -1,5 +1,29 @@
 # 更新日志
 
+## v0.12.1 · 2026-11-11 Agent SSE 会话生命周期修复 + 液态玻璃回归新结构
+
+**fix：Agent SSE 在真实流式路径上必然报错（生产缺陷，非测试问题）**
+- FastAPI ≥0.106 会在响应体开始流式**之前**执行 `yield` 依赖的收尾（`get_db` 已 `close()`），
+  而 `stream_run/stream_resume/_loop` 全程复用请求级 `db` 和 ORM `user` →
+  流里访问 `user.username` 直接 `DetachedInstanceError`，9 个 Agent 用例全线红（单跑也失败）
+- 修法（服务层零改动）：`routes/agent.py` 先取出纯数据 `username`/`session_id`，
+  生成器内部 `SessionLocal()` 自持、`finally` 关闭；`user` 传 `SimpleNamespace(username=…)`
+- 测试侧两处配套：`mock_agent` 原本只 patch `agent_service.get_ai_config`，而路由是函数内
+  `from services.ai_service import get_ai_config` 拿真身 → 补 patch `services.ai_service`；
+  `test_run_requires_key` 期望从「SSE error 事件」对齐到实际契约（HTTP 400 + detail，
+  并加断言"预检不落库、无孤儿会话"）。pytest **92 全过**，`requirements-dev.txt` 补 alembic。
+
+**feat：液态玻璃重新装回 v0.10 扁平结构（保留 SkillHub 蓝与明亮默认）**
+- 底衬：`body` 两团极淡品牌光（浅 10%/8%，深 16%/10%，`background-attachment: fixed`）——
+  没有可透的背景，`backdrop-filter` 等于白做，这正是 v0.10 之后"玻璃感没了"的根因
+- 卡片：`.card-lg` 改半透磨砂（浅 `#fff/.62`+blur16/sat1.6，深 `#151821/.62`+blur16/sat1.45）
+  + `inset` 顶高光；`BentoCard` 挂 `.lg-edge`（`mask-composite` 1.2px 边缘高光，**不加 overflow:hidden** 以免裁剪子元素）
+- 浮层：`--dd-bg` 由纯 `#fff`/`#171b25` 改半透 `.86`，`.glass-pop/.mega-dd` 恢复 `blur(20px) saturate(1.6)`；
+  `index.html` 放回 `#liquid-glass` 滤镜，`.has-refract`（`main.tsx` 能力探测）仅 Chromium 走真折射，
+  其余浏览器保留普通磨砂 —— 之前 CSS 消费被删、探测仍活着，属残留死代码，现已重新接通
+- 可达性：卡片变亮后浅色次要文字跌破 AA，`html:not(.dark) .text-gray-400/500` 压到 `#5b6472`；
+  合成底色实测对比度 8/8 全 PASS（浅 5.53~16.39，深 5.85~14.49），reduced-motion 下关闭全部模糊
+
 ## v0.9.x · 2026-11-10 凌晨自主迭代轮次（详见 WORKLOG.md）
 
 主版本 v0.9 之后的当夜加餐轮，全部基于 82 用例基线 + e2e_check 10 项回归：

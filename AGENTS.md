@@ -11,7 +11,8 @@
 
 - 前端：React 18 + Vite + TypeScript + Tailwind + zustand + framer-motion（`npm run build` 含 tsc 类型检查）
 - 后端：FastAPI + SQLAlchemy 2.0 + SQLite + PyJWT（`cd backend && python run.py`，8000 端口）
-- 测试：后端 pytest（`cd backend && python -m pytest tests/ -q`，当前基线 **80 用例**）；
+- 测试：后端 pytest（`cd backend && python -m pytest tests/ -q`，当前基线 **92 用例**，
+  依赖 `requirements-dev.txt`，含 alembic）；
   API 全链路 `python scripts/e2e_check.py`（需起服务，可配 mock LLM `python scripts/mock_llm.py`）
 
 ## 架构地图
@@ -67,6 +68,13 @@ src/
 - 生成器里 mock 迭代器耗尽会抛 StopIteration（PEP 479 → RuntimeError），脚本序列要按调用次数给足。
 - 补丁脚本写 f-string 含 `\n` 时注意 CRLF/LF 差异，最好用 `chr(10)`。
 - 改公共 CSS 要复查定位属性是否被后写规则顶掉；改透明度要顺手算文字对比度（AA 线）。
+- **SSE 生成器不能复用请求级 `db` 与 ORM `user`**：FastAPI ≥0.106 在响应体开始流式前就执行 `yield`
+  依赖的收尾，session 已 close，流里访问 `user.username` 直接 `DetachedInstanceError`。
+  做法：路由里先取纯数据（`username`/`id`），生成器内 `SessionLocal()` 自持并在 `finally` 关闭
+  （见 `routes/agent.py` 的 `gen()`）。
+- **函数内 `from x import y` 的目标要 patch 模块本身**：`routes/agent.py` 预检用
+  `from services.ai_service import get_ai_config`，只 `monkeypatch` `agent_service.get_ai_config`
+  完全无效（路由拿的是真身）——9 个 Agent 用例因此全线 400。patch `services.ai_service` 才管用。
 
 ## 内容体系（v0.11）
 

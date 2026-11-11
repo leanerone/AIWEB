@@ -9,7 +9,7 @@ interface Props {
   id?: string
 }
 
-/** 基础卡片：白底细边框浅阴影（.card-lg 统一），轻微入场淡入 */
+/** 基础卡片：液态玻璃（.card-lg 半透磨砂 + .lg-edge 边缘高光），轻微入场淡入 */
 export function BentoCard({ children, className = '', delay = 0, onClick, id }: Props) {
   return (
     <motion.div
@@ -18,7 +18,7 @@ export function BentoCard({ children, className = '', delay = 0, onClick, id }: 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay, ease: [0.22, 1, 0.36, 1] }}
       onClick={onClick}
-      className={`card-lg transition-shadow hover:shadow-bentoHover ${className}`}
+      className={`lg-edge card-lg transition-shadow hover:shadow-bentoHover ${className}`}
     >
       {children}
     </motion.div>
