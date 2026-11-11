@@ -345,9 +345,10 @@ body {
   background:
     linear-gradient(158deg, rgba(255, 255, 255, .66) 0%, rgba(255, 255, 255, .14) 30%, rgba(255, 255, 255, 0) 56%),
     rgba(255, 255, 255, .42) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(17, 24, 39, .05),
-              0 1px 2px rgba(16, 24, 40, .05), 0 16px 38px -20px rgba(16, 24, 40, .2);
-  border-color: rgba(255, 255, 255, .78) !important;
+  /* 抬升阴影带一点品牌蓝，让卡片在浅底上"浮"起来；底边用白色高光而非暗线（避免像底线） */
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 1), inset 0 -1px 0 rgba(255, 255, 255, .4),
+              0 1px 2px rgba(16, 24, 40, .06), 0 18px 42px -20px rgba(37, 99, 235, .26);
+  border-color: rgba(255, 255, 255, .82) !important;
 }
 .dark .card-lg {
   background:
@@ -391,15 +392,15 @@ html:not(.dark) header .bg-white {
     inset -1px 0 0 rgba(255, 255, 255, .22),
     inset 0 0 0 1px rgba(255, 255, 255, .18);
 }
-/* 浅色底上 screen 混合等于看不见（白+白），必须换 normal 并用暗描边勾出玻璃轮廓 */
+/* 浅色底上 screen 混合等于看不见（白+白），换 normal：顶部/左侧亮高光 + 一圈极淡轮廓
+   勾出玻璃形状。去掉原先 inset 0 -1px 的暗色底边——它在浅底上像一条多余的"底线"。 */
 html:not(.dark) .lg-edge::before {
   mix-blend-mode: normal;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .95),
-    inset 1px 0 0 rgba(255, 255, 255, .6),
-    inset 0 -1px 0 rgba(17, 24, 39, .07),
-    inset -1px 0 0 rgba(17, 24, 39, .05),
-    inset 0 0 0 1px rgba(17, 24, 39, .07);
+    inset 0 1.5px 0 rgba(255, 255, 255, 1),
+    inset 1.5px 0 0 rgba(255, 255, 255, .7),
+    inset 0 0 0 1px rgba(255, 255, 255, .55),
+    inset 0 -1px 0 rgba(255, 255, 255, .35);
 }
 .dark .lg-edge::before { opacity: .85 }
 
@@ -414,10 +415,35 @@ html:not(.dark) .lg-edge::before {
 }
 [data-lg-support="refraction"] {
   backdrop-filter: var(--lg-filter);
+  /* 关键：backdrop-filter 的滤镜结果是矩形，overflow:visible 时会在圆角玻璃四周
+     露出方形边界（用户看到的"直角没收束"）。clip 把滤镜结果裁进圆角轮廓。 */
+  overflow: clip;
 }
 [data-lg-support="solid"] {
   backdrop-filter: none;
   background: var(--dd-solid) !important;
+}
+/* 焦点玻璃：首页搜索胶囊 / 统计面板用。backdrop-blur 只在这 2 处（廉价），
+   靠「半透底 + 顶部镜面高光 + 清晰边光 + 抬升阴影」在明亮模式下也明显是玻璃。
+   不用 SVG 折射 → 无矩形滤镜边界、无每帧滤镜合成成本。配合 .lg-edge 出边光。 */
+.glass-focal {
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, .72) 0%, rgba(255, 255, 255, .28) 42%, rgba(255, 255, 255, .12) 100%),
+    rgba(255, 255, 255, .34) !important;
+  backdrop-filter: blur(18px) saturate(1.9);
+  -webkit-backdrop-filter: blur(18px) saturate(1.9);
+  border: 1px solid rgba(255, 255, 255, .85);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 1),
+              0 2px 6px rgba(16, 24, 40, .06), 0 20px 44px -22px rgba(37, 99, 235, .28);
+  overflow: clip;
+}
+.dark .glass-focal {
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, .1) 0%, rgba(255, 255, 255, .03) 42%, rgba(255, 255, 255, 0) 100%),
+    rgba(23, 27, 37, .5) !important;
+  border-color: rgba(255, 255, 255, .14);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .14),
+              0 20px 44px -22px rgba(0, 0, 0, .7);
 }
 /* 性能关键：mega-dd 常驻 DOM（靠 opacity 切换显隐）。即便 opacity:0，
    backdrop-filter 仍会每帧合成背景 → 实测把滚动从 60fps 拖到 44fps。

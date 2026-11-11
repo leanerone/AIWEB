@@ -720,3 +720,14 @@ v0.11.2 运营闭环 → v0.11.3 RSS 降噪 → v0.11.4 SKILL.md 下载 → 巡�
 - 教训：backdrop-filter 的成本在"常驻合成"而非"折射算法"；opacity:0 的元素仍会合成 backdrop；
   独立 mix-blend 全屏层是隐形性能杀手。诊断要靠 A/B 逐项关，不能凭直觉归因。
 - pytest 92 ✓ · e2e 10/10 ✓ · build ✓
+
+### 2026-11-11 · v0.12.6 明亮玻璃可见 + 消直角 + 提速（用户："明亮没玻璃效果/还卡/四周直角没收束"）
+- 直角真凶：折射表面 overflow:visible，backdrop-filter 的 SVG 滤镜结果是矩形 → 圆角玻璃四周露方形边界。
+  修：折射表面统一 overflow:clip 裁圆角；首页搜索/统计改纯 CSS .glass-focal（去持久折射）。
+- 明亮玻璃可见：.glass-focal 半透+镜面高光+白边+品牌蓝抬升阴影（顶边/背景差 74~97）；
+  卡片阴影带品牌蓝、底边改白高光（去暗色"底线"），顶边/背景差 60~71；.lg-edge 明亮边光去底线。
+- 性能：去首页 2 处持久折射 → 稳态 59fps/2卡顿/33ms（基线 26/150）。折射只留 transient 浮层且 overflow:clip。
+- 对比度真实像素：ink 15.9~16.3 / subtle 5.37~5.5 全 AA。
+- 教训：backdrop-filter:url() 的滤镜区域是矩形，必须 overflow:clip/hidden 才贴圆角；
+  "玻璃不明显"在浅底上要靠"清晰边光+抬升阴影+透光着色"三者叠加，单靠半透不够。
+- pytest 92 ✓ · e2e 10/10 ✓ · build ✓
