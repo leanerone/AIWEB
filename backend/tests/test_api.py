@@ -1760,3 +1760,66 @@ class TestVisibilityAdmin:
         lst = client.get("/api/resources?keyword=admin-vis-tool", headers=admin).json()["data"]
         assert any(r["id"] == rid for r in lst["items"])
         client.delete(f"/api/resources/{rid}", headers=auth(plain_user_token()))
+
+
+class TestMcpAgent:
+    """MCP/Agent 类型:清单校验、密钥拦截、安装配方。"""
+
+    VALID_MCP = json.dumps({
+        "name": "excel-mcp", "title": "Excel MCP",
+        "description": "读写 Excel 文件的 MCP Server",
+        "version": "1.2.0", "transport": "stdio",
+        "packages": [{"registryType": "pypi", "identifier": "excel-mcp", "version": "1.2.0"}],
+        "env": [{"key": "EXCEL_DIR", "description": "Excel 根目录", "required": True}],
+    })
+
+    def test_create_mcp_with_manifest(self, token):
+        r = client.post("/api/resources", data={"type": "mcp", "name": "excel-mcp",
+                                                "summary": "Excel MCP", "manifest": self.VALID_MCP},
+                        headers=auth(token))
+        assert r.status_code == 200, r.text
+        d = r.json()["data"]
+        assert d["manifest"]["packages"][0]["registryType"] == "pypi"
+        assert d["manifest"]["env"][0]["key"] == "EXCEL_DIR"
+        assert d["manifest"]["env"][0].get("value") is None  # 只存占位
+        client.delete(f"/api/resources/{d['id']}", headers=auth(token))
+
+    def test_mcp_secret_rejected(self, token):
+        bad = json.loads(self.VALID_MCP)
+        bad["env"] = [{"key": "OPENAI_API_KEY", "value": "sk-abc123def456ghi789jk"}]
+        resp = client.post("/api/resources", data={"type": "mcp", "name": "leaky-mcp",
+                                                   "manifest": json.dumps(bad)},
+                           headers=auth(token))
+        assert resp.status_code == 400 and "密钥" in resp.json()["detail"]
+
+    def test_mcp_invalid_registry_rejected(self, token):
+        bad = json.loads(self.VALID_MCP)
+        bad["packages"][0]["registryType"] = "ghost-registry"
+        resp = client.post("/api/resources", data={"type": "mcp", "name": "bad-mcp",
+                                                   "manifest": json.dumps(bad)},
+                           headers=auth(token))
+        assert resp.status_code == 400 and "registryType" in resp.json()["detail"]
+
+    def test_install_recipe_clients(self, token):
+        rid = client.post("/api/resources", data={"type": "mcp", "name": "excel-mcp",
+                                                  "manifest": self.VALID_MCP},
+                          headers=auth(token)).json()["data"]["id"]
+        for client_name in ("claude_desktop", "raw"):
+            r = client.get(f"/api/resources/{rid}/install-recipe?client={client_name}",
+                           headers=auth(token))
+            assert r.status_code == 200
+            sel = r.json()["data"]["selected"]
+            assert "excel-mcp" in sel
+            assert "<EXCEL_DIR>" in sel or "EXCEL_DIR" in sel
+            assert "sk-" not in sel  # 绝无真实密钥
+        client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+    def test_agent_manifest_recipe(self, token):
+        manifest = json.dumps({"name": "cim-agent", "runtime": "dsh", "entry": "SKILL.md",
+                               "description": "CIM 助手 Agent", "files": [{"path": "SKILL.md"}]})
+        rid = client.post("/api/resources", data={"type": "agent", "name": "cim-agent",
+                                                  "manifest": manifest},
+                          headers=auth(token)).json()["data"]["id"]
+        r = client.get(f"/api/resources/{rid}/install-recipe?client=dsh", headers=auth(token))
+        assert "agents/skills/cim-agent" in r.json()["data"]["selected"]
+        client.delete(f"/api/resources/{rid}", headers=auth(token))

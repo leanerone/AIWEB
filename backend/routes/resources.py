@@ -20,7 +20,7 @@ from services.skill_meta import extract_from_upload
 
 router = APIRouter(prefix="/resources", tags=["resources"])
 
-ALLOWED_TYPES = {"skill", "tool", "plugin"}
+ALLOWED_TYPES = {"skill", "tool", "plugin", "mcp", "agent"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
 # 上传白名单：只允许文档/数据/文本/脚本/归档类（v0.9.22 由黑名单升级，防未知可执行格式）
 ALLOWED_EXTS = {
@@ -46,6 +46,7 @@ class ResourceIn(BaseModel):
     license: str = ""
     version: str = ""
     visibility: str = "public"  # public / private
+    manifest: str | None = None  # MCP/Agent 清单 JSON 字符串(入库前校验)
     source_type: str = "none"
     external_url: str | None = None
 
@@ -124,6 +125,8 @@ def _serialize(r: Resource, viewer: str | None = None, bookmarked: bool = False)
         "content": r.content, "tags": r.tags or [], "author": r.author,
         "license": getattr(r, "license", "") or "", "version": getattr(r, "version", "") or "",
         "visibility": getattr(r, "visibility", "public") or "public",
+        "manifest": getattr(r, "manifest", None),
+        "verified": bool(getattr(r, "verified", False)),
         "source_type": r.source_type, "file_name": r.file_name,
         "external_url": r.external_url, "downloads": r.downloads,
         "views": r.views, "likes": r.likes,
@@ -146,19 +149,38 @@ async def create_resource(
     license: str = Form(""),
     version: str = Form(""),
     visibility: str = Form("public"),
+    manifest: str = Form(""),
     external_url: str = Form(""),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: object = Depends(get_current_user),
 ):
     if type not in ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail="类型必须是 skill/tool/plugin")
+        raise HTTPException(status_code=400,
+                            detail="类型必须是 skill/tool/plugin/mcp/agent")
     tag_list = [t.strip() for t in tags.replace("，", ",").split(",") if t.strip()]
+    # MCP/Agent 清单校验(失败即 400,不产生半截资源)
+    manifest_obj = None
+    if type in ("mcp", "agent") and manifest.strip():
+        from services.mcp_manifest import parse_manifest_json, validate_agent_manifest, validate_mcp_manifest
+
+        obj, err = parse_manifest_json(manifest)
+        if obj is None:
+            raise HTTPException(status_code=400, detail=err)
+        if type == "mcp":
+            ok, errors, manifest_obj = validate_mcp_manifest(obj)
+        else:
+            ok, errors, manifest_obj = validate_agent_manifest(obj)
+        if not ok:
+            raise HTTPException(status_code=400, detail="清单校验失败:" + ";".join(errors))
+        name = manifest_obj.get("name", name)  # 清单 name 优先
+        summary = manifest_obj.get("description", summary)
     r = Resource(
         type=type, name=name.strip(), summary=summary, content=content,
         tags=tag_list, author=author, license=license.strip()[:60],
         version=version.strip()[:30],
         visibility="private" if visibility == "private" else "public",
+        manifest=manifest_obj,
         created_by=user.username,
     )
     if external_url:
@@ -310,6 +332,22 @@ def update_resource(resource_id: int, body: ResourceIn,
         r.version = (body.version or "")[:30]
     if "visibility" in body.model_fields_set and body.visibility in ("public", "private"):
         r.visibility = body.visibility
+    if body.manifest is not None and r.type in ("mcp", "agent"):
+        from services.mcp_manifest import parse_manifest_json, validate_mcp_manifest, validate_agent_manifest
+
+        if str(body.manifest).strip():
+            obj, err = parse_manifest_json(str(body.manifest))
+            if obj is None:
+                raise HTTPException(status_code=400, detail=err)
+            if r.type == "mcp":
+                ok, errors, manifest_obj = validate_mcp_manifest(obj)
+            else:
+                ok, errors, manifest_obj = validate_agent_manifest(obj)
+            if not ok:
+                raise HTTPException(status_code=400, detail="清单校验失败:" + ";".join(errors))
+            r.manifest = manifest_obj
+        else:
+            r.manifest = None
     if body.external_url:
         safe = _safe_external_url(body.external_url)
         if safe:
@@ -367,6 +405,30 @@ def download_resource(resource_id: int, db: Session = Depends(get_db),
     r.downloads += 1
     db.commit()
     return FileResponse(path, filename=r.file_name or path.name)
+
+
+@router.get("/{resource_id}/install-recipe")
+def install_recipe(resource_id: int, client: str = "raw",
+                   db: Session = Depends(get_db), user: object = Depends(get_current_user)):
+    """按客户端生成安装配方:claude_desktop / zcode / dsh / raw(命令行)。
+
+    env 一律占位(<KEY>),真实密钥永不回传。"""
+    r = db.get(Resource, resource_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    if getattr(r, "visibility", "public") == "private"             and r.created_by != user.username and user.role != "admin":
+        raise HTTPException(status_code=404, detail="资源不存在")
+    from services.mcp_manifest import install_recipes
+
+    recipes = install_recipes(r.type, r.name, r.manifest or {})
+    if not recipes:
+        raise HTTPException(status_code=400, detail="该资源类型暂无安装配方")
+    return {"success": True, "data": {
+        "id": r.id, "name": r.name, "type": r.type,
+        "recipes": recipes,
+        "selected": recipes.get(client, recipes.get("raw", "")),
+        "env": (r.manifest or {}).get("env", []) if isinstance(r.manifest, dict) else [],
+    }}
 
 
 @router.get("/{resource_id}/versions")

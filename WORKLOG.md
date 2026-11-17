@@ -856,3 +856,12 @@ pytest 97 ✓ · e2e_check 10/10 ✓
 降噪 → SKILL.md 下载 → v0.12/13 审查与回归修复 → 巡检拍 1~29。全部推送。
 最终基线：**pytest 97 ✓ · build ✓ · e2e_check 10/10 ✓ · 浏览器验证 ✓**
 三服务运行中：前端 :5173 / 后端 :8000 / Mock LLM :9377。
+
+### 2026-11-17 · v0.15.0 P1+P2:MCP/Agent 可安装中枢(后端)
+- ALLOWED_TYPES 扩展 mcp/agent;Resource 加 manifest(JSON)/verified 列 + 轻量迁移
+- services/mcp_manifest.py:server.json 兼容校验(npm/pypi/nuget/cargo/oci/mcpb 六 registryType)
+  + detect_secrets 密钥拦截(env 只存 {key,description,required} 占位,真实值 400 拒绝)
+  + install_recipes(六客户端终态:claude_desktop/zcode/dsh/raw/npx/uvx/docker)
+- 上传链路:manifest JSON 字符串进 create(校验失败 400 不产生半截资源)/update
+- GET /resources/{id}/install-recipe?client=... 按客户端生成配置块(env 全占位)
+- 测试 92 → 102(清单校验/密钥拒绝/registryType/安装配方/Agent dsh 配方)
