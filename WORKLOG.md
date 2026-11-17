@@ -940,3 +940,6 @@ pytest 103 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 16（02:30）
 pytest 103 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 17（02:39）
+pytest 103 ✓ · e2e_check 10/10 ✓
