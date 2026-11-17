@@ -865,3 +865,8 @@ pytest 97 ✓ · e2e_check 10/10 ✓
 - 上传链路:manifest JSON 字符串进 create(校验失败 400 不产生半截资源)/update
 - GET /resources/{id}/install-recipe?client=... 按客户端生成配置块(env 全占位)
 - 测试 92 → 102(清单校验/密钥拒绝/registryType/安装配方/Agent dsh 配方)
+
+### 2026-11-17 · v0.15.1 P3:前端类型体系 + 详情页安装面板
+- Resources/Dashboard:类型 Tab/徽章加 MCP/Agent;上传表单 5 类型 + mcp/agent 清单 JSON 粘贴区
+- ResourceDetail 新增「一键安装」面板:按客户端 Tab(claude_desktop/zcode/dsh/raw)生成配置块、
+  env 需求清单(amber 提示条)、复制/下载配置

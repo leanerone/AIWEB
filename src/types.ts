@@ -10,7 +10,7 @@ export interface AuthUser {
 
 export interface Resource {
   id: number
-  type: 'skill' | 'tool' | 'plugin'
+  type: 'skill' | 'tool' | 'plugin' | 'mcp' | 'agent'
   name: string
   summary: string
   content: string
@@ -19,6 +19,8 @@ export interface Resource {
   license?: string
   version?: string
   visibility?: 'public' | 'private'
+  manifest?: Record<string, unknown> | null
+  verified?: boolean
   source_type: string
   file_name: string | null
   external_url: string | null

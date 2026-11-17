@@ -1,4 +1,4 @@
-import { ArrowLeft, Bot, Copy, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Send, Share2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bot, Check, Copy, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Plug, Send, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -14,6 +14,76 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import type { Resource } from '../types'
 
 interface CommentItem { id: number; content: string; created_by: string; created_at: string }
+
+interface RecipeData {
+  recipes: Record<string, string>
+  selected: string
+  env: { key: string; description: string; required: boolean }[]
+}
+
+const CLIENT_LABEL: Record<string, string> = {
+  claude_desktop: 'Claude Desktop', zcode: 'ZCode', dsh: 'DeepSeek Harness',
+  raw: '命令行 / 其他',
+}
+
+/** MCP/Agent 安装面板:按客户端生成配置块,一键复制 */
+function InstallPanel({ resourceId, rname }: { resourceId: number; rtype: string; rname: string }) {
+  const toast = useToast()
+  const [data, setData] = useState<RecipeData | null>(null)
+  const [client, setClient] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    api.get<never, RecipeData>(`/resources/${resourceId}/install-recipe`)
+      .then((d) => { setData(d); setClient(Object.keys(d.recipes)[0] || '') })
+      .catch(() => {})
+  }, [resourceId])
+
+  if (!data || !Object.keys(data.recipes).length) return null
+
+  const cfg = data.recipes[client] ?? data.selected
+  return (
+    <BentoCard className="p-5" delay={0.1}>
+      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold">
+        <Plug size={15} className="text-sky-500" /> 一键安装
+      </h2>
+      <p className="mb-3 text-xs text-subtle">
+        选择你的客户端,复制配置块到对应配置文件;环境变量只列名称,真实值在你本机填写
+      </p>
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {Object.keys(data.recipes).map((c) => (
+          <button key={c} onClick={() => setClient(c)}
+            className={`rounded-xl px-3 py-1.5 text-xs font-medium transition ${
+              client === c ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700'
+            }`}>
+            {CLIENT_LABEL[c] || c}
+          </button>
+        ))}
+      </div>
+      {data.env.length > 0 && (
+        <div className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+          需要环境变量:{data.env.map((e) => `${e.key}${e.required ? '' : '(可选)'}`).join('、')} —— 在你本机填真实值,平台不存储
+        </div>
+      )}
+      <pre className="max-h-56 overflow-auto rounded-xl bg-gray-900 p-3 text-[11px] leading-5 text-emerald-200">{cfg}</pre>
+      <div className="mt-2 flex justify-end gap-2">
+        <button className="btn-ghost !py-1.5 text-xs"
+          onClick={() => downloadText(`install-${rname}-${client}.txt`, cfg)}>
+          <Download size={12} /> 下载配置
+        </button>
+        <button className="btn-primary !py-1.5 text-xs"
+          onClick={async () => {
+            await navigator.clipboard.writeText(cfg)
+            setCopied(true)
+            toast('success', '安装配置已复制')
+            window.setTimeout(() => setCopied(false), 1500)
+          }}>
+          {copied ? <Check size={13} /> : <Copy size={13} />} 复制配置
+        </button>
+      </div>
+    </BentoCard>
+  )
+}
 interface VersionItem { id: number; name: string; summary: string; tags: string[]; file_name: string | null; updated_by: string; created_at: string }
 
 const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件' }
@@ -179,6 +249,10 @@ export function ResourceDetail() {
           </div>
         </div>
       </BentoCard>
+
+      {['mcp', 'agent', 'skill'].includes(r.type) && (
+        <InstallPanel resourceId={r.id} rtype={r.type} rname={r.name} />
+      )}
 
       {r.content && (
         <BentoCard className="p-6" delay={0.08}>

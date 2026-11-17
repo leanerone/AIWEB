@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Check, ClipboardPaste, Copy, Download, FileText, FileUp, Heart, Loader2, Lock, Package, Plus, Puzzle, Search, Sparkles, SquarePen, Wrench } from 'lucide-react'
+import { Check, ClipboardPaste, Copy, Download, FileText, FileUp, Heart, Loader2, Lock, Package, Plug, Plus, Puzzle, Bot, Search, Sparkles, SquarePen, Wrench } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { DragEvent, MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -40,13 +40,17 @@ const TABS = [
   { key: 'skill', label: 'Skills', icon: FileText },
   { key: 'tool', label: '小工具', icon: Wrench },
   { key: 'plugin', label: '插件', icon: Puzzle },
+  { key: 'mcp', label: 'MCP', icon: Plug },
+  { key: 'agent', label: 'Agent', icon: Bot },
 ]
 
-const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件' }
+const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件', mcp: 'MCP', agent: 'Agent' }
 const TYPE_META: Record<string, { dot: string; chip: string }> = {
   skill: { dot: 'bg-brand-500', chip: 'bg-brand-50 text-brand-700' },
   tool: { dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700' },
   plugin: { dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700' },
+  mcp: { dot: 'bg-sky-500', chip: 'bg-sky-50 text-sky-700' },
+  agent: { dot: 'bg-violet-500', chip: 'bg-violet-50 text-violet-700' },
 }
 
 /** SKILL.md 规范模板（对齐 agentskills.io 开放标准） */
@@ -267,6 +271,7 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
   const [license, setLicense] = useState('MIT')
   const [version, setVersion] = useState('0.1.0')
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
+  const [manifestText, setManifestText] = useState('')
   const [externalUrl, setExternalUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
@@ -369,6 +374,7 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
       fd.append('license', license)
       fd.append('version', version)
       fd.append('visibility', visibility)
+      if ((type === 'mcp' || type === 'agent') && manifestText.trim()) fd.append('manifest', manifestText)
       fd.append('external_url', externalUrl)
       if (file) fd.append('file', file)
       await api.post('/resources', fd)
@@ -410,16 +416,23 @@ function CreateForm({ onClose, defaultAuthor }: { onClose: () => void; defaultAu
         </div>
 
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {TABS.slice(1).map((t) => (
               <button key={t.key} onClick={() => setType(t.key)}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-sm font-medium transition ${
                   type === t.key ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-subtle hover:border-brand-300'
                 }`}>
                 <t.icon size={14} /> {t.label}
               </button>
             ))}
           </div>
+          {(type === 'mcp' || type === 'agent') && (
+            <textarea className="input min-h-[110px] font-mono text-[12px]"
+              placeholder={type === 'mcp'
+                ? '粘贴 MCP 清单 JSON(参考官方 server.json):{"name":"excel-mcp","transport":"stdio","packages":[...],"env":[{"key":"...","description":"..."}]} —— env 只填 key+说明,真实密钥会被拒绝'
+                : '粘贴 Agent 清单 JSON:{"name":"cim-agent","runtime":"dsh","entry":"SKILL.md","files":[...]}'}
+              onChange={(e) => { setManifestText(e.target.value); pasteParse(e.target.value) }} />
+          )}
 
           {/* 拖拽区（文件模式） */}
           {mode === 'file' && (

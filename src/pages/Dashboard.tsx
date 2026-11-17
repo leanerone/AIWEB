@@ -20,6 +20,8 @@ const TYPE_META: Record<string, { label: string; dot: string; chip: string }> = 
   skill: { label: 'Skill', dot: 'bg-brand-500', chip: 'bg-brand-50 text-brand-700' },
   tool: { label: '工具', dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700' },
   plugin: { label: '插件', dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700' },
+  mcp: { label: 'MCP', dot: 'bg-sky-500', chip: 'bg-sky-50 text-sky-700' },
+  agent: { label: 'Agent', dot: 'bg-violet-500', chip: 'bg-violet-50 text-violet-700' },
 }
 const KIND_META: Record<string, { label: string; cls: string }> = {
   ai: { label: 'AI 内容', cls: 'bg-brand-100 text-brand-700' },
@@ -220,6 +222,8 @@ export function Dashboard() {
             { key: 'skill', label: 'Skills' },
             { key: 'tool', label: '小工具' },
             { key: 'plugin', label: '插件' },
+            { key: 'mcp', label: 'MCP' },
+            { key: 'agent', label: 'Agent' },
           ].map((t) => (
             <button key={t.key} onClick={() => setResType(t.key)}
               className={`chip border px-3 py-1.5 text-sm transition ${
