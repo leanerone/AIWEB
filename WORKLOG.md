@@ -973,3 +973,6 @@ pytest 103 ✓ · e2e_check 10/10 ✓
 
 ### 巡检拍 27（04:12）
 pytest 103 ✓ · e2e_check 10/10 ✓
+
+### 巡检拍 28（04:22）
+pytest 103 ✓ · e2e_check 10/10 ✓
