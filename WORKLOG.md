@@ -885,3 +885,6 @@ pytest 97 ✓ · e2e_check 10/10 ✓
 - 内容包 19 → 23:新增 excel-mcp / intranet-search-mcp(带完整 server.json 清单+env 占位)、
   cim-assistant-agent(dsh)/ report-writer-agent(通用)——全部原创 MIT
 - README/AGENTS.md 同步可安装资源体系;live 库已导入(MCP 带清单 2 / Agent 带清单 2)
+
+### 运维恢复(00:05)
+Mock/前端进程掉线(机器休眠),已重启三服务全部在线;e2e_check 10/10 复验通过
