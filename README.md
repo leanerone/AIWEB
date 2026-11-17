@@ -24,7 +24,7 @@
 | 模块 | 说明 |
 |---|---|
 | 首页（发现流） | 居中 Hero（搜索胶囊/快捷指令/统计）+ 发现好资源 + 热门资源榜（复制安装指令）+ 简报带 + 最新动态 |
-| 资源库 | skill / tool / plugin 统一管理：**license/version 体系**、**拖拽上传自动识别 SKILL.md frontmatter**、粘贴创建、模板创建、搜索/标签/点赞/收藏 |
+| 资源库 | 五类资源 **skill / tool / plugin / MCP / Agent** 统一管理:license/version/公开私有、**MCP 清单校验与密钥拦截**、**一键安装面板**(Claude Desktop/ZCode/DSH/命令行四终态配置块)、**安装包 zip 下载**、拖拽上传自动识别 |
 | 笔记 | Markdown 编辑、置顶、标签、搜索 |
 | Notes 链接库 | 粘贴 notes:// 链接 / NDL / 富文本 → 解析服务器/数据库/文档 → 点「打开」唤起 Notes 客户端 |
 | AI 助手 | 右下角悬浮窗随时唤起（无独立页面）：**Agent 工具循环**（search/list/get 读工具直通；create_memo/bookmark/briefing/save_card 写工具默认**确认卡**，个人设置可开自动执行）、**ask_user 结构化提问**、任务卡轨迹、工具审计；SSE 流式、停止/重新生成、Markdown、多会话、页面上下文自动注入 |

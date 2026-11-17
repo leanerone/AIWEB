@@ -880,3 +880,8 @@ pytest 97 ✓ · e2e_check 10/10 ✓
 - POST /api/admin/verify/{id}(管理员):公开 mcp/agent 的审核标记切换
 - 详情页:公开 MCP/Agent 显示 ✓已审核/⚠未审核 徽章;管理员治理卡一键审核/撤销
 - 测试 102 → 103
+
+### 2026-11-18 · v0.15.4 P6:内容包扩展 + 文档同步
+- 内容包 19 → 23:新增 excel-mcp / intranet-search-mcp(带完整 server.json 清单+env 占位)、
+  cim-assistant-agent(dsh)/ report-writer-agent(通用)——全部原创 MIT
+- README/AGENTS.md 同步可安装资源体系;live 库已导入(MCP 带清单 2 / Agent 带清单 2)

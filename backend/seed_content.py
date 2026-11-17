@@ -438,6 +438,99 @@ MD
 - 「Notes 链接库」支持批量导入（每行一条）与搜索
 - 点击卡片唤起本机 Notes 客户端（需已装 Notes；协议坏了用 fix-notes-protocol 修复）""",
     },
+    # ═══════════ MCP Server(清单结构化,可直接复制安装配置) ═══════════
+    {
+        "type": "mcp", "name": "excel-mcp", "version": "1.0.0",
+        "summary": "读写/合并 Excel 的 MCP Server:让任意 AI 客户端直接操作 xlsx",
+        "tags": ["mcp", "excel", "office"],
+        "manifest": {
+            "name": "excel-mcp", "title": "Excel MCP Server",
+            "description": "读写与合并 Excel 文件:AI 客户端可直接打开、汇总、导出 xlsx",
+            "version": "1.0.0", "transport": "stdio",
+            "packages": [{"registryType": "pypi", "identifier": "excel-mcp",
+                          "version": "1.0.0", "transport": "stdio"}],
+            "env": [
+                {"key": "EXCEL_ROOT_DIR", "description": "Excel 文件根目录", "required": True},
+                {"key": "MAX_ROWS", "description": "单次读取行数上限(默认 5000)", "required": False},
+            ],
+        },
+        "content": """## 能力(tools)
+- `read_sheet(file, sheet)`:读取工作表为结构化数据
+- `merge_files(dir, pattern)`:按列名合并多个 xlsx
+- `export(data, out)`:把 AI 生成结果导出为 xlsx
+
+## 安装
+详情页「一键安装」面板:复制 claude_desktop / ZCode 配置块,或用 uvx 命令行。
+环境变量 `EXCEL_ROOT_DIR` 在你本机填写真实路径(平台只存占位)。
+
+## 安全
+仅建议指向非敏感目录;客户数据目录请按 data-desensitization-guide 评估后再接入。""",
+    },
+    {
+        "type": "mcp", "name": "intranet-search-mcp", "version": "1.0.0",
+        "summary": "内网知识检索 MCP:把 FTS5 全文搜索能力接入任意 MCP 客户端",
+        "tags": ["mcp", "搜索", "知识库"],
+        "manifest": {
+            "name": "intranet-search-mcp", "title": "Intranet Search MCP",
+            "description": "跨资源库/笔记/资讯的内网全文检索,让任意 MCP 客户端具备平台知识能力",
+            "version": "1.0.0", "transport": "stdio",
+            "packages": [{"registryType": "pypi", "identifier": "intranet-search-mcp",
+                          "version": "1.0.0", "transport": "stdio"}],
+            "env": [
+                {"key": "AIHUB_API", "description": "AI Hub 后端地址(如 http://aihub:8000)", "required": True},
+                {"key": "AIHUB_TOKEN", "description": "个人 API Token(设置页可生成)", "required": True},
+            ],
+        },
+        "content": """## 能力(tools)
+- `search_all(query)`:FTS5 全文检索资源/笔记/资讯
+- `get_resource(id)`:读资源详情
+
+## 安装
+详情页「一键安装」→ 复制配置块;`AIHUB_TOKEN` 用你自己的(见下方路线图:个人 Token)。
+
+## 说明
+本条目为规划示例:运行时实现见平台仓库里程碑,欢迎认领开发(MIT)。""",
+    },
+    # ═══════════ Agent 包 ═══════════
+    {
+        "type": "agent", "name": "cim-assistant-agent", "version": "1.0.0",
+        "summary": "半导体 CIM 助手 Agent(DSH 技能包):排障/日志/周报三合一",
+        "tags": ["agent", "dsh", "半导体"],
+        "manifest": {
+            "name": "cim-assistant-agent", "runtime": "dsh", "entry": "SKILL.md",
+            "description": "面向 CIM 工程师的 DeepSeek Harness 技能包:通信排障 + 日志分析 + 周报三合一",
+            "version": "1.0.0",
+            "files": [{"path": "SKILL.md", "description": "主技能文件"},
+                      {"path": "references/secs-gem.md", "description": "SECS/GEM 速查"}],
+        },
+        "content": """## 安装(DSH)
+1. 点「安装包」下载 zip
+2. 解压到 `~/.agents/skills/cim-assistant-agent/`
+3. 重启 dsh,提问时说「帮我排障/分析日志/写周报」即触发
+
+## 内含
+- SKILL.md:三合一主技能(触发词覆盖排障/日志/周报)
+- references/secs-gem.md:SECS/GEM 消息速查(渐进式加载,不占常驻上下文)""",
+    },
+    {
+        "type": "agent", "name": "report-writer-agent", "version": "1.0.0",
+        "summary": "报告撰写 Agent(通用运行时):周报/纪要/复盘三模板合一",
+        "tags": ["agent", "效率"],
+        "manifest": {
+            "name": "report-writer-agent", "runtime": "generic", "entry": "SKILL.md",
+            "description": "通用 Agent 包:周报/会议纪要/故障复盘三套结构化模板与提示词",
+            "version": "1.0.0",
+            "files": [{"path": "SKILL.md", "description": "主技能文件"}],
+        },
+        "content": """## 安装(通用)
+下载 zip,把 SKILL.md 放进你的 Agent 技能目录(Claude Code / DSH / ZCode 均兼容)。
+
+## 内含
+周报三段式 / 会议纪要结构化 / 故障复盘模板(与平台三条 Skill 同源,合并为一个 Agent 包)。
+
+## 用法
+对 Agent 说「写周报 / 整理纪要 / 复盘」,它按对应模板输出。""",
+    },
 ]
 
 
@@ -458,6 +551,7 @@ def seed_content() -> None:
                 type=item["type"], name=item["name"], summary=item["summary"],
                 content=item["content"], tags=item["tags"],
                 author=AUTHOR, license=LICENSE, version=item.get("version", "1.0.0"),
+                manifest=item.get("manifest"),
                 source_type="none", created_by="aihub-official",
             ))
             created += 1
