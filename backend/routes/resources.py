@@ -407,6 +407,63 @@ def download_resource(resource_id: int, db: Session = Depends(get_db),
     return FileResponse(path, filename=r.file_name or path.name)
 
 
+@router.get("/{resource_id}/download-bundle")
+def download_bundle(resource_id: int, db: Session = Depends(get_db),
+                    user: object = Depends(get_current_user)):
+    """一键下载安装包(zip):
+    - skill → SKILL.md(规范 frontmatter)
+    - mcp → server.json 清单 + INSTALL.md(全部客户端配方)
+    - agent → 清单 + SKILL.md + INSTALL.md
+    私有资源仅 owner/管理员可下载。"""
+    import io
+    import json as _json
+    import zipfile
+
+    r = db.get(Resource, resource_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="资源不存在")
+    if getattr(r, "visibility", "public") == "private"             and r.created_by != user.username and user.role != "admin":
+        raise HTTPException(status_code=404, detail="资源不存在")
+
+    manifest = r.manifest or {}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        if r.type == "skill":
+            fm = chr(10).join([
+                "---", f"name: {r.name}",
+                f"description: {r.summary or r.name}",
+                f"license: {r.license or 'MIT'}", f"version: {r.version or '1.0.0'}",
+                f"tags: [{', '.join(r.tags or [])}]", "---", "",
+            ])
+            zf.writestr("SKILL.md", fm + chr(10) + r.content)
+        else:
+            zf.writestr("server.json" if r.type == "mcp" else "agent.json",
+                        _json.dumps(manifest or {}, ensure_ascii=False, indent=2))
+            if r.content:
+                zf.writestr("SKILL.md", r.content)
+
+        from services.mcp_manifest import install_recipes
+
+        recipes = install_recipes(r.type, r.name, manifest) if manifest else {}
+        if r.type == "skill":
+            recipes = {"raw": f"mkdir -p ~/.agents/skills/{r.name} && 将 SKILL.md 放入该目录"}
+        nl = chr(10)
+        install_md = nl.join(
+            f"## {k}{nl}{nl}```{nl}{v}{nl}```" for k, v in recipes.items()) or "## 安装" + nl + "参考资源详情页。"
+        zf.writestr("INSTALL.md",
+                    f"# {r.name} 安装指南{nl}{nl}来源:AI Hub · 许可:{r.license or 'MIT'} · v{r.version or '1.0.0'}{nl}{nl}"
+                    + install_md)
+
+    buf.seek(0)
+    from fastapi.responses import Response
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{r.type}-{r.name}.zip"'},
+    )
+
+
 @router.get("/{resource_id}/install-recipe")
 def install_recipe(resource_id: int, client: str = "raw",
                    db: Session = Depends(get_db), user: object = Depends(get_current_user)):

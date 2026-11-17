@@ -870,3 +870,8 @@ pytest 97 ✓ · e2e_check 10/10 ✓
 - Resources/Dashboard:类型 Tab/徽章加 MCP/Agent;上传表单 5 类型 + mcp/agent 清单 JSON 粘贴区
 - ResourceDetail 新增「一键安装」面板:按客户端 Tab(claude_desktop/zcode/dsh/raw)生成配置块、
   env 需求清单(amber 提示条)、复制/下载配置
+
+### 2026-11-17 · v0.15.2 P4:一键下载安装包
+- GET /resources/{id}/download-bundle:skill→SKILL.md;mcp→server.json+INSTALL.md;
+  agent→agent.json+SKILL.md+INSTALL.md(INSTALL 汇总全部客户端配方);私有守卫 404
+- 详情页「安装包」按钮(zip 下载);测试 102 → 105

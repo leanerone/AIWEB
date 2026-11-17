@@ -1,4 +1,4 @@
-import { ArrowLeft, Bot, Check, Copy, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Plug, Send, Share2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bot, Check, Copy, Download, ExternalLink, Heart, History, Loader2, MessageSquare, Pencil, Plug, Package, Send, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
@@ -259,6 +259,24 @@ export function ResourceDetail() {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold">详细介绍</h2>
             <div className="flex gap-2">
+              <button className="btn-ghost !py-1.5 text-xs" title="下载安装包(zip):含清单文件与全客户端安装指南"
+                onClick={async () => {
+                  const token = localStorage.getItem('aiweb_token')
+                  try {
+                    const resp = await fetch(`/api/resources/${r.id}/download-bundle`, { headers: { Authorization: `Bearer ${token}` } })
+                    if (!resp.ok) throw new Error('下载失败')
+                    const blob = await resp.blob()
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${r.type}-${r.name}.zip`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    toast('success', '安装包已下载')
+                  } catch (e) { toast('error', (e as Error).message) }
+                }}>
+                <Package size={13} /> 安装包
+              </button>
               <button className="btn-ghost !py-1.5 text-xs" title="生成符合 Agent Skills 标准的 SKILL.md，放进 ~/.agents/skills/ 即可用"
                 onClick={() => {
                   const fm = [
