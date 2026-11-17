@@ -875,3 +875,8 @@ pytest 97 ✓ · e2e_check 10/10 ✓
 - GET /resources/{id}/download-bundle:skill→SKILL.md;mcp→server.json+INSTALL.md;
   agent→agent.json+SKILL.md+INSTALL.md(INSTALL 汇总全部客户端配方);私有守卫 404
 - 详情页「安装包」按钮(zip 下载);测试 102 → 105
+
+### 2026-11-17 · v0.15.3 P5:verified 审核与治理
+- POST /api/admin/verify/{id}(管理员):公开 mcp/agent 的审核标记切换
+- 详情页:公开 MCP/Agent 显示 ✓已审核/⚠未审核 徽章;管理员治理卡一键审核/撤销
+- 测试 102 → 103

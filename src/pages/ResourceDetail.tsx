@@ -86,11 +86,13 @@ function InstallPanel({ resourceId, rname }: { resourceId: number; rtype: string
 }
 interface VersionItem { id: number; name: string; summary: string; tags: string[]; file_name: string | null; updated_by: string; created_at: string }
 
-const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件' }
+const TYPE_LABEL: Record<string, string> = { skill: 'Skill', tool: '工具', plugin: '插件', mcp: 'MCP', agent: 'Agent' }
 const TYPE_BADGE: Record<string, string> = {
   skill: 'bg-brand-100 text-brand-700',
   tool: 'bg-emerald-100 text-emerald-700',
   plugin: 'bg-amber-100 text-amber-700',
+  mcp: 'bg-sky-100 text-sky-700',
+  agent: 'bg-violet-100 text-violet-700',
 }
 
 export function ResourceDetail() {
@@ -196,7 +198,13 @@ export function ResourceDetail() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`chip ${TYPE_BADGE[r.type]}`}>{TYPE_LABEL[r.type]}</span>
+              <span className={`chip ${TYPE_BADGE[r.type] ?? 'bg-gray-100 text-gray-600'}`}>{TYPE_LABEL[r.type] ?? '资源'}</span>
+              {r.type === 'mcp' || r.type === 'agent' ? (
+                <span className={`chip ${r.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
+                  title={r.verified ? '管理员已审核' : '公开 MCP/Agent 未经管理员审核,安装前请自查清单'}>
+                  {r.verified ? '✓ 已审核' : '⚠ 未审核'}
+                </span>
+              ) : null}
               {r.license && <span className="chip border border-emerald-200 bg-emerald-50 text-emerald-700" title="开源许可">{r.license}{r.version ? ` · v${r.version}` : ''}</span>}
               {r.tags.map((t) => <span key={t} className="chip bg-gray-100 text-gray-600">#{t}</span>)}
             </div>
@@ -252,6 +260,15 @@ export function ResourceDetail() {
 
       {['mcp', 'agent', 'skill'].includes(r.type) && (
         <InstallPanel resourceId={r.id} rtype={r.type} rname={r.name} />
+      )}
+
+      {me?.role === 'admin' && (r.type === 'mcp' || r.type === 'agent') && r.visibility !== 'private' && (
+        <BentoCard className="p-4" delay={0.09}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-ink">治理:清单审核</span>
+            <VerifyToggle id={r.id} verified={!!r.verified} />
+          </div>
+        </BentoCard>
       )}
 
       {r.content && (
@@ -451,5 +468,25 @@ export function ResourceDetail() {
         onCancel={() => setConfirmDel(false)}
       />
     </div>
+  )
+}
+
+function VerifyToggle({ id, verified }: { id: number; verified: boolean }) {
+  const toast = useToast()
+  const [v, setV] = useState(verified)
+  const [busy, setBusy] = useState(false)
+  return (
+    <button className={`btn !py-1.5 text-xs ${v ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true)
+        try {
+          const d = await api.post<never, { verified: boolean }>(`/admin/verify/${id}`, { verified: !v })
+          setV(d.verified)
+          toast('success', d.verified ? '已标记为已审核' : '已撤销审核')
+        } catch (e) { toast('error', (e as Error).message) } finally { setBusy(false) }
+      }}>
+      {v ? '✓ 已审核(点击撤销)' : '⚠ 未审核(点击通过)'}
+    </button>
   )
 }

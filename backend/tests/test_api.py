@@ -1823,3 +1823,28 @@ class TestMcpAgent:
         r = client.get(f"/api/resources/{rid}/install-recipe?client=dsh", headers=auth(token))
         assert "agents/skills/cim-agent" in r.json()["data"]["selected"]
         client.delete(f"/api/resources/{rid}", headers=auth(token))
+
+
+class TestVerifyResource:
+    """管理员审核 mcp/agent 公开条目:verified 标记切换。"""
+
+    def test_verify_flow(self, token):
+        manifest = TestMcpAgent.VALID_MCP
+        rid = client.post("/api/resources", data={"type": "mcp", "name": "verify-mcp-x",
+                                                  "manifest": manifest},
+                          headers=auth(token)).json()["data"]["id"]
+        from services.auth_service import generate_token
+        admin = auth(generate_token("administrator", "admin"))
+        # 默认未审核
+        d = client.get(f"/api/resources/{rid}", headers=auth(token)).json()["data"]
+        assert d["verified"] is False
+        # 普通用户不能审核
+        assert client.post(f"/api/admin/verify/{rid}", json={"verified": True},
+                           headers=auth(plain_user_token())).status_code == 403
+        # 管理员审核
+        r = client.post(f"/api/admin/verify/{rid}", json={"verified": True}, headers=admin)
+        assert r.json()["data"]["verified"] is True
+        # 撤销
+        r2 = client.post(f"/api/admin/verify/{rid}", json={"verified": False}, headers=admin)
+        assert r2.json()["data"]["verified"] is False
+        client.delete(f"/api/resources/{rid}", headers=auth(token))

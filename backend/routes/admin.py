@@ -28,3 +28,19 @@ def admin_seed_content(db: Session = Depends(get_db), _: object = Depends(requir
 
     seed_content()
     return {"success": True, "data": {"message": "官方内容包已导入"}}
+
+
+@router.post("/verify/{resource_id}")
+def admin_verify(resource_id: int, body: dict, db: Session = Depends(get_db),
+                 _: object = Depends(require_admin)):
+    """管理员审核公开的 MCP/Agent 资源:verified 标记(黄标/绿标)"""
+    from database.models import Resource
+
+    r = db.get(Resource, resource_id)
+    if not r:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="资源不存在")
+    r.verified = bool(body.get("verified", True))
+    db.commit()
+    return {"success": True, "data": {"id": r.id, "verified": r.verified}}
